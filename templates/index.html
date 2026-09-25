@@ -206,6 +206,39 @@
                 <h3><i class="fa-solid fa-chart-line"></i> <span data-sw="Takwimu za Kina za Sasa" data-en="Current Detailed Stats">Takwimu za Kina za Sasa</span></h3>
                 <p data-sw="Vipimo vyote vinachukuliwa kwa wakati husika kutoka kwenye vifaa vya sensa vilivyopo shambani." data-en="All measurements are taken in real-time from the sensor devices deployed in the field.">Vipimo vyote vinachukuliwa kwa wakati husika kutoka kwenye vifaa vya sensa vilivyopo shambani.</p>
             </div>
+            
+            <div class="grid-6">
+                <div class="card">
+                    <i class="fa-solid fa-temperature-arrow-up"></i>
+                    <h3 data-sw="Wastani wa Joto" data-en="Avg Temp">Wastani wa Joto</h3>
+                    <p class="value" id="stat-avg-temp">-- °C</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-temperature-high"></i>
+                    <h3 data-sw="Joto la Juu Zaidi" data-en="Max Temp">Joto la Juu Zaidi</h3>
+                    <p class="value" id="stat-max-temp">-- °C</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-temperature-low"></i>
+                    <h3 data-sw="Joto la Chini Zaidi" data-en="Min Temp">Joto la Chini Zaidi</h3>
+                    <p class="value" id="stat-min-temp">-- °C</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-droplet"></i>
+                    <h3 data-sw="Wastani wa Unyevu" data-en="Avg Humidity">Wastani wa Unyevu</h3>
+                    <p class="value" id="stat-avg-humidity">-- %</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-cloud-rain"></i>
+                    <h3 data-sw="Jumla ya Mvua" data-en="Total Rain">Jumla ya Mvua</h3>
+                    <p class="value" id="stat-total-rain">-- mm</p>
+                </div>
+                <div class="card">
+                    <i class="fa-solid fa-database"></i>
+                    <h3 data-sw="Jumla ya Kumbukumbu" data-en="Total Records">Jumla ya Kumbukumbu</h3>
+                    <p class="value" id="stat-total-records">--</p>
+                </div>
+            </div>
         </div>
 
         <!-- 3. HISTORIA -->
@@ -279,6 +312,9 @@
             }
             if(tabId === 'historia') {
                 loadWeatherLogs();
+            }
+            if(tabId === 'takwimu') {
+                loadWeatherStats();
             }
         }
 
@@ -376,6 +412,20 @@
 
         setInterval(fetchLiveWeatherData, 5000);
 
+        function loadWeatherStats() {
+            fetch('/get-stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('stat-avg-temp').innerText = data.avg_temp + " °C";
+                    document.getElementById('stat-max-temp').innerText = data.max_temp + " °C";
+                    document.getElementById('stat-min-temp').innerText = data.min_temp + " °C";
+                    document.getElementById('stat-avg-humidity').innerText = data.avg_humidity + " %";
+                    document.getElementById('stat-total-rain').innerText = data.total_rain + " mm";
+                    document.getElementById('stat-total-records').innerText = data.total_records;
+                })
+                .catch(error => console.error('Hitilafu katika kupata takwimu:', error));
+        }
+
         function loadWeatherLogs() {
             fetch('/get-logs')
                 .then(response => response.json())
@@ -407,6 +457,7 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             loadWeatherLogs();
+            loadWeatherStats();
         });
 
         function setLanguage(lang, btn) {
