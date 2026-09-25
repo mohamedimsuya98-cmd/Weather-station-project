@@ -22,3 +22,5 @@ Werkzeug==3.1.8
 gunicorn
 Flask
 google-genai
+Flask-SQLAlchemy
+gunicorn
