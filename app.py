@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import datetime
 import os
+import time
 from google import genai
 
 app = Flask(__name__)
@@ -62,39 +63,47 @@ def get_data():
     response_data["history"] = weather_history
     return jsonify(response_data)
 
-# Sehemu ya kuchakata uchambuzi wa AI na kinga ya makosa (Exception handling)
+# Sehemu ya uchambuzi wa AI yenye mfumo wa Kujaribu Tena (Retry Logic)
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
-    try:
-        # Hakikisha tuna ufunguo kabla ya kutuma ombi
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return jsonify({"status": "error", "analysis": "Samahani, API Key ya Gemini haijawekwa kwenye seva ya Render."})
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return jsonify({"status": "error", "analysis": "Samahani, API Key ya Gemini haijawekwa kwenye seva ya Render."})
 
-        prompt = f"""
-        Wewe ni mtaalamu wa kilimo cha kisasa. Hizi hapa ni taarifa za sasa kutoka kwenye kituo cha hali ya hewa shambani:
-        - Joto: {weather_data['temperature']} °C
-        - Unyevu wa hewa: {weather_data['humidity']} %
-        - Kiwango cha mvua: {weather_data['rain_amount']} mm
-        - Hali ya mvua: {weather_data['rain_availability']}
-        - Kasi ya upepo: {weather_data['wind_speed']} m/s
-        - Mwelekeo wa upepo: {weather_data['wind_direction']}
+    prompt = f"""
+    Wewe ni mtaalamu wa kilimo cha kisasa. Hizi hapa ni taarifa za sasa kutoka kwenye kituo cha hali ya hewa shambani:
+    - Joto: {weather_data['temperature']} °C
+    - Unyevu wa hewa: {weather_data['humidity']} %
+    - Kiwango cha mvua: {weather_data['rain_amount']} mm
+    - Hali ya mvua: {weather_data['rain_availability']}
+    - Kasi ya upepo: {weather_data['wind_speed']} m/s
+    - Mwelekeo wa upepo: {weather_data['wind_direction']}
 
-        Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
-        """
-        
-        response = client.models.generate_content(
-            model='gemini-3.8-flash',
-            contents=prompt
-        )
-        
-        if response and response.text:
-            return jsonify({"status": "success", "analysis": response.text})
-        else:
-            return jsonify({"status": "error", "analysis": "AI haikurejesha majibu yoyote kwa sasa. Tafadhali jaribu tena."})
+    Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
+    """
+    
+    max_retries = 3
+    delay = 2  # Sekunde za kusubiri kabla ya kujaribu tena
+    
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.8-flash',
+                contents=prompt
+            )
             
-    except Exception as e:
-        return jsonify({"status": "error", "analysis": f"Imeshindikana kuchambua kutokana na hitilafu: {str(e)}"})
+            if response and response.text:
+                return jsonify({"status": "success", "analysis": response.text})
+                
+        except Exception as e:
+            # Kama bado kuna majaribio, subiri kidogo kisha ujaribu tena
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+                continue
+            else:
+                return jsonify({"status": "error", "analysis": f"Seva za AI zina msongamano mkubwa kwa sasa. Tafadhali jaribu tena baada ya sekunde chache. Hitilafu: {str(e)}"})
+
+    return jsonify({"status": "error", "analysis": "Kimeshindikana kupata jibu kutoka kwa AI kwa wakati huu."})
 
 if __name__ == '__main__':
     app.run(debug=True)
