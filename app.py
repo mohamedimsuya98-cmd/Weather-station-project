@@ -36,5 +36,10 @@ def update_weather():
     
     return jsonify({"status": "error", "message": "Hakuna data iliyotumwa!"}), 400
 
+# Njia mpya inayoruhusu ukurasa kuchukua data moja kwa moja bila ku-refresh
+@app.route('/get-data', methods=['GET'])
+def get_data():
+    return jsonify(weather_data)
+
 if __name__ == '__main__':
     app.run(debug=True)
