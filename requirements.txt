@@ -20,3 +20,5 @@ six==1.17.0
 tzdata==2026.2
 Werkzeug==3.1.8
 gunicorn
+Flask
+google-genai
