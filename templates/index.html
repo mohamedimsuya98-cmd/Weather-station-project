@@ -207,7 +207,7 @@
         /* RESPONSIVE DESIGN KWA AJILI YA SIMU (ANDROID) */
         @media screen and (max-width: 768px) {
             body {
-                flex-direction: column; /* Inabadilisha muundo kuwa wa juu na chini */
+                flex-direction: column;
             }
             sidebar {
                 width: 100%;
@@ -222,7 +222,7 @@
             }
             .nav-links {
                 display: flex;
-                overflow-x: auto; /* Inaruhusu kutelezesha menu kwenda pembeni kwenye simu */
+                overflow-x: auto;
                 gap: 8px;
                 padding-bottom: 5px;
             }
@@ -244,7 +244,7 @@
                 gap: 10px;
             }
             .grid-6 {
-                grid-template-columns: repeat(2, 1fr); /* Kwenye simu kadi zinakaa mbili mbili kwa mstari */
+                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
@@ -353,7 +353,7 @@
         <div id="grafu" class="tab-section">
             <div class="info-card">
                 <h3><i class="fa-solid fa-chart-pie"></i> <span data-sw="Grafu za Mabadiliko" data-en="Weather Graphs">Grafu za Mabadiliko</span></h3>
-                <p data-sw="Inaonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita." data-en="Shows temperature and humidity trends over the past 24 hours.">Inاonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita.</p>
+                <p data-sw="Inaonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita." data-en="Shows temperature and humidity trends over the past 24 hours.">Inaonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita.</p>
             </div>
         </div>
 
@@ -384,9 +384,18 @@
             element.classList.add('active');
         }
 
-        const now = new Date();
-        document.getElementById('current-date').innerText = now.toLocaleDateString('sw-TZ', { month: 'short', day: 'numeric' });
-        document.getElementById('current-time').innerText = now.toLocaleTimeString('sw-TZ', { hour: '2-digit', minute: '2-digit' });
+        // Saa inayojisasisha Real-Time kila sekunde 1
+        function updateDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('sw-TZ', { month: 'short', day: 'numeric', year: 'numeric' });
+            document.getElementById('current-date').innerText = dateStr;
+            
+            const timeStr = now.toLocaleTimeString('sw-TZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('current-time').innerText = timeStr;
+        }
+
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
 
         function setLanguage(lang, btn) {
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
