@@ -72,6 +72,23 @@
         .btn-ai { background: var(--green); color: var(--bg-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
         .btn-ai:hover { opacity: 0.8; }
         
+        .settings-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border-left: 5px solid var(--accent-blue);
+            margin-bottom: 20px;
+        }
+        .settings-card h3 {
+            margin-top: 0;
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+        }
+
         .chart-container {
             background: var(--card-bg);
             padding: 20px;
@@ -297,7 +314,7 @@
                 <p data-sw="Badilisha taarifa za kifaa chako cha ESP32 na muunganisho." data-en="Configure your ESP32 device settings and network connection.">Badilisha taarifa za kifaa chako cha ESP32 na muunganisho.</p>
             </div>
 
-            <div class="ai-card" style="border-left-color: var(--accent-blue);">
+            <div class="settings-card">
                 <h3><i class="fa-solid fa-wifi"></i> <span data-sw="Taarifa za Mtandao na ESP32" data-en="Network & ESP32 Info">Taarifa za Mtandao na ESP32</span></h3>
                 <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: var(--text-gray); margin-top: 15px;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
