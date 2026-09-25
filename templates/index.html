@@ -86,6 +86,10 @@
             width: 100%;
             overflow-x: auto;
             margin-top: 15px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
         }
         .history-table {
             width: 100%;
@@ -99,7 +103,6 @@
             border-bottom: 1px solid rgba(255,255,255,0.05);
         }
         .history-table th {
-            background-color: rgba(58, 134, 255, 0.2);
             color: var(--accent-blue);
         }
         .history-table tr:hover {
@@ -373,7 +376,6 @@
 
         setInterval(fetchLiveWeatherData, 5000);
 
-        // Kazi ya kuchota na kuonyesha kumbukumbu za historia
         function loadWeatherLogs() {
             fetch('/get-logs')
                 .then(response => response.json())
@@ -403,7 +405,6 @@
                 });
         }
 
-        // Pakia historia wakati ukurasa unapofunguliwa
         document.addEventListener("DOMContentLoaded", function() {
             loadWeatherLogs();
         });
