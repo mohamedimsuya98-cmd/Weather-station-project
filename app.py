@@ -120,6 +120,37 @@ def get_logs():
         })
     return jsonify(logs_list)
 
+# Njia mpya ya kuchakata na kurudisha takwimu za kina (Stats)
+@app.route('/get-stats', methods=['GET'])
+def get_stats():
+    logs = WeatherLog.query.all()
+    if not logs:
+        return jsonify({
+            "avg_temp": 0.0,
+            "max_temp": 0.0,
+            "min_temp": 0.0,
+            "avg_humidity": 0.0,
+            "total_rain": 0.0,
+            "avg_wind": 0.0,
+            "total_records": 0
+        })
+    
+    temps = [log.temperature for log in logs]
+    humidities = [log.humidity for log in logs]
+    rains = [log.rain_amount for log in logs]
+    winds = [log.wind_speed for log in logs]
+    
+    stats_data = {
+        "avg_temp": round(sum(temps) / len(temps), 1),
+        "max_temp": round(max(temps), 1),
+        "min_temp": round(min(temps), 1),
+        "avg_humidity": round(sum(humidities) / len(humidities), 1),
+        "total_rain": round(sum(rains), 2),
+        "avg_wind": round(sum(winds) / len(winds), 1),
+        "total_records": len(logs)
+    }
+    return jsonify(stats_data)
+
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
     api_key = os.environ.get("GEMINI_API_KEY")
