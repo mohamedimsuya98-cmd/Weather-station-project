@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WeatherStation - Smart Monitoring</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js Maktaba -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -36,12 +35,7 @@
             box-shadow: 4px 0 10px rgba(0,0,0,0.3);
             flex-shrink: 0;
         }
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
+        .logo-area { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
         .logo-area i { font-size: 28px; color: var(--green); }
         .logo-area h2 { margin: 0; font-size: 18px; color: var(--text-white); }
         .logo-area p { margin: 2px 0 0 0; font-size: 11px; color: var(--text-gray); }
@@ -74,8 +68,9 @@
         .card .value { font-size: 18px; font-weight: bold; margin: 0; color: var(--text-white); }
         .ai-card, .info-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border-left: 5px solid var(--green); margin-bottom: 20px; }
         .ai-card h3, .info-card h3 { margin-top: 0; color: var(--green); display: flex; align-items: center; gap: 10px; font-size: 15px; }
-        .ai-card p, .info-card p { color: var(--text-gray); line-height: 1.5; font-size: 13px; margin-bottom: 0; }
-        .btn-ai { background: var(--green); color: var(--bg-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .ai-card p, .info-card p { color: var(--text-gray); line-height: 1.5; font-size: 13px; margin-bottom: 0; white-space: pre-line; }
+        .btn-ai { background: var(--green); color: var(--bg-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        .btn-ai:hover { opacity: 0.8; }
         
         .chart-container {
             background: var(--card-bg);
@@ -194,23 +189,25 @@
             </div>
         </div>
 
-        <!-- 4. GRAFU - Kitaalamu ya Kilimo -->
+        <!-- 4. GRAFU -->
         <div id="grafu" class="tab-section">
             <div class="info-card">
                 <h3><i class="fa-solid fa-chart-pie"></i> <span data-sw="Mwenendo wa Hali ya Hewa Shambani" data-en="Farm Weather Trends">Mwenendo wa Hali ya Hewa Shambani</span></h3>
-                <p data-sw="Inachambua uhusiano kati ya Joto (°C) na Unyevu (%) kwa wakati halisi ili kukusaidia kupanga ratiba ya umwagiliaji." data-en="Analyzes the relationship between Temperature (°C) and Humidity (%) in real-time to help plan irrigation schedules.">Inachambua uhusiano kati ya Joto (°C) na Unyevu (%) kwa wakati halisi ili kukusaidia kupanga ratiba ya umwagiliaji.</p>
+                <p data-sw="Inachambua uhusiano kati ya Joto (°C) na Unyevu (%) kwa wakati halisi." data-en="Analyzes the relationship between Temperature (°C) and Humidity (%) in real-time.">Inachambua uhusiano kati ya Joto (°C) na Unyevu (%) kwa wakati halisi.</p>
             </div>
             <div class="chart-container">
                 <canvas id="weatherChart"></canvas>
             </div>
         </div>
 
-        <!-- 5. AI -->
+        <!-- 5. AI - Hapa ndipo uchambuzi wa Gemini unapotokea -->
         <div id="ai" class="tab-section">
             <div class="ai-card">
                 <h3><i class="fa-solid fa-brain"></i> <span data-sw="Mchambuzi na Ushauri wa AI" data-en="AI Analyst & Advice">Mchambuzi na Ushauri wa AI</span></h3>
-                <p id="aiText" data-sw="Hali ya hewa kwa sasa ni shwari kabisa. Joto na unyevu vipo kwenye kiwango kinachoruhusu mazao kukua vizuri bila changamoto za ukame." data-en="The current weather is very calm. Temperature and humidity are at levels that allow crops to grow well without drought challenges.">Hali ya hewa kwa sasa ni shwari kabisa. Joto na unyevu vipo kwenye kiwango kinachoruhusu mazao kukua vizuri bila changamoto za ukame.</p>
-                <button class="btn-ai" onclick="chambuaDataUpya()" data-sw="Chambua Tena" data-en="Analyze Again">Chambua Tena</button>
+                <p id="aiText">Bonyeza kitufe hapa chini ili AI ichambue hali halisi ya sasa kutoka kwenye kituo chako cha shambani.</p>
+                <button class="btn-ai" onclick="chambuaDataUpya()" id="aiBtn">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-sw="Chambua Data za Sasa" data-en="Analyze Current Data">Chambua Data za Sasa</span>
+                </button>
             </div>
         </div>
 
@@ -231,7 +228,6 @@
             document.getElementById(tabId).classList.add('active-section');
             element.classList.add('active');
             
-            // Hakikisha grafu inarekebisha ukubwa wake ikifunguliwa kwenye tab yake
             if(tabId === 'grafu') {
                 weatherChart.resize();
             }
@@ -247,7 +243,6 @@
         updateDateTime();
         setInterval(updateDateTime, 1000);
 
-        // Kuweka Chart.js Kitaalamu (Dual-Axis Y ili Joto na Unyevu visisumbuane)
         const ctx = document.getElementById('weatherChart').getContext('2d');
         const weatherChart = new Chart(ctx, {
             type: 'line',
@@ -297,7 +292,7 @@
                         display: true,
                         position: 'right',
                         title: { display: true, text: 'Unyevu (%)', color: '#2ec4b6' },
-                        grid: { drawOnChartArea: false }, // Ili isichanganye mistari ya grid
+                        grid: { drawOnChartArea: false },
                         ticks: { color: '#2ec4b6' }
                     }
                 },
@@ -341,12 +336,32 @@
             });
         }
 
+        // Sehemu inayowasiliana na Gemini kupitia Flask Backend
         function chambuaDataUpya() {
-            const isEnglish = document.querySelector('.lang-btn.active').innerText === "EN";
-            const msg = isEnglish ? 
-                "AI Analysis: Weather conditions are stable and updating in real-time from the field." : 
-                "AI imechambua: Hali ya hewa ni tulivu na inajisasisha moja kwa moja kutoka shambani.";
-            document.getElementById('aiText').innerText = msg;
+            const aiText = document.getElementById('aiText');
+            const aiBtn = document.getElementById('aiBtn');
+            
+            aiText.innerText = "Inachambua taarifa za shambani kupitia AI, tafadhali subiri kidogo...";
+            aiBtn.disabled = true;
+            aiBtn.style.opacity = "0.5";
+
+            fetch('/analyze-ai')
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        aiText.innerText = data.analysis;
+                    } else {
+                        aiText.innerText = "Imeshindikana kupata uchambuzi: " + data.analysis;
+                    }
+                    aiBtn.disabled = false;
+                    aiBtn.style.opacity = "1";
+                })
+                .catch(error => {
+                    console.error('Hitilafu:', error);
+                    aiText.innerText = "Kimetokea kitendo cha kimtandao, tafadhali jaribu tena.";
+                    aiBtn.disabled = false;
+                    aiBtn.style.opacity = "1";
+                });
         }
     </script>
 </body>
