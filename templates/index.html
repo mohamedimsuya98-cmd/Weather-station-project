@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini Weather Station & AI Agriculture Advisor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta http-equiv="refresh" content="10"> <!-- Kurasa inajiupload yenyewe kila baada ya sekunde 10 -->
+</head>
+<body class="bg-light">
+    <div class="container my-5">
+        <h2 class="text-center mb-4">🌍 Mini Weather Station & AI Farm Advisor</h2>
+        
+        <div class="row text-center mb-4">
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm">
+                    <h5>Joto (Temperature)</h5>
+                    <h3>{{ data.temperature }} °C</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm">
+                    <h5>Unyevunyevu wa Hewa</h5>
+                    <h3>{{ data.humidity }} %</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm">
+                    <h5>Kasi ya Upepo</h5>
+                    <h3>{{ data.wind_speed }} m/s</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm">
+                    <h5>Unyevunyevu wa Udongo</h5>
+                    <h3>{{ data.soil_moisture }} %</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-success">
+            <div class="card-header bg-success text-white">
+                <h4>🤖 Uchambuzi na Ushauri wa AI kwa Mkulima</h4>
+            </div>
+            <div class="card-body">
+                <p class="fs-5">{{ recommendation }}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
