@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, jsonify
+import datetime
 
 app = Flask(__name__)
 
-# Hapa tunatunza data za awali (Default) endapo ESP32 bado haijatuma data
 weather_data = {
     "location": "Shamba Langu, Dar es Salaam",
     "temperature": "0.0",
@@ -13,16 +13,20 @@ weather_data = {
     "wind_direction": "Kaskazini"
 }
 
+weather_history = {
+    "timestamps": [],
+    "temperatures": [],
+    "humidities": []
+}
+
 @app.route('/')
 def home():
-    # Inatuma data za sasa kwenda kwenye index.html
     return render_template('index.html', data=weather_data)
 
-# Njia (API Endpoint) inayotumiwa na ESP32 kutuma data
 @app.route('/update', methods=['POST'])
 def update_weather():
-    global weather_data
-    data = request.json # Inapokea JSON kutoka ESP32
+    global weather_data, weather_history
+    data = request.json
     
     if data:
         weather_data['temperature'] = data.get('temperature', weather_data['temperature'])
@@ -32,14 +36,27 @@ def update_weather():
         weather_data['wind_speed'] = data.get('wind_speed', weather_data['wind_speed'])
         weather_data['wind_direction'] = data.get('wind_direction', weather_data['wind_direction'])
         
-        return jsonify({"status": "success", "message": "Data imepokelewa kikamilifu!"}), 200
+        current_time = datetime.datetime.now().strftime("%H:%M:%S")
+        
+        weather_history["timestamps"].append(current_time)
+        weather_history["temperatures"].append(float(weather_data['temperature']))
+        weather_history["humidities"].append(float(weather_data['humidity']))
+        
+        # Weka ukomo wa vipimo 20 vya mwisho kwenye grafu
+        if len(weather_history["timestamps"]) > 20:
+            weather_history["timestamps"].pop(0)
+            weather_history["temperatures"].pop(0)
+            weather_history["humidities"].pop(0)
+            
+        return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
     
-    return jsonify({"status": "error", "message": "Hakuna data iliyotumwa!"}), 400
+    return jsonify({"status": "error", "message": "Haikusomeka!"}), 400
 
-# Njia mpya inayoruhusu ukurasa kuchukua data moja kwa moja bila ku-refresh
 @app.route('/get-data', methods=['GET'])
 def get_data():
-    return jsonify(weather_data)
+    response_data = weather_data.copy()
+    response_data["history"] = weather_history
+    return jsonify(response_data)
 
 if __name__ == '__main__':
     app.run(debug=True)
