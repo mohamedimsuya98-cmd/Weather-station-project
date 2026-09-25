@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
 import datetime
 import os
 import time
@@ -6,7 +7,28 @@ from google import genai
 
 app = Flask(__name__)
 
-# Sanidi Gemini Client kwa kutumia Environment Variable ya Render
+# Sanidi Database ya SQLite ndani ya mradi
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Unda mfumo wa hifadhi (Model) ya data za hali ya hewa
+class WeatherLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    temperature = db.Column(db.Float, nullable=False)
+    humidity = db.Column(db.Float, nullable=False)
+    rain_amount = db.Column(db.Float, nullable=False)
+    rain_availability = db.Column(db.String(50), nullable=False)
+    wind_speed = db.Column(db.Float, nullable=False)
+    wind_direction = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.String(20), nullable=False)
+    date_recorded = db.Column(db.String(20), nullable=False)
+
+# Anzisha Database wakati app inapowaka
+with app.app_context():
+    db.create_all()
+
+# Sanidi Gemini Client
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 weather_data = {
@@ -43,7 +65,9 @@ def update_weather():
         weather_data['wind_direction'] = data.get('wind_direction', weather_data['wind_direction'])
         
         current_time = datetime.datetime.now().strftime("%H:%M:%S")
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         
+        # 1. Hifadhi kwenye kumbukumbu za muda mfupi (in-memory history kwa ajili ya chart)
         weather_history["timestamps"].append(current_time)
         weather_history["temperatures"].append(float(weather_data['temperature']))
         weather_history["humidities"].append(float(weather_data['humidity']))
@@ -53,7 +77,21 @@ def update_weather():
             weather_history["temperatures"].pop(0)
             weather_history["humidities"].pop(0)
             
-        return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
+        # 2. Hifadhi ya kudumu kwenye Database (SQLite)
+        new_log = WeatherLog(
+            temperature=float(weather_data['temperature']),
+            humidity=float(weather_data['humidity']),
+            rain_amount=float(weather_data['rain_amount']),
+            rain_availability=weather_data['rain_availability'],
+            wind_speed=float(weather_data['wind_speed']),
+            wind_direction=weather_data['wind_direction'],
+            timestamp=current_time,
+            date_recorded=current_date
+        )
+        db.session.add(new_log)
+        db.session.commit()
+            
+        return jsonify({"status": "success", "message": "Data imepokelewa na kuhifadhiwa!"}), 200
     
     return jsonify({"status": "error", "message": "Haikusomeka!"}), 400
 
@@ -63,7 +101,25 @@ def get_data():
     response_data["history"] = weather_history
     return jsonify(response_data)
 
-# Sehemu ya uchambuzi wa AI yenye mfumo wa Kujaribu Tena (Retry Logic)
+# Njia mpya ya kuchota historia yote iliyohifadhiwa kwenye database kwa ajili ya ukurasa wa Historia
+@app.route('/get-logs', methods=['GET'])
+def get_logs():
+    logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(50).all()
+    logs_list = []
+    for log in logs:
+        logs_list.append({
+            "id": log.id,
+            "temperature": log.temperature,
+            "humidity": log.humidity,
+            "rain_amount": log.rain_amount,
+            "rain_availability": log.rain_availability,
+            "wind_speed": log.wind_speed,
+            "wind_direction": log.wind_direction,
+            "timestamp": log.timestamp,
+            "date": log.date_recorded
+        })
+    return jsonify(logs_list)
+
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -83,7 +139,7 @@ def analyze_ai():
     """
     
     max_retries = 3
-    delay = 2  # Sekunde za kusubiri kabla ya kujaribu tena
+    delay = 2
     
     for attempt in range(max_retries):
         try:
@@ -91,19 +147,16 @@ def analyze_ai():
                 model='gemini-3.8-flash',
                 contents=prompt
             )
-            
             if response and response.text:
                 return jsonify({"status": "success", "analysis": response.text})
-                
         except Exception as e:
-            # Kama bado kuna majaribio, subiri kidogo kisha ujaribu tena
             if attempt < max_retries - 1:
                 time.sleep(delay)
                 continue
             else:
-                return jsonify({"status": "error", "analysis": f"Seva za AI zina msongamano mkubwa kwa sasa. Tafadhali jaribu tena baada ya sekunde chache. Hitilafu: {str(e)}"})
+                return jsonify({"status": "error", "analysis": f"Seva za AI zina msongamano kwa sasa. Jaribu tena baadae. Hitilafu: {str(e)}"})
 
-    return jsonify({"status": "error", "analysis": "Kimeshindikana kupata jibu kutoka kwa AI kwa wakati huu."})
+    return jsonify({"status": "error", "analysis": "Kimeshindikana kupata jibu kutoka kwa AI."})
 
 if __name__ == '__main__':
     app.run(debug=True)
