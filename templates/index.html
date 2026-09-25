@@ -22,7 +22,9 @@
             margin: 0;
             display: flex;
             min-height: 100vh;
+            flex-direction: row;
         }
+        /* Sidebar ya Kompyuta */
         sidebar {
             width: 250px;
             background-color: var(--sidebar-bg);
@@ -31,6 +33,7 @@
             flex-direction: column;
             padding: 20px;
             box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
         }
         .logo-area {
             display: flex;
@@ -79,15 +82,16 @@
         }
         .main-content {
             flex-grow: 1;
-            padding: 25px;
+            padding: 20px;
             overflow-y: auto;
+            width: 100%;
         }
         .top-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: var(--card-bg);
-            padding: 15px 25px;
+            padding: 15px 20px;
             border-radius: 12px;
             margin-bottom: 25px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
@@ -97,9 +101,9 @@
         .location-info, .date-time {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             color: var(--text-gray);
-            font-size: 14px;
+            font-size: 13px;
         }
         .location-info strong, .date-time strong {
             color: var(--text-white);
@@ -112,7 +116,7 @@
         .lang-switch {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 5px;
+            padding: 4px;
             border-radius: 20px;
             display: flex;
             gap: 5px;
@@ -121,10 +125,10 @@
             background: none;
             border: none;
             color: var(--text-gray);
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 15px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
         }
         .lang-btn.active {
@@ -139,30 +143,30 @@
         }
         .grid-6 {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
         .card {
             background: var(--card-bg);
-            padding: 20px;
+            padding: 15px;
             border-radius: 12px;
             text-align: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             border-top: 4px solid var(--accent-blue);
         }
         .card i {
-            font-size: 26px;
+            font-size: 24px;
             color: var(--accent-blue);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .card h3 {
-            margin: 0 0 8px 0;
-            font-size: 13px;
+            margin: 0 0 6px 0;
+            font-size: 12px;
             color: var(--text-gray);
         }
         .card .value {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             margin: 0;
             color: var(--text-white);
@@ -181,12 +185,12 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 16px;
+            font-size: 15px;
         }
         .ai-card p, .info-card p {
             color: var(--text-gray);
-            line-height: 1.6;
-            font-size: 14px;
+            line-height: 1.5;
+            font-size: 13px;
             margin-bottom: 0;
         }
         .btn-ai {
@@ -199,11 +203,55 @@
             cursor: pointer;
             margin-top: 10px;
         }
+
+        /* RESPONSIVE DESIGN KWA AJILI YA SIMU (ANDROID) */
+        @media screen and (max-width: 768px) {
+            body {
+                flex-direction: column; /* Inabadilisha muundo kuwa wa juu na chini */
+            }
+            sidebar {
+                width: 100%;
+                box-sizing: border-box;
+                padding: 15px;
+                box-shadow: none;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+            }
+            .logo-area {
+                margin-bottom: 15px;
+            }
+            .nav-links {
+                display: flex;
+                overflow-x: auto; /* Inaruhusu kutelezesha menu kwenda pembeni kwenye simu */
+                gap: 8px;
+                padding-bottom: 5px;
+            }
+            .nav-links li {
+                margin-bottom: 0;
+                flex-shrink: 0;
+            }
+            .nav-links a {
+                padding: 8px 12px;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+            .main-content {
+                padding: 15px;
+            }
+            .top-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .grid-6 {
+                grid-template-columns: repeat(2, 1fr); /* Kwenye simu kadi zinakaa mbili mbili kwa mstari */
+            }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar -->
+    <!-- Sidebar / Menu ya Juu kwenye Simu -->
     <sidebar>
         <div class="logo-area">
             <i class="fa-solid fa-cloud-sun-rain"></i>
@@ -214,10 +262,10 @@
         </div>
         <ul class="nav-links">
             <li><a onclick="switchTab('nyumbani', this)" class="active"><i class="fa-solid fa-house"></i> <span data-sw="Nyumbani" data-en="Home">Nyumbani</span></a></li>
-            <li><a onclick="switchTab('takwimu', this)"><i class="fa-solid fa-chart-line"></i> <span data-sw="Takwimu za Sasa" data-en="Current Stats">Takwimu za Sasa</span></a></li>
-            <li><a onclick="switchTab('historia', this)"><i class="fa-solid fa-clock-rotate-left"></i> <span data-sw="Historia ya Data" data-en="Data History">Historia ya Data</span></a></li>
+            <li><a onclick="switchTab('takwimu', this)"><i class="fa-solid fa-chart-line"></i> <span data-sw="Takwimu" data-en="Stats">Takwimu</span></a></li>
+            <li><a onclick="switchTab('historia', this)"><i class="fa-solid fa-clock-rotate-left"></i> <span data-sw="Historia" data-en="History">Historia</span></a></li>
             <li><a onclick="switchTab('grafu', this)"><i class="fa-solid fa-chart-pie"></i> <span data-sw="Grafu" data-en="Graphs">Grafu</span></a></li>
-            <li><a onclick="switchTab('ai', this)"><i class="fa-solid fa-brain"></i> <span data-sw="Uchambuzi wa AI" data-en="AI Analysis">Uchambuzi wa AI</span></a></li>
+            <li><a onclick="switchTab('ai', this)"><i class="fa-solid fa-brain"></i> <span data-sw="AI" data-en="AI">AI</span></a></li>
             <li><a onclick="switchTab('mipangilio', this)"><i class="fa-solid fa-gear"></i> <span data-sw="Mipangilio" data-en="Settings">Mipangilio</span></a></li>
         </ul>
     </sidebar>
@@ -234,13 +282,13 @@
             <div class="date-time">
                 <i class="fa-regular fa-calendar" style="color: var(--accent-blue);"></i>
                 <span><strong id="current-date">--</strong></span>
-                <i class="fa-regular fa-clock" style="color: var(--accent-blue); margin-left: 10px;"></i>
+                <i class="fa-regular fa-clock" style="color: var(--accent-blue); margin-left: 5px;"></i>
                 <span id="current-time">--</span>
             </div>
             <div class="header-actions">
                 <div class="lang-switch">
-                    <button class="lang-btn active" onclick="setLanguage('sw', this)">Kiswahili</button>
-                    <button class="lang-btn" onclick="setLanguage('en', this)">English</button>
+                    <button class="lang-btn active" onclick="setLanguage('sw', this)">SW</button>
+                    <button class="lang-btn" onclick="setLanguage('en', this)">EN</button>
                 </div>
             </div>
         </div>
@@ -249,28 +297,28 @@
         <div id="nyumbani" class="tab-section active-section">
             <div class="info-card">
                 <h3><i class="fa-solid fa-circle-info"></i> <span data-sw="Karibu kwenye Kituo cha Hali ya Hewa" data-en="Welcome to the Weather Station">Karibu kwenye Kituo cha Hali ya Hewa</span></h3>
-                <p data-sw="Mfumo huu unakusaidia wewe mkulima kufuatilia mabadiliko ya hali ya hewa moja kwa moja kutoka shambani kwa urahisi na kwa usahihi." data-en="This system helps you as a farmer monitor weather changes directly from the field easily and accurately.">Mfumo huu unakusaidia wewe mkulima kufuatilia mabadiliko ya hali ya hewa moja kwa moja kutoka shambani kwa urahisi na kwa usahihi.</p>
+                <p data-sw="Mfumo huu unakusaidia wewe mkulima kufuatilia mabadiliko ya hali ya hewa moja kwa moja kutoka shambani kwa urahisi." data-en="This system helps you monitor weather changes directly from the field easily.">Mfumo huu unakusaidia wewe mkulima kufuatilia mabadiliko ya hali ya hewa moja kwa moja kutoka shambani kwa urahisi.</p>
             </div>
             <div class="grid-6">
                 <div class="card">
                     <i class="fa-solid fa-temperature-high"></i>
-                    <h3 data-sw="Joto la Sasa" data-en="Current Temperature">Joto la Sasa</h3>
+                    <h3 data-sw="Joto" data-en="Temp">Joto</h3>
                     <p class="value">{{ data.temperature }} °C</p>
                 </div>
                 <div class="card">
                     <i class="fa-solid fa-droplet"></i>
-                    <h3 data-sw="Unyevu Hewa" data-en="Humidity">Unyevu Hewa</h3>
+                    <h3 data-sw="Unyevu" data-en="Humidity">Unyevu</h3>
                     <p class="value">{{ data.humidity }} %</p>
                 </div>
                 <div class="card">
                     <i class="fa-solid fa-cloud-rain"></i>
-                    <h3 data-sw="Kiwango cha Mvua" data-en="Rain Amount">Kiwango cha Mvua</h3>
+                    <h3 data-sw="Mvua (mm)" data-en="Rain (mm)">Mvua (mm)</h3>
                     <p class="value">{{ data.rain_amount }} mm</p>
                 </div>
                 <div class="card">
                     <i class="fa-solid fa-cloud-showers-heavy"></i>
                     <h3 data-sw="Hali ya Mvua" data-en="Rain Status">Hali ya Mvua</h3>
-                    <p class="value" style="font-size: 16px;">{{ data.rain_availability }}</p>
+                    <p class="value" style="font-size: 14px;">{{ data.rain_availability }}</p>
                 </div>
                 <div class="card">
                     <i class="fa-solid fa-wind"></i>
@@ -279,8 +327,8 @@
                 </div>
                 <div class="card">
                     <i class="fa-solid fa-compass"></i>
-                    <h3 data-sw="Mwelekeo wa Upepo" data-en="Wind Direction">Mwelekeo wa Upepo</h3>
-                    <p class="value" style="font-size: 16px;">{{ data.wind_direction }}</p>
+                    <h3 data-sw="Mwelekeo" data-en="Direction">Mwelekeo</h3>
+                    <p class="value" style="font-size: 14px;">{{ data.wind_direction }}</p>
                 </div>
             </div>
         </div>
@@ -305,7 +353,7 @@
         <div id="grafu" class="tab-section">
             <div class="info-card">
                 <h3><i class="fa-solid fa-chart-pie"></i> <span data-sw="Grafu za Mabadiliko" data-en="Weather Graphs">Grafu za Mabadiliko</span></h3>
-                <p data-sw="Inaonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita." data-en="Shows temperature and humidity trends over the past 24 hours.">Inaonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita.</p>
+                <p data-sw="Inaonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita." data-en="Shows temperature and humidity trends over the past 24 hours.">Inاonyesha mienendo ya joto na unyevu kwa saa 24 zilizopita.</p>
             </div>
         </div>
 
@@ -329,7 +377,6 @@
     </div>
 
     <script>
-        // Mfumo wa Tabs
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active-section'));
             document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
@@ -337,12 +384,10 @@
             element.classList.add('active');
         }
 
-        // Tarehe na Muda
         const now = new Date();
-        document.getElementById('current-date').innerText = now.toLocaleDateString('sw-TZ', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+        document.getElementById('current-date').innerText = now.toLocaleDateString('sw-TZ', { month: 'short', day: 'numeric' });
         document.getElementById('current-time').innerText = now.toLocaleTimeString('sw-TZ', { hour: '2-digit', minute: '2-digit' });
 
-        // Kubadili Lugha kwa maandishi yote yenye data-sw na data-en
         function setLanguage(lang, btn) {
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -354,7 +399,7 @@
         }
 
         function chambuaDataUpya() {
-            const isEnglish = document.querySelector('.lang-btn.active').innerText === "English";
+            const isEnglish = document.querySelector('.lang-btn.active').innerText === "EN";
             const msg = isEnglish ? 
                 "AI Analysis: Rain is expected tomorrow. We advise farmers to complete weeding activities today." : 
                 "AI imechambua: Mvua inatarajiwa siku ya kesho. Tunashauri wakulima kukamilisha shughuli za kupalilia leo.";
