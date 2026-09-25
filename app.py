@@ -101,7 +101,7 @@ def get_data():
     response_data["history"] = weather_history
     return jsonify(response_data)
 
-# Njia mpya ya kuchota historia yote iliyohifadhiwa kwenye database kwa ajili ya ukurasa wa Historia
+# Njia ya kuchota historia yote iliyohifadhiwa kwenye database kwa ajili ya ukurasa wa Historia
 @app.route('/get-logs', methods=['GET'])
 def get_logs():
     logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(50).all()
@@ -144,7 +144,7 @@ def analyze_ai():
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.5-flash',
                 contents=prompt
             )
             if response and response.text:
@@ -159,4 +159,5 @@ def analyze_ai():
     return jsonify({"status": "error", "analysis": "Kimeshindikana kupata jibu kutoka kwa AI."})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
