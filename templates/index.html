@@ -82,6 +82,30 @@
             height: 350px;
         }
 
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--text-white);
+            font-size: 13px;
+        }
+        .history-table th, .history-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .history-table th {
+            background-color: rgba(58, 134, 255, 0.2);
+            color: var(--accent-blue);
+        }
+        .history-table tr:hover {
+            background-color: rgba(255,255,255,0.02);
+        }
+
         @media screen and (max-width: 768px) {
             body { flex-direction: column; }
             sidebar { width: 100%; box-sizing: border-box; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -185,7 +209,26 @@
         <div id="historia" class="tab-section">
             <div class="info-card">
                 <h3><i class="fa-solid fa-clock-rotate-left"></i> <span data-sw="Historia ya Hali ya Hewa" data-en="Weather History">Historia ya Hali ya Hewa</span></h3>
-                <p data-sw="Hapa unaweza kuona kumbukumbu za mabadiliko ya siku zilizopita." data-en="Here you can view logs of past weather changes.">Hapa unaweza kuona kumbukumbu za mabadiliko ya siku zilizopita.</p>
+                <p data-sw="Hapa unaweza kuona kumbukumbu za mabadiliko ya vipimo vilivyohifadhiwa." data-en="Here you can view logs of stored measurements.">Hapa unaweza kuona kumbukumbu za mabadiliko ya vipimo vilivyohifadhiwa.</p>
+            </div>
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th data-sw="Tarehe na Wakati" data-en="Date & Time">Tarehe na Wakati</th>
+                            <th data-sw="Joto" data-en="Temp">Joto</th>
+                            <th data-sw="Unyevu" data-en="Humidity">Unyevu</th>
+                            <th data-sw="Mvua" data-en="Rain">Mvua</th>
+                            <th data-sw="Hali" data-en="Status">Hali</th>
+                            <th data-sw="Upepo" data-en="Wind">Upepo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-gray);">Inapakia kumbukumbu...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -200,7 +243,7 @@
             </div>
         </div>
 
-        <!-- 5. AI - Hapa ndipo uchambuzi wa Gemini unapotokea -->
+        <!-- 5. AI -->
         <div id="ai" class="tab-section">
             <div class="ai-card">
                 <h3><i class="fa-solid fa-brain"></i> <span data-sw="Mchambuzi na Ushauri wa AI" data-en="AI Analyst & Advice">Mchambuzi na Ushauri wa AI</span></h3>
@@ -230,6 +273,9 @@
             
             if(tabId === 'grafu') {
                 weatherChart.resize();
+            }
+            if(tabId === 'historia') {
+                loadWeatherLogs();
             }
         }
 
@@ -327,6 +373,41 @@
 
         setInterval(fetchLiveWeatherData, 5000);
 
+        // Kazi ya kuchota na kuonyesha kumbukumbu za historia
+        function loadWeatherLogs() {
+            fetch('/get-logs')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('historyTableBody');
+                    tableBody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-gray);">Hakuna kumbukumbu bado.</td></tr>`;
+                        return;
+                    }
+                    
+                    data.forEach(log => {
+                        let row = `<tr>
+                            <td>${log.date} ${log.timestamp}</td>
+                            <td>${log.temperature} °C</td>
+                            <td>${log.humidity} %</td>
+                            <td>${log.rain_amount} mm</td>
+                            <td>${log.rain_availability}</td>
+                            <td>${log.wind_speed} m/s (${log.wind_direction})</td>
+                        </tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(error => {
+                    console.error('Hitilafu katika kupata historia:', error);
+                });
+        }
+
+        // Pakia historia wakati ukurasa unapofunguliwa
+        document.addEventListener("DOMContentLoaded", function() {
+            loadWeatherLogs();
+        });
+
         function setLanguage(lang, btn) {
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -336,7 +417,6 @@
             });
         }
 
-        // Sehemu inayowasiliana na Gemini kupitia Flask Backend
         function chambuaDataUpya() {
             const aiText = document.getElementById('aiText');
             const aiBtn = document.getElementById('aiBtn');
