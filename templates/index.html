@@ -300,32 +300,32 @@
                 <p data-sw="Mfumo huu unakusaidia wewe mkulima kufuatilia mabadiliko ya hali ya hewa moja kwa moja kutoka shambani kwa urahisi." data-en="This system helps you monitor weather changes directly from the field easily.">Mfumo huu unakusaidia wewe mkulima kufuatilia mabadiliko ya hali ya hewa moja kwa moja kutoka shambani kwa urahisi.</p>
             </div>
             <div class="grid-6">
-                <div class="card">
+                <div class="card" id="card-temp">
                     <i class="fa-solid fa-temperature-high"></i>
                     <h3 data-sw="Joto" data-en="Temp">Joto</h3>
                     <p class="value">{{ data.temperature }} °C</p>
                 </div>
-                <div class="card">
+                <div class="card" id="card-humidity">
                     <i class="fa-solid fa-droplet"></i>
                     <h3 data-sw="Unyevu" data-en="Humidity">Unyevu</h3>
                     <p class="value">{{ data.humidity }} %</p>
                 </div>
-                <div class="card">
+                <div class="card" id="card-rain-amount">
                     <i class="fa-solid fa-cloud-rain"></i>
                     <h3 data-sw="Mvua (mm)" data-en="Rain (mm)">Mvua (mm)</h3>
                     <p class="value">{{ data.rain_amount }} mm</p>
                 </div>
-                <div class="card">
+                <div class="card" id="card-rain-status">
                     <i class="fa-solid fa-cloud-showers-heavy"></i>
                     <h3 data-sw="Hali ya Mvua" data-en="Rain Status">Hali ya Mvua</h3>
                     <p class="value" style="font-size: 14px;">{{ data.rain_availability }}</p>
                 </div>
-                <div class="card">
+                <div class="card" id="card-wind-speed">
                     <i class="fa-solid fa-wind"></i>
                     <h3 data-sw="Kasi ya Upepo" data-en="Wind Speed">Kasi ya Upepo</h3>
                     <p class="value">{{ data.wind_speed }} m/s</p>
                 </div>
-                <div class="card">
+                <div class="card" id="card-wind-dir">
                     <i class="fa-solid fa-compass"></i>
                     <h3 data-sw="Mwelekeo" data-en="Direction">Mwelekeo</h3>
                     <p class="value" style="font-size: 14px;">{{ data.wind_direction }}</p>
@@ -396,6 +396,25 @@
 
         updateDateTime();
         setInterval(updateDateTime, 1000);
+
+        // Chini hapa ndipo kazi inayovuta takwimu mpya kutoka seva kila baada ya sekunde 5 bila ku-refresh
+        function fetchLiveWeatherData() {
+            fetch('/get-data')
+                .then(response => response.json())
+                .then(data => {
+                    document.querySelector('#card-temp .value').innerText = data.temperature + " °C";
+                    document.querySelector('#card-humidity .value').innerText = data.humidity + " %";
+                    document.querySelector('#card-rain-amount .value').innerText = data.rain_amount + " mm";
+                    document.querySelector('#card-rain-status .value').innerText = data.rain_availability;
+                    document.querySelector('#card-wind-speed .value').innerText = data.wind_speed + " m/s";
+                    document.querySelector('#card-wind-dir .value').innerText = data.wind_direction;
+                    document.getElementById('locationName').innerText = data.location;
+                })
+                .catch(error => console.error('Hitilafu katika kupata data:', error));
+        }
+
+        // Inafanya kazi kila baada ya sekunde 5
+        setInterval(fetchLiveWeatherData, 5000);
 
         function setLanguage(lang, btn) {
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
