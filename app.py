@@ -5,8 +5,7 @@ from google import genai
 
 app = Flask(__name__)
 
-# Sanidi Gemini Client (Hakikisha unaweka API Key yako au mazingira ya Render)
-# Unaweza kuweka key yako moja kwa moja kwenye mabano au kuhakikisha GEMINI_API_KEY ipo kwenye Render Environment Variables
+# Sanidi Gemini Client kwa kutumia Environment Variable ya Render
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 weather_data = {
@@ -63,11 +62,15 @@ def get_data():
     response_data["history"] = weather_history
     return jsonify(response_data)
 
-# Sehemu mpya ya kuchakata uchambuzi wa AI kihalisia
+# Sehemu ya kuchakata uchambuzi wa AI na kinga ya makosa (Exception handling)
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
     try:
-        # Tunga ujumbe wa kumuagiza AI kulingana na data za sasa za shambani
+        # Hakikisha tuna ufunguo kabla ya kutuma ombi
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return jsonify({"status": "error", "analysis": "Samahani, API Key ya Gemini haijawekwa kwenye seva ya Render."})
+
         prompt = f"""
         Wewe ni mtaalamu wa kilimo cha kisasa. Hizi hapa ni taarifa za sasa kutoka kwenye kituo cha hali ya hewa shambani:
         - Joto: {weather_data['temperature']} °C
@@ -85,9 +88,13 @@ def analyze_ai():
             contents=prompt
         )
         
-        return jsonify({"status": "success", "analysis": response.text})
+        if response and response.text:
+            return jsonify({"status": "success", "analysis": response.text})
+        else:
+            return jsonify({"status": "error", "analysis": "AI haikurejesha majibu yoyote kwa sasa. Tafadhali jaribu tena."})
+            
     except Exception as e:
-        return jsonify({"status": "error", "analysis": f"Imeshindikana kuchambua kwa sasa: {str(e)}"})
+        return jsonify({"status": "error", "analysis": f"Imeshindikana kuchambua kutokana na hitilafu: {str(e)}"})
 
 if __name__ == '__main__':
     app.run(debug=True)
