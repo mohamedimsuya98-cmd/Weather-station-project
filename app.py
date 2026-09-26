@@ -85,7 +85,7 @@ def update_weather():
             rain_amount=float(weather_data['rain_amount']),
             rain_availability=weather_data['rain_availability'],
             wind_speed=float(weather_data['wind_speed']),
-            wind_direction=weather_data['wind_direction'],
+            wind_direction=float(weather_data['wind_direction']),
             wifi_ssid=received_ssid,
             timestamp=current_time,
             date_recorded=current_date
@@ -159,13 +159,12 @@ def get_stats():
 
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
-    if not openai_api_key:
-        return jsonify({"status": "error", "analysis": "Samahani, OPENAI_API_KEY haijawekwa kwenye seva ya Render."})
+    gemini_api_key = os.environ.get("GEMINI_API_KEY")
+    if not gemini_api_key:
+        return jsonify({"status": "error", "analysis": "Samahani, GEMINI_API_KEY haijawekwa kwenye seva ya Render."})
 
-    url = "https://api.openai.com/v1/chat/completions"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
     headers = {
-        "Authorization": f"Bearer {openai_api_key}",
         "Content-Type": "application/json"
     }
     
@@ -183,19 +182,19 @@ def analyze_ai():
     """
 
     payload = {
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
     }
 
     try:
         response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
             res_json = response.json()
-            analysis_text = res_json['choices'][0]['message']['content']
+            analysis_text = res_json['candidates'][0]['content']['parts'][0]['text']
             return jsonify({"status": "success", "analysis": analysis_text})
         else:
-            return jsonify({"status": "error", "analysis": f"Hitilafu kutoka OpenAI: {response.text}"})
+            return jsonify({"status": "error", "analysis": f"Hitilafu kutoka Gemini: {response.text}"})
     except Exception as e:
         return jsonify({"status": "error", "analysis": f"Imeshindikana kuunganisha na AI: {str(e)}"})
 
