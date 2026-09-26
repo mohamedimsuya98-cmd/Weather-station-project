@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import datetime
@@ -559,8 +558,8 @@ def get_data():
     lang = get_language()
 
 
-    response_data =
-        weather_data.copy()
+    # SEHEMU ILIYOSAHIHISHWA: Imewekwa kwenye mstari mmoja
+    response_data = weather_data.copy()
 
 
     response_data[
@@ -949,12 +948,6 @@ def get_stats():
 # =========================================================
 # AI ANALYSIS ENDPOINT
 # =========================================================
-#
-# Endpoint hii nimeiacha kwa sababu uliomba backend
-# architecture yako isibadilishwe. Haionekani tena
-# kwenye frontend.
-#
-# =========================================================
 
 @app.route(
     '/analyze-ai',
@@ -1189,4 +1182,3 @@ if __name__ == '__main__':
         debug=False
 
     )
-
