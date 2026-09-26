@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import datetime
 import os
-import requests
 
 app = Flask(__name__)
 
@@ -139,64 +138,99 @@ def get_logs():
 def get_stats():
     logs = WeatherLog.query.all()
     if not logs:
-        return jsonify({"avg_temp": 0.0, "max_temp": 0.0, "min_temp": 0.0, "avg_humidity": 0.0, "total_rain": 0.0, "avg_wind": 0.0, "total_records": 0})
+        return jsonify({
+            "avg_temp": 0.0, "max_temp": 0.0, "min_temp": 0.0, 
+            "avg_humidity": 0.0, "total_rain": 0.0, "avg_wind": 0.0, 
+            "total_records": 0,
+            "insight": "Hakuna kumbukumbu za kutosha bado kwenye mfumo."
+        })
     
     temps = [log.temperature for log in logs]
     humidities = [log.humidity for log in logs]
     rains = [log.rain_amount for log in logs]
     winds = [log.wind_speed for log in logs]
     
+    avg_temp = round(sum(temps) / len(temps), 1)
+    max_temp = round(max(temps), 1)
+    min_temp = round(min(temps), 1)
+    avg_humidity = round(sum(humidities) / len(humidities), 1)
+    total_rain = round(sum(rains), 2)
+    avg_wind = round(sum(winds) / len(winds), 1)
+    total_records = len(logs)
+    
+    # Uchambuzi wa kitakwimu wa kina (Advanced Statistical Trend Analysis)
+    insight = f"📈 **Uchambuzi wa Mwenendo wa Shamba (Jumla ya kumbukumbu: {total_records}):**\n\n"
+    
+    if max_temp > 33:
+        insight += f"• **Tahadhari ya Joto Kali:** Kiwango cha juu kimyafikia {max_temp}°C. Udongo unakauka kwa kasi kubwa; inashauriwa kuongeza mzunguko wa umwagiliaji nyakati za jioni.\n"
+    elif min_temp < 18 and min_temp > 0:
+        insight += f"• **Tahadhari ya Baridi:** Joto limeshuka hadi {min_temp}°C, hali inayoweza kupunguza kasi ya ukuaji wa baadhi ya mimea nyeti.\n"
+    else:
+        insight += f"• **Hali ya Joto:** Wastani wa joto upo vizuri ({avg_temp}°C), ukiwa na kiwango cha juu cha {max_temp}°C na cha chini cha {min_temp}°C.\n"
+
+    if total_rain > 10:
+        insight += f"• **Mwenendo wa Mnvua:** Kiasi cha jumla cha mvua ({total_rain} mm) kinatosheleza mahitaji ya unyevu; simamisha umwagiliaji wa bandia kuepusha kuoza kwa mizizi.\n"
+    elif total_rain > 0:
+        insight += f"• **Mwenendo wa Mvua:** Mvua ndogo imerekodiwa ({total_rain} mm), fuatilia unyevu wa udongo ili kujua kama kuna haja ya nyongeza ya maji.\n"
+    else:
+        insight += f"• **Mwenendo wa Mvua:** Hakuna mvua ya kutosha iliyorekodiwa katika kipindi hiki, tegemea mifumo ya kumwagilia.\n"
+
+    if avg_wind > 5.0:
+        insight += f"• **Tahadhari ya Upepo:** Wastani wa upepo ni mkali ({avg_wind} m/s). Hatari ya kupukutisha maua au kuangusha mimea michanga;imarisha ulinzi wa maeneo wazi."
+    else:
+        insight += f"• **Hali ya Upepo:** Kasi ya wastani ya upepo ({avg_wind} m/s) iko salama kwa shughuli zote za mazao."
+
     return jsonify({
-        "avg_temp": round(sum(temps) / len(temps), 1),
-        "max_temp": round(max(temps), 1),
-        "min_temp": round(min(temps), 1),
-        "avg_humidity": round(sum(humidities) / len(humidities), 1),
-        "total_rain": round(sum(rains), 2),
-        "avg_wind": round(sum(winds) / len(winds), 1),
-        "total_records": len(logs)
+        "avg_temp": avg_temp,
+        "max_temp": max_temp,
+        "min_temp": min_temp,
+        "avg_humidity": avg_humidity,
+        "total_rain": total_rain,
+        "avg_wind": avg_wind,
+        "total_records": total_records,
+        "insight": insight
     })
 
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
-    groq_api_key = os.environ.get("GROQ_API_KEY")
-    if not groq_api_key:
-        return jsonify({"status": "error", "analysis": "Samahani, GROQ_API_KEY haijawekwa kwenye seva ya Render."})
-
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {groq_api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    prompt = f"""
-    Wewe ni mtaalamu wa kilimo cha kisasa. Hizi hapa ni taarifa za sasa kutoka kwenye kituo cha hali ya hewa shambani:
-    - Joto: {weather_data['temperature']} °C
-    - Unyevu wa hewa: {weather_data['humidity']} %
-    - Kiwango cha mvua: {weather_data['rain_amount']} mm
-    - Hali ya mvua: {weather_data['rain_availability']}
-    - Kasi ya upepo: {weather_data['wind_speed']} m/s
-    - Mwelekeo wa upepo: {weather_data['wind_direction']}
-    - Wi-Fi SSID: {weather_data['wifi_ssid']}
-
-    Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
-    """
-
-    payload = {
-        "model": "llama-3.1-8b-instant",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7
-    }
-
+    # Uchambuzi wa kina wa hali ya sasa (Advanced Real-time Expert System)
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            res_json = response.json()
-            analysis_text = res_json['choices'][0]['message']['content']
-            return jsonify({"status": "success", "analysis": analysis_text})
+        temp = float(weather_data['temperature'])
+        humidity = float(weather_data['humidity'])
+        rain_amt = float(weather_data['rain_amount'])
+        rain_status = weather_data['rain_availability']
+        wind_spd = float(weather_data['wind_speed'])
+        wind_dir = weather_data['wind_direction']
+        
+        analysis = f"🌿 **Uchambuzi wa Kitaalamu wa Hali ya Hewa (Live Expert System):**\n\n"
+        
+        # 1. Kuchambua Joto na Unyevu kwa Pamoja (Thermal-Moisture Matrix)
+        if temp > 32 and humidity < 45:
+            analysis += f"1. **Hali ya Hewa & Unyevu:** ⚠️ Joto lipo juu sana ({temp}°C) na unyevu ni mdogo ({humidity}%). Hii inasababisha uvukizi mkubwa kwenye mimea. **Ushauri:** Ongeza kiwango cha kumwagilia mara moja.\n"
+        elif temp > 32 and humidity >= 45:
+            analysis += f"1. **Hali ya Hewa & Unyevu:** ☀️ Joto ni kali ({temp}°C) lakini unyevu uko sawa ({humidity}%). Mimea inaweza kuhimili, lakini angalia unyevu wa udongo.\n"
+        elif temp < 20 and humidity > 75:
+            analysis += f"1. **Hali ya Hewa & Unyevu:** 💧 Joto ni la chini ({temp}°C) na unyevu uko juu ({humidity}%). **Tahadhari:** Angalia dalili za magonjwa ya ukungu (fungal spores) kwenye majani.\n"
         else:
-            return jsonify({"status": "error", "analysis": f"Hitilafu kutoka Groq: {response.text}"})
+            analysis += f"1. **Hali ya Hewa & Unyevu:** 🌱 Hali ya joto ({temp}°C) na unyevu ({humidity}%) ziko katika uwiano mzuri na salama kwa mimea.\n"
+
+        # 2. Kuchambua Mvua
+        if rain_amt > 0 or "Mvua" in rain_status:
+            analysis += f"2. **Hali ya Mvua:** Mvua imepimwa kiasi cha {rain_amt} mm ({rain_status}). Hii inapunguza moja kwa moja hitaji la kumwagilia kwa saa zijazo.\n"
+        else:
+            analysis += f"2. **Hali ya Mvua:** Hakuna mvua iliyorekodiwa ({rain_status}). Endelea na ratiba ya kawaida ya uangalizi wa maji.\n"
+
+        # 3. Kuchambua Upepo
+        if wind_spd > 4.5:
+            analysis += f"3. **Hali ya Upepo:** 💨 Kasi ya upepo ni kali ({wind_spd} m/s ikitokea {wind_direction}). Kuwa makini na mikanda ya vivuli au mimea michanga isiyofungwa vizuri.\n"
+        else:
+            analysis += f"3. **Hali ya Upepo:** Kasi ya upepo ni tulivu ({wind_spd} m/s kutoka {wind_direction}), hakuna hatari inayojitokeza.\n"
+
+        analysis += "\n_Mfumo huu umesanifiwa kutoa tathmini ya kitaalamu kwa usahihi wa hali ya juu bila kukosa mtandao._"
+
+        return jsonify({"status": "success", "analysis": analysis})
     except Exception as e:
-        return jsonify({"status": "error", "analysis": f"Imeshindikana kuunganisha na AI: {str(e)}"})
+        return jsonify({"status": "error", "analysis": f"Imeshindikana kuchambua data: {str(e)}"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
