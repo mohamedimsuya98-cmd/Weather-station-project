@@ -158,27 +158,26 @@ def get_stats():
     avg_wind = round(sum(winds) / len(winds), 1)
     total_records = len(logs)
     
-    # Uchambuzi wa kitakwimu wa kina (Advanced Statistical Trend Analysis)
     insight = f"📈 **Uchambuzi wa Mwenendo wa Shamba (Jumla ya kumbukumbu: {total_records}):**\n\n"
     
     if max_temp > 33:
-        insight += f"• **Tahadhari ya Joto Kali:** Kiwango cha juu kimyafikia {max_temp}°C. Udongo unakauka kwa kasi kubwa; inashauriwa kuongeza mzunguko wa umwagiliaji nyakati za jioni.\n"
+        insight += f"• **Tahadhari ya Joto Kali:** Kiwango cha juu kimefika {max_temp}°C. Udongo unakauka kwa kasi; ongeza umwagiliaji jioni.\n"
     elif min_temp < 18 and min_temp > 0:
-        insight += f"• **Tahadhari ya Baridi:** Joto limeshuka hadi {min_temp}°C, hali inayoweza kupunguza kasi ya ukuaji wa baadhi ya mimea nyeti.\n"
+        insight += f"• **Tahadhari ya Baridi:** Joto limeshuka hadi {min_temp}°C, punguza kasi ya kumwagilia maji ya baridi.\n"
     else:
-        insight += f"• **Hali ya Joto:** Wastani wa joto upo vizuri ({avg_temp}°C), ukiwa na kiwango cha juu cha {max_temp}°C na cha chini cha {min_temp}°C.\n"
+        insight += f"• **Hali ya Joto:** Wastani wa joto upo vizuri ({avg_temp}°C), ukiwa na upeo wa {max_temp}°C.\n"
 
     if total_rain > 10:
-        insight += f"• **Mwenendo wa Mnvua:** Kiasi cha jumla cha mvua ({total_rain} mm) kinatosheleza mahitaji ya unyevu; simamisha umwagiliaji wa bandia kuepusha kuoza kwa mizizi.\n"
+        insight += f"• **Mwenendo wa Mvua:** Jumla ya mvua ({total_rain} mm) inatosha; simamisha umwagiliaji kwa muda.\n"
     elif total_rain > 0:
-        insight += f"• **Mwenendo wa Mvua:** Mvua ndogo imerekodiwa ({total_rain} mm), fuatilia unyevu wa udongo ili kujua kama kuna haja ya nyongeza ya maji.\n"
+        insight += f"• **Mwenendo wa Mvua:** Mvua ndogo imerekodiwa ({total_rain} mm).\n"
     else:
-        insight += f"• **Mwenendo wa Mvua:** Hakuna mvua ya kutosha iliyorekodiwa katika kipindi hiki, tegemea mifumo ya kumwagilia.\n"
+        insight += f"• **Mwenendo wa Mvua:** Hakuna mvua iliyorekodiwa, tegemea umwagiliaji wa bandia.\n"
 
     if avg_wind > 5.0:
-        insight += f"• **Tahadhari ya Upepo:** Wastani wa upepo ni mkali ({avg_wind} m/s). Hatari ya kupukutisha maua au kuangusha mimea michanga;imarisha ulinzi wa maeneo wazi."
+        insight += f"• **Tahadhari ya Upepo:** Upepo ni mkali ({avg_wind} m/s). Kuwa makini na ulinzi wa mimea."
     else:
-        insight += f"• **Hali ya Upepo:** Kasi ya wastani ya upepo ({avg_wind} m/s) iko salama kwa shughuli zote za mazao."
+        insight += f"• **Hali ya Upepo:** Kasi ya wastani ya upepo ({avg_wind} m/s) iko salama."
 
     return jsonify({
         "avg_temp": avg_temp,
@@ -193,7 +192,6 @@ def get_stats():
 
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
-    # Uchambuzi wa kina wa hali ya sasa (Advanced Real-time Expert System)
     try:
         temp = float(weather_data['temperature'])
         humidity = float(weather_data['humidity'])
@@ -204,29 +202,26 @@ def analyze_ai():
         
         analysis = f"🌿 **Uchambuzi wa Kitaalamu wa Hali ya Hewa (Live Expert System):**\n\n"
         
-        # 1. Kuchambua Joto na Unyevu kwa Pamoja (Thermal-Moisture Matrix)
         if temp > 32 and humidity < 45:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** ⚠️ Joto lipo juu sana ({temp}°C) na unyevu ni mdogo ({humidity}%). Hii inasababisha uvukizi mkubwa kwenye mimea. **Ushauri:** Ongeza kiwango cha kumwagilia mara moja.\n"
+            analysis += f"1. **Hali ya Hewa & Unyevu:** ⚠️ Joto lipo juu sana ({temp}°C) na unyevu ni mdogo ({humidity}%). **Ushauri:** Ongeza kiwango cha kumwagilia.\n"
         elif temp > 32 and humidity >= 45:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** ☀️ Joto ni kali ({temp}°C) lakini unyevu uko sawa ({humidity}%). Mimea inaweza kuhimili, lakini angalia unyevu wa udongo.\n"
+            analysis += f"1. **Hali ya Hewa & Unyevu:** ☀️ Joto ni kali ({temp}°C) lakini unyevu uko sawa ({humidity}%).\n"
         elif temp < 20 and humidity > 75:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** 💧 Joto ni la chini ({temp}°C) na unyevu uko juu ({humidity}%). **Tahadhari:** Angalia dalili za magonjwa ya ukungu (fungal spores) kwenye majani.\n"
+            analysis += f"1. **Hali ya Hewa & Unyevu:** 💧 Joto ni la chini ({temp}°C) na unyevu uko juu ({humidity}%). **Tahadhari:** Angalia magonjwa ya ukungu.\n"
         else:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** 🌱 Hali ya joto ({temp}°C) na unyevu ({humidity}%) ziko katika uwiano mzuri na salama kwa mimea.\n"
+            analysis += f"1. **Hali ya Hewa & Unyevu:** 🌱 Hali ya joto ({temp}°C) na unyevu ({humidity}%) ziko katika uwiano mzuri.\n"
 
-        # 2. Kuchambua Mvua
         if rain_amt > 0 or "Mvua" in rain_status:
-            analysis += f"2. **Hali ya Mvua:** Mvua imepimwa kiasi cha {rain_amt} mm ({rain_status}). Hii inapunguza moja kwa moja hitaji la kumwagilia kwa saa zijazo.\n"
+            analysis += f"2. **Hali ya Mvua:** Mvua imepimwa kiasi cha {rain_amt} mm ({rain_status}).\n"
         else:
-            analysis += f"2. **Hali ya Mvua:** Hakuna mvua iliyorekodiwa ({rain_status}). Endelea na ratiba ya kawaida ya uangalizi wa maji.\n"
+            analysis += f"2. **Hali ya Mvua:** Hakuna mvua iliyorekodiwa ({rain_status}).\n"
 
-        # 3. Kuchambua Upepo
         if wind_spd > 4.5:
-            analysis += f"3. **Hali ya Upepo:** 💨 Kasi ya upepo ni kali ({wind_spd} m/s ikitokea {wind_direction}). Kuwa makini na mikanda ya vivuli au mimea michanga isiyofungwa vizuri.\n"
+            analysis += f"3. **Hali ya Upepo:** 💨 Kasi ya upepo ni kali ({wind_spd} m/s kutoka {wind_dir}).\n"
         else:
-            analysis += f"3. **Hali ya Upepo:** Kasi ya upepo ni tulivu ({wind_spd} m/s kutoka {wind_direction}), hakuna hatari inayojitokeza.\n"
+            analysis += f"3. **Hali ya Upepo:** Kasi ya upepo ni tulivu ({wind_spd} m/s kutoka {wind_dir}), hakuna hatari.\n"
 
-        analysis += "\n_Mfumo huu umesanifiwa kutoa tathmini ya kitaalamu kwa usahihi wa hali ya juu bila kukosa mtandao._"
+        analysis += "\n_Mfumo huu umesanifiwa kutoa tathmini kwa usahihi bila kukosa mtandao._"
 
         return jsonify({"status": "success", "analysis": analysis})
     except Exception as e:
