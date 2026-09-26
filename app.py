@@ -5,7 +5,6 @@ import os
 
 app = Flask(__name__)
 
-# Sanidi Database ya SQLite ndani ya mradi
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -193,12 +192,12 @@ def get_stats():
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
     try:
-        temp = float(weather_data['temperature'])
-        humidity = float(weather_data['humidity'])
-        rain_amt = float(weather_data['rain_amount'])
-        rain_status = weather_data['rain_availability']
-        wind_spd = float(weather_data['wind_speed'])
-        wind_dir = weather_data['wind_direction']
+        temp = float(weather_data.get('temperature', 0.0))
+        humidity = float(weather_data.get('humidity', 0.0))
+        rain_amt = float(weather_data.get('rain_amount', 0.0))
+        rain_status = weather_data.get('rain_availability', 'Hakuna Mvua')
+        wind_spd = float(weather_data.get('wind_speed', 0.0))
+        wind_dir = weather_data.get('wind_direction', 'Kaskazini')
         
         analysis = f"🌿 **Uchambuzi wa Kitaalamu wa Hali ya Hewa (Live Expert System):**\n\n"
         
