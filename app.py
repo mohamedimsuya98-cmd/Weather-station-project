@@ -203,8 +203,8 @@ def analyze_ai():
     Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
     """
 
- payload = {
-        "model": "llama-3.3-70b-versatile",  # <--- Tumia hii
+payload = {
+        "model": "llama3-8b-8192",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7
     }
