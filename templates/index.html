@@ -1,345 +1,2592 @@
+```html
 <!DOCTYPE html>
 <html lang="sw" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeatherStation - Smart Monitoring</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <title>SmartFarm Weather Station</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
+        /* =========================================================
+           SMART AGRICULTURE WEATHER STATION
+           FRONTEND ONLY
+           Backend endpoints remain unchanged
+        ========================================================= */
+
         :root {
-            --bg-dark: #0a1128;
-            --sidebar-bg: #0f1c3f;
-            --card-bg: #162247;
-            --accent-blue: #3a86ff;
-            --text-white: #ffffff;
-            --text-gray: #8d99ae;
-            --green: #2ec4b6;
-            --orange: #ff9f1c;
-            --red: #e71d36;
+            --forest: #14532d;
+            --forest-dark: #0b3d20;
+            --green: #22c55e;
+            --green-soft: #dcfce7;
+
+            --sky: #0284c7;
+            --sky-soft: #e0f2fe;
+
+            --rain: #2563eb;
+            --rain-soft: #dbeafe;
+
+            --sun: #f59e0b;
+            --sun-soft: #fef3c7;
+
+            --wind: #0f766e;
+            --wind-soft: #ccfbf1;
+
+            --earth: #8b5e34;
+            --earth-soft: #f3e8d8;
+
+            --danger: #dc2626;
+            --danger-soft: #fee2e2;
+
+            --bg: #f3f7f1;
+            --surface: #ffffff;
+            --surface-2: #f8faf7;
+
+            --text: #17251b;
+            --text-soft: #647267;
+            --border: #e4ebe3;
+
+            --shadow-sm: 0 4px 14px rgba(20, 83, 45, 0.07);
+            --shadow-md: 0 10px 30px rgba(20, 83, 45, 0.10);
+
+            --radius: 18px;
         }
 
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        html {
+            scroll-behavior: smooth;
         }
 
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-white);
-            display: flex;
+            margin: 0;
             min-height: 100vh;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background:
+                radial-gradient(circle at 90% 0%, rgba(34,197,94,0.07), transparent 28%),
+                radial-gradient(circle at 0% 100%, rgba(2,132,199,0.05), transparent 25%),
+                var(--bg);
+            color: var(--text);
+            display: flex;
         }
 
-        /* Sidebar Styling */
-        .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        button,
+        a {
+            font-family: inherit;
+        }
+
+        /* =========================================================
+           SIDEBAR
+        ========================================================= */
+
+        sidebar {
+            width: 250px;
+            min-height: 100vh;
+            background: linear-gradient(
+                180deg,
+                #103d25 0%,
+                #14532d 48%,
+                #174c2d 100%
+            );
+            color: white;
+            padding: 24px 16px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
+            flex-shrink: 0;
+            box-shadow: 5px 0 25px rgba(10, 50, 25, 0.12);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 20;
         }
 
-        .sidebar-brand {
+        .logo-area {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--accent-blue);
-            margin-bottom: 30px;
+            gap: 13px;
+            padding: 6px 8px 25px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
         }
 
-        .sidebar-brand i {
-            font-size: 1.5rem;
+        .logo-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.13);
+            color: #86efac;
+            font-size: 22px;
         }
 
-        .sidebar-menu {
+        .logo-area h2 {
+            margin: 0;
+            font-size: 17px;
+            letter-spacing: -0.3px;
+        }
+
+        .logo-area p {
+            margin: 4px 0 0;
+            color: rgba(255,255,255,0.63);
+            font-size: 11px;
+        }
+
+        .nav-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+            color: rgba(255,255,255,0.43);
+            padding: 10px 12px 8px;
+        }
+
+        .nav-links {
             list-style: none;
-            flex-grow: 1;
+            padding: 0;
+            margin: 0;
+            flex: 1;
         }
 
-        .sidebar-menu li {
-            margin-bottom: 10px;
+        .nav-links li {
+            margin-bottom: 5px;
         }
 
-        .sidebar-menu a {
+        .nav-links a {
             display: flex;
             align-items: center;
-            gap: 12px;
-            color: var(--text-gray);
+            gap: 13px;
+            padding: 12px 13px;
+            border-radius: 12px;
+            color: rgba(255,255,255,0.70);
             text-decoration: none;
-            padding: 12px 15px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.25s ease;
         }
 
-        .sidebar-menu a:hover, .sidebar-menu a.active {
-            background-color: var(--accent-blue);
-            color: var(--text-white);
-        }
-
-        .sidebar-footer {
-            font-size: 0.85rem;
-            color: var(--text-gray);
+        .nav-links a i {
+            width: 20px;
             text-align: center;
-            padding-top: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 15px;
         }
 
-        /* Main Content Styling */
-        .main-content {
-            flex-grow: 1;
-            padding: 30px;
-            overflow-y: auto;
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.09);
+            color: white;
+            transform: translateX(2px);
         }
 
-        .header {
+        .nav-links a.active {
+            background: white;
+            color: var(--forest);
+            font-weight: 700;
+            box-shadow: 0 5px 16px rgba(0,0,0,0.12);
+        }
+
+        .station-mini {
+            margin-top: auto;
+            padding: 13px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.09);
+        }
+
+        .station-mini-title {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            gap: 8px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.68);
+            margin-bottom: 9px;
         }
 
-        .header h1 {
-            font-size: 1.8rem;
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fbbf24;
+            box-shadow: 0 0 0 4px rgba(251,191,36,0.12);
+        }
+
+        .station-mini strong {
+            display: block;
+            font-size: 12px;
+        }
+
+        /* =========================================================
+           MAIN
+        ========================================================= */
+
+        .main-content {
+            flex: 1;
+            width: 100%;
+            min-width: 0;
+            padding: 22px;
+            overflow-x: hidden;
+        }
+
+        /* =========================================================
+           HEADER
+        ========================================================= */
+
+        .top-header {
+            min-height: 72px;
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+
+        .farm-symbol {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--green-soft);
+            color: var(--forest);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .location-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .location-label {
+            color: var(--text-soft);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .location-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .date-time {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: var(--text-soft);
+            font-size: 12px;
+        }
+
+        .date-time i {
+            color: var(--forest);
+        }
+
+        .lang-switch {
+            display: flex;
+            gap: 3px;
+            padding: 4px;
+            border-radius: 11px;
+            background: #eef3ed;
+            border: 1px solid var(--border);
         }
 
         .lang-btn {
-            background-color: var(--card-bg);
-            color: var(--text-white);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px 16px;
-            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-soft);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
         }
 
-        .lang-btn:hover {
-            background-color: var(--accent-blue);
+        .lang-btn.active {
+            background: var(--forest);
+            color: white;
         }
 
-        /* Cards Grid */
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
+        /* =========================================================
+           PAGE TITLE
+        ========================================================= */
 
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-blue);
-        }
-
-        .card.temp { border-left-color: var(--red); }
-        .card.humidity { border-left-color: var(--accent-blue); }
-        .card.rain { border-left-color: var(--green); }
-        .card.wind { border-left-color: var(--orange); }
-
-        .card-header {
+        .page-heading {
             display: flex;
+            align-items: flex-end;
             justify-content: space-between;
+            gap: 15px;
+            margin: 5px 2px 20px;
+        }
+
+        .page-heading h1 {
+            margin: 0;
+            font-size: 25px;
+            letter-spacing: -0.7px;
+            color: var(--forest-dark);
+        }
+
+        .page-heading p {
+            margin: 5px 0 0;
+            font-size: 12px;
+            color: var(--text-soft);
+        }
+
+        .live-badge {
+            display: inline-flex;
             align-items: center;
-            color: var(--text-gray);
-            margin-bottom: 15px;
-            font-size: 0.95rem;
+            gap: 7px;
+            padding: 7px 11px;
+            border-radius: 20px;
+            background: var(--green-soft);
+            color: var(--forest);
+            font-size: 11px;
+            font-weight: 700;
         }
 
-        .card-value {
-            font-size: 2rem;
-            font-weight: bold;
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 1.7s infinite;
         }
 
-        /* Charts & Tables Section */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+            70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+            100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
         }
 
-        @media (max-width: 1024px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
+        /* =========================================================
+           SECTIONS
+        ========================================================= */
+
+        .tab-section {
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .tab-section.active-section {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
             }
-            .sidebar {
-                width: 80px;
-                padding: 15px 10px;
-            }
-            .sidebar-brand span, .sidebar-menu span, .sidebar-footer {
-                display: none;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        .panel {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-        }
+        /* =========================================================
+           WELCOME CARD
+        ========================================================= */
 
-        .panel h3 {
+        .welcome-card {
+            position: relative;
+            overflow: hidden;
+            background:
+                linear-gradient(
+                    115deg,
+                    rgba(20,83,45,0.96),
+                    rgba(22,101,52,0.91)
+                );
+            color: white;
+            border-radius: 22px;
+            padding: 24px;
             margin-bottom: 20px;
-            font-size: 1.2rem;
+            box-shadow: var(--shadow-md);
         }
 
-        /* Table Design */
+        .welcome-card::before {
+            content: "";
+            position: absolute;
+            width: 210px;
+            height: 210px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+            right: -70px;
+            top: -90px;
+        }
+
+        .welcome-card::after {
+            content: "";
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(134,239,172,0.08);
+            right: 100px;
+            bottom: -85px;
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 2;
+            max-width: 650px;
+        }
+
+        .welcome-card h2 {
+            margin: 0 0 8px;
+            font-size: 20px;
+        }
+
+        .welcome-card p {
+            margin: 0;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.78);
+            font-size: 13px;
+        }
+
+        .field-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 14px;
+            padding: 7px 10px;
+            background: rgba(255,255,255,0.10);
+            border-radius: 9px;
+            color: #d1fae5;
+            font-size: 11px;
+        }
+
+        /* =========================================================
+           WEATHER CARDS
+        ========================================================= */
+
+        .grid-6 {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 13px;
+            margin-bottom: 20px;
+        }
+
+        .weather-card {
+            position: relative;
+            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 17px;
+            padding: 17px 15px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .weather-card::after {
+            content: "";
+            position: absolute;
+            right: -25px;
+            bottom: -35px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: var(--card-soft);
+            opacity: 0.45;
+        }
+
+        .weather-icon {
+            position: relative;
+            z-index: 2;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 13px;
+            background: var(--card-soft);
+            color: var(--card-color);
+            font-size: 16px;
+        }
+
+        .weather-card h3 {
+            margin: 0 0 6px;
+            color: var(--text-soft);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .weather-value {
+            position: relative;
+            z-index: 2;
+            margin: 0;
+            font-size: 20px;
+            line-height: 1.15;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .weather-unit {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-soft);
+        }
+
+        .temp-card {
+            --card-color: #ea580c;
+            --card-soft: #ffedd5;
+        }
+
+        .humidity-card {
+            --card-color: #0284c7;
+            --card-soft: #e0f2fe;
+        }
+
+        .rain-card {
+            --card-color: #2563eb;
+            --card-soft: #dbeafe;
+        }
+
+        .rain-status-card {
+            --card-color: #0891b2;
+            --card-soft: #cffafe;
+        }
+
+        .wind-card {
+            --card-color: #0f766e;
+            --card-soft: #ccfbf1;
+        }
+
+        .direction-card {
+            --card-color: #7c3aed;
+            --card-soft: #ede9fe;
+        }
+
+        /* =========================================================
+           INFO / SECTION CARDS
+        ========================================================= */
+
+        .info-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 19px 20px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+            color: var(--forest);
+            font-size: 15px;
+        }
+
+        .section-title i {
+            width: 33px;
+            height: 33px;
+            border-radius: 10px;
+            background: var(--green-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .info-card p {
+            margin: 10px 0 0 43px;
+            color: var(--text-soft);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* =========================================================
+           STATS
+        ========================================================= */
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 13px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 17px;
+            padding: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card .stat-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: var(--green-soft);
+            color: var(--forest);
+            margin-bottom: 12px;
+        }
+
+        .stat-card h3 {
+            font-size: 11px;
+            color: var(--text-soft);
+            margin: 0 0 7px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        /* =========================================================
+           HISTORY TABLE
+        ========================================================= */
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+        }
+
         .history-table {
             width: 100%;
+            min-width: 720px;
             border-collapse: collapse;
-            text-align: left;
-            font-size: 0.9rem;
-        }
-
-        .history-table th, .history-table td {
-            padding: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 12px;
         }
 
         .history-table th {
-            color: var(--text-gray);
+            background: #f0f6ef;
+            color: var(--forest);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 13px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .history-table td {
+            padding: 13px 15px;
+            color: #475449;
+            border-bottom: 1px solid #edf1ec;
+        }
+
+        .history-table tbody tr:hover {
+            background: #f8fbf7;
+        }
+
+        .history-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* =========================================================
+           CHART
+        ========================================================= */
+
+        .chart-container {
+            position: relative;
+            height: 390px;
+            padding: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* =========================================================
+           STATION INFO
+        ========================================================= */
+
+        .settings-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .settings-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--forest);
+            font-size: 15px;
+            margin: 0 0 18px;
+        }
+
+        .settings-title i {
+            width: 36px;
+            height: 36px;
+            border-radius: 11px;
+            background: var(--green-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 13px 0;
+            border-bottom: 1px solid #edf1ec;
+            font-size: 12px;
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            color: var(--text-soft);
+        }
+
+        .setting-value {
+            color: var(--text);
+            font-weight: 700;
+            text-align: right;
+        }
+
+        /* =========================================================
+           RESPONSIVE
+        ========================================================= */
+
+        @media screen and (max-width: 1200px) {
+            .grid-6,
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media screen and (max-width: 850px) {
+            body {
+                display: block;
+            }
+
+            sidebar {
+                width: 100%;
+                min-height: auto;
+                height: auto;
+                position: relative;
+                padding: 12px;
+            }
+
+            .logo-area {
+                padding: 4px 7px 12px;
+                margin-bottom: 5px;
+            }
+
+            .nav-title,
+            .station-mini {
+                display: none;
+            }
+
+            .nav-links {
+                display: flex;
+                gap: 5px;
+                overflow-x: auto;
+                padding: 5px 0;
+            }
+
+            .nav-links li {
+                flex-shrink: 0;
+                margin: 0;
+            }
+
+            .nav-links a {
+                padding: 9px 12px;
+                white-space: nowrap;
+                font-size: 12px;
+            }
+
+            .main-content {
+                padding: 14px;
+            }
+
+            .top-header {
+                flex-wrap: wrap;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .grid-6,
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media screen and (max-width: 550px) {
+            .main-content {
+                padding: 10px;
+            }
+
+            .top-header {
+                padding: 12px;
+            }
+
+            .date-time {
+                font-size: 10px;
+            }
+
+            .page-heading {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .page-heading h1 {
+                font-size: 21px;
+            }
+
+            .grid-6,
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 9px;
+            }
+
+            .weather-card {
+                padding: 14px 12px;
+            }
+
+            .weather-value {
+                font-size: 17px;
+            }
+
+            .welcome-card {
+                padding: 19px;
+            }
+
+            .info-card p {
+                margin-left: 0;
+            }
+
+            .chart-container {
+                height: 310px;
+                padding: 12px;
+            }
+
+            .setting-row {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .setting-value {
+                text-align: left;
+            }
         }
     </style>
 </head>
+
 <body>
 
-    <!-- Sidebar -->
-    <nav class="sidebar">
+<!-- =========================================================
+     SIDEBAR
+========================================================= -->
+
+<sidebar>
+
+    <div class="logo-area">
+        <div class="logo-icon">
+            <i class="fa-solid fa-seedling"></i>
+        </div>
+
         <div>
-            <div class="sidebar-brand">
-                <i class="fa-solid fa-cloud-sun"></i>
-                <span data-sw="Kituo Hewa" data-en="WeatherStation">WeatherStation</span>
+            <h2>SmartFarm</h2>
+            <p>Weather Station</p>
+        </div>
+    </div>
+
+    <div class="nav-title"
+         data-sw="Menyu"
+         data-en="Menu">
+        Menyu
+    </div>
+
+    <ul class="nav-links">
+
+        <li>
+            <a onclick="switchTab('nyumbani', this)"
+               class="active">
+
+                <i class="fa-solid fa-house"></i>
+
+                <span
+                    data-sw="Muhtasari"
+                    data-en="Overview">
+                    Muhtasari
+                </span>
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('takwimu', this)">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                <span
+                    data-sw="Takwimu"
+                    data-en="Statistics">
+                    Takwimu
+                </span>
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('historia', this)">
+
+                <i class="fa-solid fa-clock-rotate-left"></i>
+
+                <span
+                    data-sw="Historia"
+                    data-en="History">
+                    Historia
+                </span>
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('grafu', this)">
+
+                <i class="fa-solid fa-chart-line"></i>
+
+                <span
+                    data-sw="Mwenendo"
+                    data-en="Trends">
+                    Mwenendo
+                </span>
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('mipangilio', this)">
+
+                <i class="fa-solid fa-tower-broadcast"></i>
+
+                <span
+                    data-sw="Kituo"
+                    data-en="Station">
+                    Kituo
+                </span>
+            </a>
+        </li>
+
+    </ul>
+
+    <div class="station-mini">
+
+        <div class="station-mini-title">
+            <span class="online-dot"></span>
+
+            <span
+                data-sw="Kituo cha Hali ya Hewa"
+                data-en="Weather Station">
+                Kituo cha Hali ya Hewa
+            </span>
+        </div>
+
+        <strong id="sidebarStationStatus">
+            Inasubiri data...
+        </strong>
+
+    </div>
+
+</sidebar>
+
+
+<!-- =========================================================
+     MAIN CONTENT
+========================================================= -->
+
+<div class="main-content">
+
+    <!-- HEADER -->
+
+    <div class="top-header">
+
+        <div class="header-left">
+
+            <div class="farm-symbol">
+                <i class="fa-solid fa-location-dot"></i>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="#" class="active"><i class="fa-solid fa-chart-pie"></i> <span data-sw="Dashibodi" data-en="Dashboard">Dashboard</span></a></li>
-                <li><a href="#"><i class="fa-solid fa-clock-rotate-left"></i> <span data-sw="Historia" data-en="History">History</span></a></li>
-                <li><a href="#"><i class="fa-solid fa-gear"></i> <span data-sw="Mipangilio" data-en="Settings">Settings</span></a></li>
-            </ul>
-        </div>
-        <div class="sidebar-footer">
-            <p>&copy; 2026 Smart Agri</p>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="header">
-            <h1 id="pageTitle" data-sw="Taarifa za Hali ya Hewa" data-en="Weather Monitoring Dashboard">Taarifa za Hali ya Hewa</h1>
-            <button class="lang-btn" id="langToggle" onclick="toggleLanguage()">EN / SW</button>
-        </header>
+            <div class="location-info">
 
-        <!-- Cards Section -->
-        <section class="cards-grid">
-            <div class="card temp">
-                <div class="card-header">
-                    <span data-sw="Joto la Hewa" data-en="Temperature">Joto la Hewa</span>
-                    <i class="fa-solid fa-temperature-high"></i>
+                <span
+                    class="location-label"
+                    data-sw="Eneo la Kituo"
+                    data-en="Station Location">
+                    Eneo la Kituo
+                </span>
+
+                <span
+                    class="location-value"
+                    id="locationName">
+                    {{ data.location }}
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="header-right">
+
+            <div class="date-time">
+
+                <i class="fa-regular fa-calendar"></i>
+
+                <strong id="current-date">
+                    --
+                </strong>
+
+                <i class="fa-regular fa-clock"></i>
+
+                <span id="current-time">
+                    --
+                </span>
+
+            </div>
+
+
+            <div class="lang-switch">
+
+                <button
+                    class="lang-btn active"
+                    onclick="setLanguage('sw', this)">
+                    SW
+                </button>
+
+                <button
+                    class="lang-btn"
+                    onclick="setLanguage('en', this)">
+                    EN
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         HOME
+    ====================================================== -->
+
+    <div id="nyumbani"
+         class="tab-section active-section">
+
+        <div class="page-heading">
+
+            <div>
+
+                <h1
+                    data-sw="Hali ya Shamba"
+                    data-en="Farm Conditions">
+                    Hali ya Shamba
+                </h1>
+
+                <p
+                    data-sw="Ufuatiliaji wa mazingira ya shamba kwa wakati halisi"
+                    data-en="Real-time monitoring of field environmental conditions">
+                    Ufuatiliaji wa mazingira ya shamba kwa wakati halisi
+                </p>
+
+            </div>
+
+            <div class="live-badge">
+
+                <span class="live-dot"></span>
+
+                <span
+                    data-sw="LIVE"
+                    data-en="LIVE">
+                    LIVE
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- Welcome -->
+
+        <div class="welcome-card">
+
+            <div class="welcome-content">
+
+                <h2
+                    data-sw="🌱 Karibu kwenye SmartFarm"
+                    data-en="🌱 Welcome to SmartFarm">
+                    🌱 Karibu kwenye SmartFarm
+                </h2>
+
+                <p
+                    data-sw="Mfumo huu unafuatilia mazingira ya shamba kwa kutumia kituo cha hali ya hewa, ukikusanya taarifa muhimu kuhusu joto, unyevu, mvua na upepo."
+                    data-en="This system monitors field conditions using a weather station, collecting important information about temperature, humidity, rainfall and wind.">
+                    Mfumo huu unafuatilia mazingira ya shamba kwa kutumia kituo cha hali ya hewa, ukikusanya taarifa muhimu kuhusu joto, unyevu, mvua na upepo.
+                </p>
+
+                <div class="field-label">
+
+                    <i class="fa-solid fa-leaf"></i>
+
+                    <span
+                        data-sw="Ufuatiliaji wa Mazingira ya Shamba"
+                        data-en="Field Environmental Monitoring">
+                        Ufuatiliaji wa Mazingira ya Shamba
+                    </span>
+
                 </div>
-                <div class="card-value" id="tempVal">--°C</div>
+
             </div>
-            <div class="card humidity">
-                <div class="card-header">
-                    <span data-sw="Unyevu kwenye Hewa" data-en="Humidity">Unyevu kwenye Hewa</span>
+
+        </div>
+
+
+        <!-- WEATHER CARDS -->
+
+        <div class="grid-6">
+
+            <!-- Temperature -->
+
+            <div class="weather-card temp-card">
+
+                <div class="weather-icon">
+                    <i class="fa-solid fa-temperature-half"></i>
+                </div>
+
+                <h3
+                    data-sw="Joto"
+                    data-en="Temperature">
+                    Joto
+                </h3>
+
+                <p class="weather-value"
+                   id="card-temp-value">
+
+                    {{ data.temperature }}
+
+                    <span class="weather-unit">
+                        °C
+                    </span>
+
+                </p>
+
+            </div>
+
+
+            <!-- Humidity -->
+
+            <div class="weather-card humidity-card">
+
+                <div class="weather-icon">
                     <i class="fa-solid fa-droplet"></i>
                 </div>
-                <div class="card-value" id="humVal">--%</div>
+
+                <h3
+                    data-sw="Unyevu wa Hewa"
+                    data-en="Humidity">
+                    Unyevu wa Hewa
+                </h3>
+
+                <p class="weather-value"
+                   id="card-humidity-value">
+
+                    {{ data.humidity }}
+
+                    <span class="weather-unit">
+                        %
+                    </span>
+
+                </p>
+
             </div>
-            <div class="card rain">
-                <div class="card-header">
-                    <span data-sw="Kiwango cha Mvua" data-en="Rainfall">Kiwango cha Mvua</span>
+
+
+            <!-- Rain -->
+
+            <div class="weather-card rain-card">
+
+                <div class="weather-icon">
                     <i class="fa-solid fa-cloud-rain"></i>
                 </div>
-                <div class="card-value" id="rainVal">-- mm</div>
+
+                <h3
+                    data-sw="Kiasi cha Mvua"
+                    data-en="Rainfall">
+                    Kiasi cha Mvua
+                </h3>
+
+                <p class="weather-value"
+                   id="card-rain-amount-value">
+
+                    {{ data.rain_amount }}
+
+                    <span class="weather-unit">
+                        mm
+                    </span>
+
+                </p>
+
             </div>
-            <div class="card wind">
-                <div class="card-header">
-                    <span data-sw="Kasi ya Upepo" data-en="Wind Speed">Kasi ya Upepo</span>
+
+
+            <!-- Rain status -->
+
+            <div class="weather-card rain-status-card">
+
+                <div class="weather-icon">
+                    <i class="fa-solid fa-cloud-showers-heavy"></i>
+                </div>
+
+                <h3
+                    data-sw="Hali ya Mvua"
+                    data-en="Rain Status">
+                    Hali ya Mvua
+                </h3>
+
+                <p class="weather-value"
+                   id="card-rain-status-value"
+                   style="font-size:15px;">
+
+                    {{ data.rain_availability }}
+
+                </p>
+
+            </div>
+
+
+            <!-- Wind speed -->
+
+            <div class="weather-card wind-card">
+
+                <div class="weather-icon">
                     <i class="fa-solid fa-wind"></i>
                 </div>
-                <div class="card-value" id="windVal">-- m/s</div>
-            </div>
-        </section>
 
-        <!-- Charts and Tables -->
-        <section class="dashboard-grid">
-            <div class="panel">
-                <h3 data-sw="Mwenendo wa Joto na Unyevu" data-en="Temperature & Humidity Trend">Mwenendo wa Joto na Unyevu</h3>
-                <canvas id="weatherChart" height="120"></canvas>
-            </div>
-            <div class="panel">
-                <h3 data-sw="Rekodi za Hivi Karibuni" data-en="Recent Logs">Rekodi za Hivi Karibuni</h3>
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th data-sw="Muda" data-en="Time">Muda</th>
-                            <th data-sw="Joto" data-en="Temp">Joto</th>
-                            <th data-sw="Unyevu" data-en="Hum">Unyevu</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logTableBody">
-                        <tr>
-                            <td>12:00</td>
-                            <td>28°C</td>
-                            <td>75%</td>
-                        </tr>
-                        <tr>
-                            <td>12:30</td>
-                            <td>29°C</td>
-                            <td>72%</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+                <h3
+                    data-sw="Kasi ya Upepo"
+                    data-en="Wind Speed">
+                    Kasi ya Upepo
+                </h3>
 
-    <script>
-        // Lugha Dynamic Toggle
-        let currentLang = 'sw';
-        function toggleLanguage() {
-            currentLang = currentLang === 'sw' ? 'en' : 'sw';
-            document.getElementById('htmlRoot').setAttribute('lang', currentLang);
-            
-            const elements = document.querySelectorAll('[data-sw]');
-            elements.forEach(el => {
-                el.innerText = el.getAttribute(`data-${currentLang}`);
+                <p class="weather-value"
+                   id="card-wind-speed-value">
+
+                    {{ data.wind_speed }}
+
+                    <span class="weather-unit">
+                        m/s
+                    </span>
+
+                </p>
+
+            </div>
+
+
+            <!-- Wind direction -->
+
+            <div class="weather-card direction-card">
+
+                <div class="weather-icon">
+                    <i class="fa-solid fa-compass"></i>
+                </div>
+
+                <h3
+                    data-sw="Mwelekeo wa Upepo"
+                    data-en="Wind Direction">
+                    Mwelekeo wa Upepo
+                </h3>
+
+                <p class="weather-value"
+                   id="card-wind-dir-value"
+                   style="font-size:15px;">
+
+                    {{ data.wind_direction }}
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         STATISTICS
+    ====================================================== -->
+
+    <div id="takwimu"
+         class="tab-section">
+
+        <div class="page-heading">
+
+            <div>
+
+                <h1
+                    data-sw="Takwimu za Shamba"
+                    data-en="Farm Statistics">
+                    Takwimu za Shamba
+                </h1>
+
+                <p
+                    data-sw="Muhtasari wa vipimo vilivyokusanywa na kituo"
+                    data-en="Summary of measurements collected by the station">
+                    Muhtasari wa vipimo vilivyokusanywa na kituo
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <h3 class="section-title">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                <span
+                    data-sw="Takwimu za Vipimo"
+                    data-en="Measurement Statistics">
+                    Takwimu za Vipimo
+                </span>
+
+            </h3>
+
+            <p
+                data-sw="Takwimu hizi zinatokana na kumbukumbu zilizohifadhiwa kwenye mfumo."
+                data-en="These statistics are calculated from measurements stored in the system.">
+                Takwimu hizi zinatokana na kumbukumbu zilizohifadhiwa kwenye mfumo.
+            </p>
+
+        </div>
+
+
+        <div class="stats-grid">
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-temperature-half"></i>
+                </div>
+
+                <h3
+                    data-sw="Wastani wa Joto"
+                    data-en="Average Temperature">
+                    Wastani wa Joto
+                </h3>
+
+                <p class="stat-value"
+                   id="stat-avg-temp">
+                    -- °C
+                </p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-temperature-arrow-up"></i>
+                </div>
+
+                <h3
+                    data-sw="Joto la Juu Zaidi"
+                    data-en="Maximum Temperature">
+                    Joto la Juu Zaidi
+                </h3>
+
+                <p class="stat-value"
+                   id="stat-max-temp">
+                    -- °C
+                </p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-temperature-arrow-down"></i>
+                </div>
+
+                <h3
+                    data-sw="Joto la Chini Zaidi"
+                    data-en="Minimum Temperature">
+                    Joto la Chini Zaidi
+                </h3>
+
+                <p class="stat-value"
+                   id="stat-min-temp">
+                    -- °C
+                </p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-droplet"></i>
+                </div>
+
+                <h3
+                    data-sw="Wastani wa Unyevu"
+                    data-en="Average Humidity">
+                    Wastani wa Unyevu
+                </h3>
+
+                <p class="stat-value"
+                   id="stat-avg-humidity">
+                    -- %
+                </p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-cloud-rain"></i>
+                </div>
+
+                <h3
+                    data-sw="Jumla ya Mvua"
+                    data-en="Total Rainfall">
+                    Jumla ya Mvua
+                </h3>
+
+                <p class="stat-value"
+                   id="stat-total-rain">
+                    -- mm
+                </p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+
+                <h3
+                    data-sw="Jumla ya Kumbukumbu"
+                    data-en="Total Records">
+                    Jumla ya Kumbukumbu
+                </h3>
+
+                <p class="stat-value"
+                   id="stat-total-records">
+                    --
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         HISTORY
+    ====================================================== -->
+
+    <div id="historia"
+         class="tab-section">
+
+        <div class="page-heading">
+
+            <div>
+
+                <h1
+                    data-sw="Historia ya Hali ya Hewa"
+                    data-en="Weather History">
+                    Historia ya Hali ya Hewa
+                </h1>
+
+                <p
+                    data-sw="Kumbukumbu za vipimo vilivyokusanywa na kituo"
+                    data-en="Historical measurements collected by the station">
+                    Kumbukumbu za vipimo vilivyokusanywa na kituo
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="table-responsive">
+
+            <table class="history-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th
+                            data-sw="Tarehe na Wakati"
+                            data-en="Date & Time">
+                            Tarehe na Wakati
+                        </th>
+
+                        <th
+                            data-sw="Joto"
+                            data-en="Temperature">
+                            Joto
+                        </th>
+
+                        <th
+                            data-sw="Unyevu"
+                            data-en="Humidity">
+                            Unyevu
+                        </th>
+
+                        <th
+                            data-sw="Mvua"
+                            data-en="Rainfall">
+                            Mvua
+                        </th>
+
+                        <th
+                            data-sw="Hali ya Mvua"
+                            data-en="Rain Status">
+                            Hali ya Mvua
+                        </th>
+
+                        <th
+                            data-sw="Upepo"
+                            data-en="Wind">
+                            Upepo
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="historyTableBody">
+
+                    <tr>
+
+                        <td colspan="6"
+                            style="text-align:center;padding:30px;color:#647267;">
+
+                            Inapakia kumbukumbu...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         GRAPHS
+    ====================================================== -->
+
+    <div id="grafu"
+         class="tab-section">
+
+        <div class="page-heading">
+
+            <div>
+
+                <h1
+                    data-sw="Mwenendo wa Hali ya Hewa"
+                    data-en="Weather Trends">
+                    Mwenendo wa Hali ya Hewa
+                </h1>
+
+                <p
+                    data-sw="Mabadiliko ya joto na unyevu kwa wakati"
+                    data-en="Temperature and humidity changes over time">
+                    Mabadiliko ya joto na unyevu kwa wakati
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <h3 class="section-title">
+
+                <i class="fa-solid fa-chart-line"></i>
+
+                <span
+                    data-sw="Joto na Unyevu"
+                    data-en="Temperature & Humidity">
+                    Joto na Unyevu
+                </span>
+
+            </h3>
+
+            <p
+                data-sw="Grafu inaonyesha mwenendo wa vipimo vilivyopokelewa kutoka kituo cha shamba."
+                data-en="The graph shows trends from measurements received from the field station.">
+                Grafu inaonyesha mwenendo wa vipimo vilivyopokelewa kutoka kituo cha shamba.
+            </p>
+
+        </div>
+
+
+        <div class="chart-container">
+
+            <canvas id="weatherChart"></canvas>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         STATION
+    ====================================================== -->
+
+    <div id="mipangilio"
+         class="tab-section">
+
+        <div class="page-heading">
+
+            <div>
+
+                <h1
+                    data-sw="Taarifa za Kituo"
+                    data-en="Station Information">
+                    Taarifa za Kituo
+                </h1>
+
+                <p
+                    data-sw="Hali ya kituo na muunganisho wa kifaa"
+                    data-en="Station and device connection information">
+                    Hali ya kituo na muunganisho wa kifaa
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="settings-card">
+
+            <h3 class="settings-title">
+
+                <i class="fa-solid fa-tower-broadcast"></i>
+
+                <span
+                    data-sw="Kituo cha Weather Station"
+                    data-en="Weather Station">
+                    Kituo cha Weather Station
+                </span>
+
+            </h3>
+
+
+            <div class="setting-row">
+
+                <span class="setting-label"
+                      data-sw="Hali ya Muunganisho"
+                      data-en="Connection Status">
+                    Hali ya Muunganisho
+                </span>
+
+                <strong class="setting-value"
+                        id="setting-wifi-status"
+                        style="color:#d97706;">
+                    Haijaunganishwa
+                </strong>
+
+            </div>
+
+
+            <div class="setting-row">
+
+                <span class="setting-label"
+                      data-sw="Jina la Wi-Fi"
+                      data-en="Wi-Fi Name">
+                    Jina la Wi-Fi
+                </span>
+
+                <strong class="setting-value"
+                        id="setting-wifi-ssid">
+                    Hakuna Kifaa
+                </strong>
+
+            </div>
+
+
+            <div class="setting-row">
+
+                <span class="setting-label"
+                      data-sw="Eneo"
+                      data-en="Location">
+                    Eneo
+                </span>
+
+                <strong class="setting-value"
+                        id="setting-location">
+                    {{ data.location }}
+                </strong>
+
+            </div>
+
+
+            <div class="setting-row">
+
+                <span class="setting-label"
+                      data-sw="Toleo la Mfumo"
+                      data-en="System Version">
+                    Toleo la Mfumo
+                </span>
+
+                <strong class="setting-value">
+                    v1.0.2 Smart Ag
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
+
+<script>
+
+    let currentLang = 'sw';
+
+
+    /* =========================================================
+       TAB SWITCHING
+    ========================================================= */
+
+    function switchTab(tabId, element) {
+
+        document
+            .querySelectorAll('.tab-section')
+            .forEach(section => {
+                section.classList.remove('active-section');
             });
+
+        document
+            .querySelectorAll('.nav-links a')
+            .forEach(link => {
+                link.classList.remove('active');
+            });
+
+        const selectedTab = document.getElementById(tabId);
+
+        if (selectedTab) {
+            selectedTab.classList.add('active-section');
         }
 
-        // Setup Chart.js
-        const ctx = document.getElementById('weatherChart').getContext('2d');
-        const weatherChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30'],
-                datasets: [{
-                    label: 'Joto (°C)',
-                    data: [26, 27, 27.5, 28, 28.5, 29],
-                    borderColor: '#e71d36',
-                    backgroundColor: 'rgba(231, 29, 54, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { labels: { color: '#ffffff' } }
-                },
-                scales: {
-                    x: { ticks: { color: '#8d99ae' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#8d99ae' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        if (element) {
+            element.classList.add('active');
+        }
+
+        if (tabId === 'grafu') {
+
+            setTimeout(() => {
+
+                if (weatherChart) {
+                    weatherChart.resize();
                 }
+
+            }, 50);
+        }
+
+        if (tabId === 'historia') {
+            loadWeatherLogs();
+        }
+
+        if (tabId === 'takwimu') {
+            loadWeatherStats();
+        }
+
+    }
+
+
+    /* =========================================================
+       DATE & TIME
+    ========================================================= */
+
+    function updateDateTime() {
+
+        const now = new Date();
+
+        const locale =
+            currentLang === 'en'
+                ? 'en-US'
+                : 'sw-TZ';
+
+        const dateStr =
+            now.toLocaleDateString(
+                locale,
+                {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                }
+            );
+
+        document.getElementById(
+            'current-date'
+        ).innerText = dateStr;
+
+
+        const timeStr =
+            now.toLocaleTimeString(
+                locale,
+                {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }
+            );
+
+        document.getElementById(
+            'current-time'
+        ).innerText = timeStr;
+    }
+
+    updateDateTime();
+
+    setInterval(updateDateTime, 1000);
+
+
+    /* =========================================================
+       CHART
+    ========================================================= */
+
+    const ctx =
+        document
+            .getElementById('weatherChart')
+            .getContext('2d');
+
+
+    const weatherChart =
+        new Chart(ctx, {
+
+            type: 'line',
+
+            data: {
+
+                labels: [],
+
+                datasets: [
+
+                    {
+                        label: 'Joto (°C)',
+
+                        data: [],
+
+                        borderColor: '#ea580c',
+
+                        backgroundColor:
+                            'rgba(234, 88, 12, 0.08)',
+
+                        borderWidth: 2.5,
+
+                        pointRadius: 3,
+
+                        pointHoverRadius: 5,
+
+                        tension: 0.4,
+
+                        fill: true,
+
+                        yAxisID: 'y'
+                    },
+
+                    {
+                        label: 'Unyevu (%)',
+
+                        data: [],
+
+                        borderColor: '#0284c7',
+
+                        backgroundColor:
+                            'rgba(2, 132, 199, 0.07)',
+
+                        borderWidth: 2.5,
+
+                        pointRadius: 3,
+
+                        pointHoverRadius: 5,
+
+                        tension: 0.4,
+
+                        fill: true,
+
+                        yAxisID: 'y1'
+                    }
+
+                ]
+
+            },
+
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+
+                scales: {
+
+                    x: {
+
+                        grid: {
+                            color: 'rgba(20,83,45,0.06)'
+                        },
+
+                        ticks: {
+                            color: '#647267',
+                            font: {
+                                size: 10
+                            }
+                        }
+
+                    },
+
+
+                    y: {
+
+                        type: 'linear',
+
+                        display: true,
+
+                        position: 'left',
+
+                        title: {
+                            display: true,
+                            text: 'Joto (°C)',
+                            color: '#ea580c'
+                        },
+
+                        grid: {
+                            color: 'rgba(20,83,45,0.06)'
+                        },
+
+                        ticks: {
+                            color: '#ea580c'
+                        }
+
+                    },
+
+
+                    y1: {
+
+                        type: 'linear',
+
+                        display: true,
+
+                        position: 'right',
+
+                        title: {
+                            display: true,
+                            text: 'Unyevu (%)',
+                            color: '#0284c7'
+                        },
+
+                        grid: {
+                            drawOnChartArea: false
+                        },
+
+                        ticks: {
+                            color: '#0284c7'
+                        }
+
+                    }
+
+                },
+
+
+                plugins: {
+
+                    legend: {
+
+                        labels: {
+                            color: '#344239',
+                            usePointStyle: true,
+                            padding: 18
+                        }
+
+                    },
+
+                    tooltip: {
+
+                        backgroundColor: '#17351f',
+
+                        titleColor: '#ffffff',
+
+                        bodyColor: '#e5f5e8',
+
+                        padding: 12,
+
+                        cornerRadius: 10
+
+                    }
+
+                }
+
             }
+
         });
-    </script>
+
+
+    /* =========================================================
+       LIVE WEATHER DATA
+       BACKEND ENDPOINT UNCHANGED
+    ========================================================= */
+
+    function fetchLiveWeatherData() {
+
+        fetch('/get-data')
+
+            .then(response => response.json())
+
+            .then(data => {
+
+                document.getElementById(
+                    'card-temp-value'
+                ).innerHTML =
+                    data.temperature +
+                    ' <span class="weather-unit">°C</span>';
+
+
+                document.getElementById(
+                    'card-humidity-value'
+                ).innerHTML =
+                    data.humidity +
+                    ' <span class="weather-unit">%</span>';
+
+
+                document.getElementById(
+                    'card-rain-amount-value'
+                ).innerHTML =
+                    data.rain_amount +
+                    ' <span class="weather-unit">mm</span>';
+
+
+                document.getElementById(
+                    'card-rain-status-value'
+                ).innerText =
+                    data.rain_availability;
+
+
+                document.getElementById(
+                    'card-wind-speed-value'
+                ).innerHTML =
+                    data.wind_speed +
+                    ' <span class="weather-unit">m/s</span>';
+
+
+                document.getElementById(
+                    'card-wind-dir-value'
+                ).innerText =
+                    data.wind_direction;
+
+
+                document.getElementById(
+                    'locationName'
+                ).innerText =
+                    data.location;
+
+
+                document.getElementById(
+                    'setting-location'
+                ).innerText =
+                    data.location;
+
+
+                /* -----------------------------------------
+                   WIFI STATUS
+                ----------------------------------------- */
+
+                const wifiStatusEl =
+                    document.getElementById(
+                        'setting-wifi-status'
+                    );
+
+                const wifiSsidEl =
+                    document.getElementById(
+                        'setting-wifi-ssid'
+                    );
+
+
+                if (data.wifi_status) {
+
+                    wifiStatusEl.innerText =
+                        data.wifi_status;
+
+
+                    if (
+                        data.wifi_status
+                            .toLowerCase()
+                            .includes('online')
+                    ) {
+
+                        wifiStatusEl.style.color =
+                            '#16a34a';
+
+                    } else {
+
+                        wifiStatusEl.style.color =
+                            '#d97706';
+                    }
+
+                } else {
+
+                    wifiStatusEl.innerText =
+                        currentLang === 'en'
+                            ? 'Offline'
+                            : 'Haijaunganishwa';
+
+                    wifiStatusEl.style.color =
+                        '#d97706';
+                }
+
+
+                if (data.wifi_ssid) {
+
+                    wifiSsidEl.innerText =
+                        data.wifi_ssid;
+
+                } else {
+
+                    wifiSsidEl.innerText =
+                        currentLang === 'en'
+                            ? 'No Device'
+                            : 'Hakuna Kifaa';
+                }
+
+
+                /* -----------------------------------------
+                   SIDEBAR STATUS
+                ----------------------------------------- */
+
+                const sidebarStatus =
+                    document.getElementById(
+                        'sidebarStationStatus'
+                    );
+
+
+                if (
+                    data.wifi_status &&
+                    data.wifi_status
+                        .toLowerCase()
+                        .includes('online')
+                ) {
+
+                    sidebarStatus.innerText =
+                        currentLang === 'en'
+                            ? 'Station connected'
+                            : 'Kituo kimeunganishwa';
+
+                } else {
+
+                    sidebarStatus.innerText =
+                        currentLang === 'en'
+                            ? 'Waiting for station'
+                            : 'Inasubiri kituo';
+                }
+
+
+                /* -----------------------------------------
+                   CHART DATA
+                ----------------------------------------- */
+
+                if (data.history) {
+
+                    weatherChart.data.labels =
+                        data.history.timestamps;
+
+                    weatherChart.data.datasets[0].data =
+                        data.history.temperatures;
+
+                    weatherChart.data.datasets[1].data =
+                        data.history.humidities;
+
+                    weatherChart.update('none');
+                }
+
+            })
+
+            .catch(error => {
+
+                console.error(
+                    'Hitilafu katika kupata data:',
+                    error
+                );
+
+            });
+
+    }
+
+
+    /* Live update every 5 seconds */
+
+    fetchLiveWeatherData();
+
+    setInterval(
+        fetchLiveWeatherData,
+        5000
+    );
+
+
+    /* =========================================================
+       STATISTICS
+       BACKEND ENDPOINT UNCHANGED
+    ========================================================= */
+
+    function loadWeatherStats() {
+
+        fetch('/get-stats')
+
+            .then(response => response.json())
+
+            .then(data => {
+
+                document.getElementById(
+                    'stat-avg-temp'
+                ).innerText =
+                    data.avg_temp + ' °C';
+
+
+                document.getElementById(
+                    'stat-max-temp'
+                ).innerText =
+                    data.max_temp + ' °C';
+
+
+                document.getElementById(
+                    'stat-min-temp'
+                ).innerText =
+                    data.min_temp + ' °C';
+
+
+                document.getElementById(
+                    'stat-avg-humidity'
+                ).innerText =
+                    data.avg_humidity + ' %';
+
+
+                document.getElementById(
+                    'stat-total-rain'
+                ).innerText =
+                    data.total_rain + ' mm';
+
+
+                document.getElementById(
+                    'stat-total-records'
+                ).innerText =
+                    data.total_records;
+
+            })
+
+            .catch(error => {
+
+                console.error(
+                    'Hitilafu katika kupata takwimu:',
+                    error
+                );
+
+            });
+
+    }
+
+
+    /* =========================================================
+       WEATHER HISTORY
+       BACKEND ENDPOINT UNCHANGED
+    ========================================================= */
+
+    function loadWeatherLogs() {
+
+        fetch('/get-logs')
+
+            .then(response => response.json())
+
+            .then(data => {
+
+                const tableBody =
+                    document.getElementById(
+                        'historyTableBody'
+                    );
+
+
+                tableBody.innerHTML = '';
+
+
+                if (!data || data.length === 0) {
+
+                    const noLogsText =
+                        currentLang === 'en'
+                            ? 'No records available yet.'
+                            : 'Hakuna kumbukumbu bado.';
+
+
+                    tableBody.innerHTML = `
+
+                        <tr>
+
+                            <td
+                                colspan="6"
+                                style="
+                                    text-align:center;
+                                    padding:30px;
+                                    color:#647267;
+                                ">
+
+                                ${noLogsText}
+
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                    return;
+                }
+
+
+                data.forEach(log => {
+
+                    const row = document.createElement('tr');
+
+
+                    row.innerHTML = `
+
+                        <td>
+                            ${log.date}
+                            ${log.timestamp}
+                        </td>
+
+                        <td>
+                            ${log.temperature} °C
+                        </td>
+
+                        <td>
+                            ${log.humidity} %
+                        </td>
+
+                        <td>
+                            ${log.rain_amount} mm
+                        </td>
+
+                        <td>
+                            ${log.rain_availability}
+                        </td>
+
+                        <td>
+                            ${log.wind_speed} m/s
+                            (${log.wind_direction})
+                        </td>
+
+                    `;
+
+
+                    tableBody.appendChild(row);
+
+                });
+
+            })
+
+            .catch(error => {
+
+                console.error(
+                    'Hitilafu katika kupata historia:',
+                    error
+                );
+
+            });
+
+    }
+
+
+    /* =========================================================
+       LANGUAGE
+    ========================================================= */
+
+    function setLanguage(lang, btn) {
+
+        currentLang = lang;
+
+
+        document
+            .getElementById('htmlRoot')
+            .setAttribute('lang', lang);
+
+
+        document
+            .querySelectorAll('.lang-btn')
+            .forEach(button => {
+                button.classList.remove('active');
+            });
+
+
+        if (btn) {
+            btn.classList.add('active');
+        }
+
+
+        document
+            .querySelectorAll('[data-sw]')
+            .forEach(element => {
+
+                const text =
+                    element.getAttribute(
+                        `data-${lang}`
+                    );
+
+
+                if (text) {
+                    element.innerText = text;
+                }
+
+            });
+
+
+        updateDateTime();
+
+
+        /* Update sidebar station text */
+
+        const sidebarStatus =
+            document.getElementById(
+                'sidebarStationStatus'
+            );
+
+
+        if (sidebarStatus) {
+
+            sidebarStatus.innerText =
+                sidebarStatus.innerText
+                    .toLowerCase()
+                    .includes('connected') ||
+                sidebarStatus.innerText
+                    .toLowerCase()
+                    .includes('imeunganishwa')
+
+                    ? (
+                        lang === 'en'
+                            ? 'Station connected'
+                            : 'Kituo kimeunganishwa'
+                    )
+
+                    : (
+                        lang === 'en'
+                            ? 'Waiting for station'
+                            : 'Inasubiri kituo'
+                    );
+        }
+
+
+        /* Refresh history text */
+
+        const historySection =
+            document.getElementById(
+                'historia'
+            );
+
+
+        if (
+            historySection &&
+            historySection.classList.contains(
+                'active-section'
+            )
+        ) {
+
+            loadWeatherLogs();
+
+        }
+
+    }
+
+
+    /* =========================================================
+       INITIAL LOAD
+    ========================================================= */
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function() {
+
+            loadWeatherLogs();
+
+            loadWeatherStats();
+
+            fetchLiveWeatherData();
+
+        }
+    );
+
+</script>
+
 </body>
 </html>
+```
