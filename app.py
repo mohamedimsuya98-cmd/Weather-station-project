@@ -199,6 +199,17 @@ def analyze_ai():
         wind_spd = float(weather_data.get('wind_speed', 0.0))
         wind_dir = weather_data.get('wind_direction', 'Kaskazini')
         
+        # Zuia kutoa uchambuzi wa uongo kama data zote zimesalia kuwa 0.0
+        if temp == 0.0 and humidity == 0.0 and rain_amt == 0.0 and wind_spd == 0.0:
+            analysis = (
+                "⚠️ **Tahadhari ya Mfumo:** Hakuna data halisi zilizopokelewa kutoka kwenye kihisi (Sensor) "
+                "au kifaa cha ESP8266/ESP32. Thamani zote zimesalia kuwa `0.0`.\n\n"
+                "**Njia ya Kurekebisha:**\n"
+                "1. Hakikisha kifaa chako cha ESP kimeunganishwa kwenye intaneti.\n"
+                "2. Hakikisha kinatuma maombi ya `POST` kwenda kwenye anuani sahihi ya `/update`."
+            )
+            return jsonify({"status": "warning", "analysis": analysis})
+
         analysis = f"🌿 **Uchambuzi wa Kitaalamu wa Hali ya Hewa (Live Expert System):**\n\n"
         
         if temp > 32 and humidity < 45:
