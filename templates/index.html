@@ -1,245 +1,3085 @@
+```html
 <!DOCTYPE html>
-<html lang="sw">
+<html lang="sw" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartFarm Weather Station</title>
-    <!-- FontAwesome & Chart.js -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <title>WeatherStation | Smart Farm Monitoring</title>
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root {
-            --primary: #10b981;
-            --primary-dark: #059669;
-            --bg-main: #f0fdf4;
-            --sidebar-bg: #064e3b;
-            --card-bg: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
+            --bg: #f4f8f3;
+            --surface: #ffffff;
+            --surface-soft: #eef5ec;
+
+            --green-900: #123524;
+            --green-800: #185c3a;
+            --green-700: #237a4b;
+            --green-600: #2e8b57;
+            --green-500: #45a85f;
+
+            --sky: #4fa8c7;
+            --blue-soft: #e8f5f8;
+
+            --earth: #9a6a3a;
+            --earth-soft: #f5eadc;
+
+            --yellow: #e7ad35;
+            --yellow-soft: #fff6dc;
+
+            --red: #d95c5c;
+            --red-soft: #fce9e9;
+
+            --text: #183024;
+            --text-muted: #718078;
+
+            --border: #e1e9e1;
+
+            --shadow:
+                0 8px 25px rgba(24, 53, 36, 0.08);
+
+            --shadow-hover:
+                0 14px 35px rgba(24, 53, 36, 0.13);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Sidebar */
-        sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; padding: 20px; }
-        .logo-area { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
-        .logo-area i { font-size: 28px; color: var(--primary); }
-        .logo-area h2 { font-size: 20px; font-weight: 600; }
-        .menu-label { font-size: 12px; text-transform: uppercase; color: #9ca3af; margin-bottom: 10px; letter-spacing: 1px; }
-        ul.nav-links { list-style: none; flex-grow: 1; }
-        ul.nav-links li { margin-bottom: 8px; }
-        ul.nav-links li a { display: flex; align-items: center; gap: 14px; padding: 12px 16px; color: #d1d5db; text-decoration: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        ul.nav-links li a:hover, ul.nav-links li a.active { background-color: var(--primary); color: white; }
-        
-        .station-status-box { background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; font-size: 13px; }
-        
-        /* Main Content Area */
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
-        header { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background: white; border-bottom: 1px solid #e5e7eb; }
-        .location-badge { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; }
-        .controls-area { display: flex; align-items: center; gap: 20px; }
-        .datetime-display { font-size: 13px; color: var(--text-muted); }
-        .lang-toggle { display: flex; background: #e5e7eb; border-radius: 20px; padding: 2px; }
-        .lang-btn { border: none; background: transparent; padding: 6px 12px; border-radius: 18px; cursor: pointer; font-weight: 600; font-size: 12px; }
-        .lang-btn.active { background: var(--sidebar-bg); color: white; }
 
-        /* Dashboard Grid */
-        .dashboard-body { padding: 30px 40px; }
-        .page-title { margin-bottom: 20px; }
-        .page-title h1 { font-size: 24px; font-weight: 700; }
-        .page-title p { color: var(--text-muted); font-size: 14px; }
-        
-        .banner-card { background: linear-gradient(135deg, #065f46, #047857); color: white; padding: 25px; border-radius: 16px; margin-bottom: 30px; }
-        .banner-card h2 { margin-bottom: 8px; }
-        .banner-card p { font-size: 14px; opacity: 0.9; }
+        * {
+            box-sizing: border-box;
+        }
 
-        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .metric-card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: relative; }
-        .metric-card .icon-box { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; background: #d1fae5; color: var(--primary-dark); }
-        .metric-card h3 { font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 5px; }
-        .metric-card .value { font-size: 28px; font-weight: 700; }
+        html {
+            scroll-behavior: smooth;
+        }
 
-        .tab-section { display: none; }
-        .tab-section.active { display: block; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family:
+                "Segoe UI",
+                Tahoma,
+                Geneva,
+                Verdana,
+                sans-serif;
+
+            color: var(--text);
+
+            background:
+                linear-gradient(
+                    rgba(244,248,243,0.96),
+                    rgba(244,248,243,0.96)
+                ),
+                radial-gradient(
+                    circle at 10% 20%,
+                    rgba(69,168,95,0.13),
+                    transparent 30%
+                ),
+                radial-gradient(
+                    circle at 90% 10%,
+                    rgba(79,168,199,0.12),
+                    transparent 30%
+                );
+
+            display: flex;
+        }
+
+        /* =========================
+           SIDEBAR
+        ========================= */
+
+        sidebar {
+            width: 255px;
+            min-height: 100vh;
+
+            position: sticky;
+            top: 0;
+
+            display: flex;
+            flex-direction: column;
+
+            padding: 24px 18px;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #123524 0%,
+                    #185c3a 55%,
+                    #164c32 100%
+                );
+
+            color: white;
+
+            box-shadow:
+                5px 0 25px rgba(18,53,36,0.14);
+
+            flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+
+            padding: 8px 8px 24px;
+
+            margin-bottom: 18px;
+
+            border-bottom:
+                1px solid rgba(255,255,255,0.12);
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 14px;
+
+            background:
+                rgba(255,255,255,0.12);
+
+            border:
+                1px solid rgba(255,255,255,0.12);
+
+            box-shadow:
+                0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .logo-icon i {
+            font-size: 24px;
+            color: #b9e59f;
+        }
+
+        .logo-area h2 {
+            margin: 0;
+
+            font-size: 18px;
+            font-weight: 700;
+
+            letter-spacing: -0.3px;
+        }
+
+        .logo-area p {
+            margin: 3px 0 0;
+
+            font-size: 11px;
+
+            color:
+                rgba(255,255,255,0.65);
+        }
+
+        .nav-title {
+            padding: 0 10px;
+            margin: 8px 0 12px;
+
+            font-size: 10px;
+            font-weight: 700;
+
+            color:
+                rgba(255,255,255,0.45);
+
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            list-style: none;
+
+            padding: 0;
+            margin: 0;
+
+            flex-grow: 1;
+        }
+
+        .nav-links li {
+            margin-bottom: 6px;
+        }
+
+        .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+
+            padding: 12px 13px;
+
+            color:
+                rgba(255,255,255,0.72);
+
+            text-decoration: none;
+
+            border-radius: 11px;
+
+            transition:
+                all 0.25s ease;
+
+            font-size: 13px;
+
+            cursor: pointer;
+        }
+
+        .nav-links a i {
+            width: 19px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .nav-links a:hover {
+            background:
+                rgba(255,255,255,0.08);
+
+            color: white;
+
+            transform:
+                translateX(2px);
+        }
+
+        .nav-links a.active {
+            background: white;
+            color: var(--green-800);
+
+            box-shadow:
+                0 8px 18px rgba(0,0,0,0.12);
+        }
+
+        .sidebar-footer {
+            padding: 14px 12px;
+
+            border-radius: 12px;
+
+            background:
+                rgba(255,255,255,0.07);
+
+            border:
+                1px solid rgba(255,255,255,0.08);
+        }
+
+        .sidebar-footer-title {
+            font-size: 11px;
+            font-weight: 700;
+
+            color: white;
+
+            margin-bottom: 5px;
+        }
+
+        .sidebar-footer-text {
+            font-size: 10px;
+
+            color:
+                rgba(255,255,255,0.55);
+
+            line-height: 1.5;
+        }
+
+        /* =========================
+           MAIN
+        ========================= */
+
+        .main-content {
+            flex: 1;
+
+            width: 100%;
+            min-width: 0;
+
+            padding: 24px;
+
+            overflow-x: hidden;
+        }
+
+        /* =========================
+           HEADER
+        ========================= */
+
+        .top-header {
+            display: grid;
+
+            grid-template-columns:
+                minmax(180px, 1fr)
+                auto
+                auto;
+
+            align-items: center;
+
+            gap: 20px;
+
+            background: var(--surface);
+
+            padding: 15px 18px;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 16px;
+
+            margin-bottom: 22px;
+
+            box-shadow: var(--shadow);
+        }
+
+        .location-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            min-width: 0;
+
+            color: var(--text-muted);
+
+            font-size: 12px;
+        }
+
+        .location-icon {
+            width: 36px;
+            height: 36px;
+
+            flex-shrink: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 10px;
+
+            background: #e8f5e9;
+            color: var(--green-700);
+        }
+
+        .location-text {
+            min-width: 0;
+        }
+
+        .location-text span {
+            display: block;
+
+            font-size: 10px;
+
+            color: var(--text-muted);
+
+            margin-bottom: 2px;
+        }
+
+        .location-text strong {
+            display: block;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            color: var(--text);
+        }
+
+        .date-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            color: var(--text-muted);
+
+            font-size: 12px;
+
+            white-space: nowrap;
+        }
+
+        .date-time i {
+            color: var(--green-600);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .lang-switch {
+            display: flex;
+
+            padding: 3px;
+
+            background: #f0f4ef;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 9px;
+        }
+
+        .lang-btn {
+            border: none;
+
+            background: transparent;
+
+            color: var(--text-muted);
+
+            padding: 6px 10px;
+
+            border-radius: 7px;
+
+            cursor: pointer;
+
+            font-size: 11px;
+            font-weight: 700;
+
+            transition: 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--green-700);
+            color: white;
+        }
+
+        /* =========================
+           SECTIONS
+        ========================= */
+
+        .tab-section {
+            display: none;
+        }
+
+        .tab-section.active-section {
+            display: block;
+            animation:
+                fadeIn 0.25s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* =========================
+           FARM HERO
+        ========================= */
+
+        .farm-hero {
+            position: relative;
+
+            overflow: hidden;
+
+            min-height: 205px;
+
+            display: flex;
+            align-items: center;
+
+            padding: 28px;
+
+            margin-bottom: 20px;
+
+            border-radius: 18px;
+
+            color: white;
+
+            background:
+                linear-gradient(
+                    105deg,
+                    rgba(18,53,36,0.98),
+                    rgba(35,122,75,0.88)
+                );
+
+            box-shadow:
+                0 12px 30px rgba(24,92,58,0.18);
+        }
+
+        .farm-hero::before {
+            content: "";
+
+            position: absolute;
+
+            width: 280px;
+            height: 280px;
+
+            right: -60px;
+            top: -110px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(255,255,255,0.07);
+        }
+
+        .farm-hero::after {
+            content: "";
+
+            position: absolute;
+
+            width: 180px;
+            height: 180px;
+
+            right: 100px;
+            bottom: -100px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(184,229,159,0.12);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+
+            max-width: 700px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+
+            padding: 6px 10px;
+
+            border-radius: 20px;
+
+            background:
+                rgba(255,255,255,0.12);
+
+            border:
+                1px solid rgba(255,255,255,0.12);
+
+            font-size: 10px;
+            font-weight: 700;
+
+            margin-bottom: 12px;
+        }
+
+        .hero-content h1 {
+            margin: 0 0 8px;
+
+            font-size: clamp(23px, 3vw, 34px);
+
+            line-height: 1.15;
+
+            letter-spacing: -0.8px;
+        }
+
+        .hero-content p {
+            margin: 0;
+
+            max-width: 620px;
+
+            color:
+                rgba(255,255,255,0.76);
+
+            font-size: 13px;
+
+            line-height: 1.6;
+        }
+
+        .hero-icons {
+            position: absolute;
+
+            right: 40px;
+            bottom: 25px;
+
+            display: flex;
+            align-items: flex-end;
+
+            gap: 10px;
+
+            color:
+                rgba(255,255,255,0.18);
+
+            font-size: 58px;
+        }
+
+        .hero-icons i:nth-child(2) {
+            font-size: 82px;
+        }
+
+        /* =========================
+           INFO CARD
+        ========================= */
+
+        .info-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+
+            padding: 17px 18px;
+
+            margin-bottom: 20px;
+
+            background: var(--surface);
+
+            border:
+                1px solid var(--border);
+
+            border-left:
+                4px solid var(--green-600);
+
+            border-radius: 14px;
+
+            box-shadow: var(--shadow);
+        }
+
+        .info-card > i {
+            flex-shrink: 0;
+
+            width: 35px;
+            height: 35px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 10px;
+
+            background:
+                #e9f6eb;
+
+            color:
+                var(--green-700);
+        }
+
+        .info-card-content h3 {
+            margin: 0 0 5px;
+
+            font-size: 14px;
+
+            color:
+                var(--green-800);
+        }
+
+        .info-card-content p {
+            margin: 0;
+
+            color:
+                var(--text-muted);
+
+            font-size: 12px;
+
+            line-height: 1.55;
+        }
+
+        /* =========================
+           SENSOR CARDS
+        ========================= */
+
+        .grid-6 {
+            display: grid;
+
+            grid-template-columns:
+                repeat(6, minmax(0, 1fr));
+
+            gap: 13px;
+
+            margin-bottom: 22px;
+        }
+
+        .card {
+            position: relative;
+
+            overflow: hidden;
+
+            min-height: 132px;
+
+            padding: 17px;
+
+            background:
+                var(--surface);
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 15px;
+
+            box-shadow:
+                var(--shadow);
+
+            transition:
+                transform 0.25s ease,
+                box-shadow 0.25s ease;
+
+            text-align: left;
+        }
+
+        .card:hover {
+            transform:
+                translateY(-4px);
+
+            box-shadow:
+                var(--shadow-hover);
+        }
+
+        .card::after {
+            content: "";
+
+            position: absolute;
+
+            right: -20px;
+            bottom: -30px;
+
+            width: 90px;
+            height: 90px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(69,168,95,0.07);
+        }
+
+        .sensor-icon {
+            width: 37px;
+            height: 37px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 11px;
+
+            margin-bottom: 12px;
+
+            font-size: 15px;
+        }
+
+        .icon-temp {
+            background: #fff0ed;
+            color: #e46b55;
+        }
+
+        .icon-humidity {
+            background: #e9f6fa;
+            color: #3597b8;
+        }
+
+        .icon-rain {
+            background: #eaf4ff;
+            color: #3983c9;
+        }
+
+        .icon-status {
+            background: #fff7df;
+            color: #d99b20;
+        }
+
+        .icon-wind {
+            background: #edf6ee;
+            color: #3c9a58;
+        }
+
+        .icon-direction {
+            background: #f1edf9;
+            color: #7954a8;
+        }
+
+        .card h3 {
+            margin: 0 0 5px;
+
+            font-size: 11px;
+
+            font-weight: 600;
+
+            color:
+                var(--text-muted);
+        }
+
+        .card .value {
+            margin: 0;
+
+            font-size: 20px;
+
+            font-weight: 750;
+
+            color:
+                var(--green-900);
+
+            position: relative;
+            z-index: 2;
+        }
+
+        .card .unit {
+            font-size: 11px;
+
+            font-weight: 500;
+
+            color:
+                var(--text-muted);
+        }
+
+        /* =========================
+           SECTION TITLE
+        ========================= */
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 14px;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+
+            font-size: 17px;
+
+            color:
+                var(--green-900);
+        }
+
+        .section-heading p {
+            margin: 3px 0 0;
+
+            color:
+                var(--text-muted);
+
+            font-size: 11px;
+        }
+
+        /* =========================
+           CHART
+        ========================= */
+
+        .chart-container {
+            position: relative;
+
+            height: 390px;
+
+            padding: 22px;
+
+            background:
+                var(--surface);
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 16px;
+
+            box-shadow:
+                var(--shadow);
+        }
+
+        /* =========================
+           TABLE
+        ========================= */
+
+        .table-responsive {
+            width: 100%;
+
+            overflow-x: auto;
+
+            background:
+                var(--surface);
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 16px;
+
+            box-shadow:
+                var(--shadow);
+        }
+
+        .history-table {
+            width: 100%;
+
+            border-collapse: collapse;
+
+            color:
+                var(--text);
+
+            font-size: 12px;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 13px 14px;
+
+            text-align: left;
+
+            border-bottom:
+                1px solid var(--border);
+
+            white-space: nowrap;
+        }
+
+        .history-table th {
+            background:
+                #f5f9f4;
+
+            color:
+                var(--green-800);
+
+            font-size: 11px;
+
+            font-weight: 700;
+        }
+
+        .history-table tbody tr:hover {
+            background:
+                #f7faf7;
+        }
+
+        .history-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* =========================
+           STATS
+        ========================= */
+
+        .stats-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+
+            gap: 14px;
+        }
+
+        .stat-card {
+            display: flex;
+
+            align-items: center;
+
+            gap: 13px;
+
+            padding: 18px;
+
+            background:
+                var(--surface);
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 15px;
+
+            box-shadow:
+                var(--shadow);
+        }
+
+        .stat-icon {
+            width: 43px;
+            height: 43px;
+
+            flex-shrink: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 12px;
+
+            background:
+                #edf6ee;
+
+            color:
+                var(--green-700);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 4px;
+
+            color:
+                var(--text-muted);
+
+            font-size: 11px;
+        }
+
+        .stat-card .value {
+            margin: 0;
+
+            color:
+                var(--green-900);
+
+            font-size: 20px;
+
+            font-weight: 750;
+        }
+
+        /* =========================
+           STATION INFO
+        ========================= */
+
+        .settings-card {
+            background:
+                var(--surface);
+
+            padding: 20px;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 16px;
+
+            box-shadow:
+                var(--shadow);
+
+            margin-bottom: 20px;
+        }
+
+        .settings-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            margin: 0 0 18px;
+
+            color:
+                var(--green-800);
+
+            font-size: 14px;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 20px;
+
+            padding: 13px 0;
+
+            border-bottom:
+                1px solid var(--border);
+
+            font-size: 12px;
+
+            color:
+                var(--text-muted);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-row strong {
+            color:
+                var(--text);
+
+            text-align: right;
+        }
+
+        .status-online {
+            color:
+                var(--green-700) !important;
+        }
+
+        .status-offline {
+            color:
+                var(--red) !important;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media screen and (max-width: 1200px) {
+            .grid-6 {
+                grid-template-columns:
+                    repeat(3, minmax(0, 1fr));
+            }
+
+            .stats-grid {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media screen and (max-width: 900px) {
+            body {
+                display: block;
+            }
+
+            sidebar {
+                width: 100%;
+                min-height: auto;
+
+                position: relative;
+
+                padding: 13px;
+
+                border-radius: 0;
+            }
+
+            .logo-area {
+                padding: 5px 5px 13px;
+                margin-bottom: 12px;
+            }
+
+            .nav-title,
+            .sidebar-footer {
+                display: none;
+            }
+
+            .nav-links {
+                display: flex;
+
+                overflow-x: auto;
+
+                gap: 6px;
+
+                padding-bottom: 3px;
+            }
+
+            .nav-links li {
+                flex-shrink: 0;
+                margin: 0;
+            }
+
+            .nav-links a {
+                padding: 9px 12px;
+            }
+
+            .nav-links a span {
+                display: none;
+            }
+
+            .nav-links a i {
+                margin: 0;
+            }
+
+            .main-content {
+                padding: 14px;
+            }
+
+            .top-header {
+                grid-template-columns:
+                    1fr auto;
+
+                gap: 12px;
+            }
+
+            .date-time {
+                display: none;
+            }
+
+            .header-actions {
+                justify-self: end;
+            }
+
+            .farm-hero {
+                min-height: 185px;
+            }
+
+            .hero-icons {
+                right: 20px;
+                opacity: 0.6;
+            }
+        }
+
+        @media screen and (max-width: 600px) {
+            .main-content {
+                padding: 10px;
+            }
+
+            .top-header {
+                padding: 11px 12px;
+                border-radius: 13px;
+            }
+
+            .location-info {
+                font-size: 11px;
+            }
+
+            .farm-hero {
+                padding: 22px 19px;
+                min-height: 200px;
+            }
+
+            .hero-content h1 {
+                font-size: 23px;
+            }
+
+            .hero-content p {
+                font-size: 11px;
+            }
+
+            .hero-icons {
+                right: -5px;
+                bottom: 10px;
+                font-size: 38px;
+            }
+
+            .hero-icons i:nth-child(2) {
+                font-size: 55px;
+            }
+
+            .grid-6 {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+
+                gap: 10px;
+            }
+
+            .card {
+                min-height: 126px;
+                padding: 14px;
+            }
+
+            .card .value {
+                font-size: 17px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-card {
+                padding: 14px;
+            }
+
+            .chart-container {
+                height: 310px;
+                padding: 12px;
+            }
+
+            .setting-row {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .setting-row strong {
+                text-align: left;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-    <!-- Sidebar Navigation -->
-    <sidebar>
-        <div class="logo-area">
+<!-- =========================
+     SIDEBAR
+========================= -->
+
+<sidebar>
+
+    <div class="logo-area">
+
+        <div class="logo-icon">
             <i class="fa-solid fa-seedling"></i>
-            <h2>SmartFarm</h2>
         </div>
-        <div class="menu-label">Menu</div>
-        <ul class="nav-links">
-            <li><a class="active" onclick="switchTab('overview', this)"><i class="fa-solid fa-house"></i><span data-sw="Muhtasari" data-en="Overview">Overview</span></a></li>
-            <li><a onclick="switchTab('statistics', this)"><i class="fa-solid fa-chart-line"></i><span data-sw="Takwimu" data-en="Statistics">Statistics</span></a></li>
-            <li><a onclick="switchTab('history', this)"><i class="fa-solid fa-clock-rotate-left"></i><span data-sw="Historia" data-en="History">History</span></a></li>
-            <li><a onclick="switchTab('mipangilio', this)"><i class="fa-solid fa-circle-info"></i><span data-sw="Taarifa za Kituo" data-en="Station Info">Station</span></a></li>
-        </ul>
-        <div class="station-status-box">
-            <i class="fa-solid fa-circle" id="status-dot" style="color: #f59e0b; font-size: 10px;"></i>
-            <span id="station-status-text" data-sw="Inasubiri kituo" data-en="Waiting for station">Waiting for station</span>
+
+        <div>
+            <h2>WeatherStation</h2>
+
+            <p data-sw="Smart Farm Monitoring"
+               data-en="Smart Farm Monitoring">
+                Smart Farm Monitoring
+            </p>
         </div>
-    </sidebar>
 
-    <!-- Main Content Area -->
-    <div class="main-content">
-        <header>
-            <div class="location-badge">
-                <i class="fa-solid fa-location-dot" style="color: var(--primary);"></i>
-                <span id="station-loc">Shamba Langu, Dar es Salaam</span>
-            </div>
-            <div class="controls-area">
-                <div class="datetime-display" id="datetime-div">Sat, Sep 26, 2026 - 08:53 PM</div>
-                <div class="lang-toggle">
-                    <button class="lang-btn" onclick="setLanguage('sw')">SW</button>
-                    <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
-                </div>
-            </div>
-        </header>
-
-        <div class="dashboard-body">
-            <!-- OVERVIEW TAB -->
-            <div id="overview" class="tab-section active">
-                <div class="page-title">
-                    <h1 data-sw="Hali ya Shamba" data-en="Farm Conditions">Farm Conditions</h1>
-                    <p data-sw="Ufuatiliaji wa wakati halisi wa mazingira ya shamba" data-en="Real-time monitoring of field environmental conditions">Real-time monitoring of field environmental conditions</p>
-                </div>
-
-                <div class="banner-card">
-                    <h2 data-sw="Karibu SmartFarm" data-en="Welcome to SmartFarm">Welcome to SmartFarm</h2>
-                    <p data-sw="Mfumo huu unafuatilia hali ya shamba kwa kutumia kituo cha hali ya hewa." data-en="This system monitors field conditions using a weather station.">This system monitors field conditions using a weather station.</p>
-                </div>
-
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="icon-box"><i class="fa-solid fa-temperature-high"></i></div>
-                        <h3 data-sw="Joto" data-en="Temperature">Temperature</h3>
-                        <div class="value"><span id="val-temp">{{ data.temperature }}</span> &deg;C</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="icon-box"><i class="fa-solid fa-droplet"></i></div>
-                        <h3 data-sw="Unyevu" data-en="Humidity">Humidity</h3>
-                        <div class="value"><span id="val-hum">{{ data.humidity }}</span> %</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="icon-box"><i class="fa-solid fa-cloud-rain"></i></div>
-                        <h3 data-sw="Mvua" data-en="Rainfall">Rainfall</h3>
-                        <div class="value"><span id="val-rain">{{ data.rainfall }}</span> mm</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="icon-box"><i class="fa-solid fa-cloud-showers-water"></i></div>
-                        <h3 data-sw="Hali ya Mvua" data-en="Rain Status">Rain Status</h3>
-                        <div class="value" id="val-rain-status" style="font-size: 20px; margin-top: 5px;">{{ data.rain_status }}</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="icon-box"><i class="fa-solid fa-wind"></i></div>
-                        <h3 data-sw="Kasi ya Upepo" data-en="Wind Speed">Wind Speed</h3>
-                        <div class="value"><span id="val-wind-speed">{{ data.wind_speed }}</span> m/s</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="icon-box"><i class="fa-solid fa-compass"></i></div>
-                        <h3 data-sw="Mwelekeo wa Upepo" data-en="Wind Direction">Wind Direction</h3>
-                        <div class="value" id="val-wind-dir" style="font-size: 22px; margin-top: 5px;">{{ data.wind_direction }}</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STATISTICS TAB -->
-            <div id="statistics" class="tab-section">
-                <div class="page-title">
-                    <h1 data-sw="Takwimu za Hali ya Hewa" data-en="Weather Statistics">Weather Statistics</h1>
-                    <p data-sw="Uchambuzi wa takwimu za mazingira" data-en="Environmental data analytics">Environmental data analytics</p>
-                </div>
-            </div>
-
-            <!-- HISTORY TAB -->
-            <div id="history" class="tab-section">
-                <div class="page-title">
-                    <h1 data-sw="Historia ya Vipimo" data-en="Measurement History">Measurement History</h1>
-                    <p data-sw="Kumbukumbu zilizopita za vituo" data-en="Past logged records">Past logged records</p>
-                </div>
-            </div>
-
-            <!-- STATION INFO TAB -->
-            <div id="mipangilio" class="tab-section">
-                <div class="page-title">
-                    <h1 data-sw="Taarifa za Kituo" data-en="Station Information">Station Information</h1>
-                    <p data-sw="Maelezo ya vifaa na muunganisho" data-en="Hardware and connection parameters">Hardware and connection parameters</p>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <script>
-        let currentLang = 'en';
+    <div class="nav-title"
+         data-sw="MENYU KUU"
+         data-en="MAIN MENU">
+        MENYU KUU
+    </div>
 
-        // Translation dictionary mapping both Swahili and English variations correctly
-        const translations = {
-            rain: {
-                "Hakuna Mvua": { sw: "Hakuna Mvua", en: "No Rain" },
-                "Mvua": { sw: "Mvua", en: "Rain" },
-                "Mvua Ndogo": { sw: "Mvua Ndogo", en: "Light Rain" },
-                "Mvua Kubwa": { sw: "Mvua Kubwa", en: "Heavy Rain" },
-                "No Rain": { sw: "Hakuna Mvua", en: "No Rain" },
-                "Rain": { sw: "Mvua", en: "Rain" },
-                "Light Rain": { sw: "Mvua Ndogo", en: "Light Rain" },
-                "Heavy Rain": { sw: "Mvua Kubwa", en: "Heavy Rain" }
+    <ul class="nav-links">
+
+        <li>
+            <a onclick="switchTab('nyumbani', this)"
+               class="active">
+
+                <i class="fa-solid fa-house"></i>
+
+                <span
+                    data-sw="Nyumbani"
+                    data-en="Home">
+                    Nyumbani
+                </span>
+
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('takwimu', this)">
+
+                <i class="fa-solid fa-chart-simple"></i>
+
+                <span
+                    data-sw="Takwimu"
+                    data-en="Statistics">
+                    Takwimu
+                </span>
+
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('historia', this)">
+
+                <i class="fa-solid fa-clock-rotate-left"></i>
+
+                <span
+                    data-sw="Historia"
+                    data-en="History">
+                    Historia
+                </span>
+
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('grafu', this)">
+
+                <i class="fa-solid fa-chart-line"></i>
+
+                <span
+                    data-sw="Grafu"
+                    data-en="Graphs">
+                    Grafu
+                </span>
+
+            </a>
+        </li>
+
+        <li>
+            <a onclick="switchTab('mipangilio', this)">
+
+                <i class="fa-solid fa-circle-info"></i>
+
+                <span
+                    data-sw="Taarifa za Kituo"
+                    data-en="Station Info">
+                    Taarifa za Kituo
+                </span>
+
+            </a>
+        </li>
+
+    </ul>
+
+    <div class="sidebar-footer">
+
+        <div class="sidebar-footer-title">
+            <i class="fa-solid fa-leaf"></i>
+            Smart Agriculture
+        </div>
+
+        <div class="sidebar-footer-text"
+             data-sw="Kufuatilia mazingira ya shamba kwa kutumia data za sensa."
+             data-en="Monitoring farm conditions using sensor data.">
+            Kufuatilia mazingira ya shamba kwa kutumia data za sensa.
+        </div>
+
+    </div>
+
+</sidebar>
+
+
+<!-- =========================
+     MAIN CONTENT
+========================= -->
+
+<div class="main-content">
+
+    <!-- HEADER -->
+
+    <div class="top-header">
+
+        <div class="location-info">
+
+            <div class="location-icon">
+                <i class="fa-solid fa-location-dot"></i>
+            </div>
+
+            <div class="location-text">
+
+                <span
+                    data-sw="Eneo la kituo"
+                    data-en="Station location">
+                    Eneo la kituo
+                </span>
+
+                <strong id="locationName">
+                    {{ data.location }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="date-time">
+
+            <i class="fa-regular fa-calendar"></i>
+
+            <strong id="current-date">
+                --
+            </strong>
+
+            <i class="fa-regular fa-clock"></i>
+
+            <span id="current-time">
+                --
+            </span>
+
+        </div>
+
+
+        <div class="header-actions">
+
+            <div class="lang-switch">
+
+                <button
+                    class="lang-btn active"
+                    onclick="setLanguage('sw', this)">
+                    SW
+                </button>
+
+                <button
+                    class="lang-btn"
+                    onclick="setLanguage('en', this)">
+                    EN
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         HOME
+    ========================= -->
+
+    <div id="nyumbani"
+         class="tab-section active-section">
+
+        <!-- FARM HERO -->
+
+        <div class="farm-hero">
+
+            <div class="hero-content">
+
+                <div class="hero-badge">
+
+                    <i class="fa-solid fa-satellite-dish"></i>
+
+                    <span
+                        data-sw="Kituo cha Hali ya Hewa Shambani"
+                        data-en="Farm Weather Station">
+                        Kituo cha Hali ya Hewa Shambani
+                    </span>
+
+                </div>
+
+                <h1
+                    data-sw="Fuatilia Mazingira ya Shamba"
+                    data-en="Monitor Your Farm Environment">
+                    Fuatilia Mazingira ya Shamba
+                </h1>
+
+                <p
+                    data-sw="Pata taarifa za joto, unyevu, mvua na upepo kutoka kwenye kituo chako cha sensa kwa wakati halisi."
+                    data-en="Monitor temperature, humidity, rainfall and wind conditions from your sensor station in real time.">
+                    Pata taarifa za joto, unyevu, mvua na upepo kutoka kwenye kituo chako cha sensa kwa wakati halisi.
+                </p>
+
+            </div>
+
+            <div class="hero-icons">
+
+                <i class="fa-solid fa-cloud-sun"></i>
+                <i class="fa-solid fa-seedling"></i>
+                <i class="fa-solid fa-cloud-rain"></i>
+
+            </div>
+
+        </div>
+
+
+        <!-- INTRO -->
+
+        <div class="info-card">
+
+            <i class="fa-solid fa-leaf"></i>
+
+            <div class="info-card-content">
+
+                <h3
+                    data-sw="Hali ya Mazingira ya Shamba"
+                    data-en="Farm Environmental Conditions">
+                    Hali ya Mazingira ya Shamba
+                </h3>
+
+                <p
+                    data-sw="Vipimo hapa chini vinaonyesha hali ya sasa ya mazingira inayopokelewa kutoka kwenye sensa za kituo."
+                    data-en="The measurements below show the current environmental conditions received from the station sensors.">
+                    Vipimo hapa chini vinaonyesha hali ya sasa ya mazingira inayopokelewa kutoka kwenye sensa za kituo.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- SENSOR CARDS -->
+
+        <div class="grid-6">
+
+            <!-- TEMPERATURE -->
+
+            <div class="card">
+
+                <div class="sensor-icon icon-temp">
+                    <i class="fa-solid fa-temperature-half"></i>
+                </div>
+
+                <h3
+                    data-sw="Joto"
+                    data-en="Temperature">
+                    Joto
+                </h3>
+
+                <p class="value"
+                   id="temperatureValue">
+                    {{ data.temperature }}
+                    <span class="unit">°C</span>
+                </p>
+
+            </div>
+
+
+            <!-- HUMIDITY -->
+
+            <div class="card">
+
+                <div class="sensor-icon icon-humidity">
+                    <i class="fa-solid fa-droplet"></i>
+                </div>
+
+                <h3
+                    data-sw="Unyevu wa Hewa"
+                    data-en="Air Humidity">
+                    Unyevu wa Hewa
+                </h3>
+
+                <p class="value"
+                   id="humidityValue">
+                    {{ data.humidity }}
+                    <span class="unit">%</span>
+                </p>
+
+            </div>
+
+
+            <!-- RAIN -->
+
+            <div class="card">
+
+                <div class="sensor-icon icon-rain">
+                    <i class="fa-solid fa-cloud-rain"></i>
+                </div>
+
+                <h3
+                    data-sw="Kiasi cha Mvua"
+                    data-en="Rainfall">
+                    Kiasi cha Mvua
+                </h3>
+
+                <p class="value"
+                   id="rainAmountValue">
+                    {{ data.rain_amount }}
+                    <span class="unit">mm</span>
+                </p>
+
+            </div>
+
+
+            <!-- RAIN STATUS -->
+
+            <div class="card">
+
+                <div class="sensor-icon icon-status">
+                    <i class="fa-solid fa-cloud-showers-heavy"></i>
+                </div>
+
+                <h3
+                    data-sw="Hali ya Mvua"
+                    data-en="Rain Status">
+                    Hali ya Mvua
+                </h3>
+
+                <p class="value"
+                   id="rainStatusValue"
+                   style="font-size:15px;">
+                    {{ data.rain_availability }}
+                </p>
+
+            </div>
+
+
+            <!-- WIND SPEED -->
+
+            <div class="card">
+
+                <div class="sensor-icon icon-wind">
+                    <i class="fa-solid fa-wind"></i>
+                </div>
+
+                <h3
+                    data-sw="Kasi ya Upepo"
+                    data-en="Wind Speed">
+                    Kasi ya Upepo
+                </h3>
+
+                <p class="value"
+                   id="windSpeedValue">
+                    {{ data.wind_speed }}
+                    <span class="unit">m/s</span>
+                </p>
+
+            </div>
+
+
+            <!-- WIND DIRECTION -->
+
+            <div class="card">
+
+                <div class="sensor-icon icon-direction">
+                    <i class="fa-regular fa-compass"></i>
+                </div>
+
+                <h3
+                    data-sw="Mwelekeo wa Upepo"
+                    data-en="Wind Direction">
+                    Mwelekeo wa Upepo
+                </h3>
+
+                <p class="value"
+                   id="windDirectionValue"
+                   style="font-size:15px;">
+                    {{ data.wind_direction }}
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         STATISTICS
+    ========================= -->
+
+    <div id="takwimu"
+         class="tab-section">
+
+        <div class="section-heading">
+
+            <div>
+                <h2
+                    data-sw="Takwimu za Kituo"
+                    data-en="Station Statistics">
+                    Takwimu za Kituo
+                </h2>
+
+                <p
+                    data-sw="Muhtasari wa vipimo vilivyohifadhiwa kwenye mfumo."
+                    data-en="Summary of measurements stored in the system.">
+                    Muhtasari wa vipimo vilivyohifadhiwa kwenye mfumo.
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="stats-grid">
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-temperature-half"></i>
+                </div>
+
+                <div>
+                    <h3
+                        data-sw="Wastani wa Joto"
+                        data-en="Average Temperature">
+                        Wastani wa Joto
+                    </h3>
+
+                    <p
+                        class="value"
+                        id="stat-avg-temp">
+                        -- °C
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-temperature-arrow-up"></i>
+                </div>
+
+                <div>
+                    <h3
+                        data-sw="Joto la Juu"
+                        data-en="Maximum Temperature">
+                        Joto la Juu
+                    </h3>
+
+                    <p
+                        class="value"
+                        id="stat-max-temp">
+                        -- °C
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-temperature-arrow-down"></i>
+                </div>
+
+                <div>
+                    <h3
+                        data-sw="Joto la Chini"
+                        data-en="Minimum Temperature">
+                        Joto la Chini
+                    </h3>
+
+                    <p
+                        class="value"
+                        id="stat-min-temp">
+                        -- °C
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-droplet"></i>
+                </div>
+
+                <div>
+                    <h3
+                        data-sw="Wastani wa Unyevu"
+                        data-en="Average Humidity">
+                        Wastani wa Unyevu
+                    </h3>
+
+                    <p
+                        class="value"
+                        id="stat-avg-humidity">
+                        -- %
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-cloud-rain"></i>
+                </div>
+
+                <div>
+                    <h3
+                        data-sw="Jumla ya Mvua"
+                        data-en="Total Rainfall">
+                        Jumla ya Mvua
+                    </h3>
+
+                    <p
+                        class="value"
+                        id="stat-total-rain">
+                        -- mm
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+
+                <div>
+                    <h3
+                        data-sw="Jumla ya Kumbukumbu"
+                        data-en="Total Records">
+                        Jumla ya Kumbukumbu
+                    </h3>
+
+                    <p
+                        class="value"
+                        id="stat-total-records">
+                        --
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         HISTORY
+    ========================= -->
+
+    <div id="historia"
+         class="tab-section">
+
+        <div class="section-heading">
+
+            <div>
+
+                <h2
+                    data-sw="Historia ya Hali ya Hewa"
+                    data-en="Weather History">
+                    Historia ya Hali ya Hewa
+                </h2>
+
+                <p
+                    data-sw="Kumbukumbu za vipimo vilivyopokelewa kutoka kituoni."
+                    data-en="Records of measurements received from the station.">
+                    Kumbukumbu za vipimo vilivyopokelewa kutoka kituoni.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="table-responsive">
+
+            <table class="history-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th
+                            data-sw="Tarehe na Wakati"
+                            data-en="Date & Time">
+                            Tarehe na Wakati
+                        </th>
+
+                        <th
+                            data-sw="Joto"
+                            data-en="Temperature">
+                            Joto
+                        </th>
+
+                        <th
+                            data-sw="Unyevu"
+                            data-en="Humidity">
+                            Unyevu
+                        </th>
+
+                        <th
+                            data-sw="Mvua"
+                            data-en="Rain">
+                            Mvua
+                        </th>
+
+                        <th
+                            data-sw="Hali ya Mvua"
+                            data-en="Rain Status">
+                            Hali ya Mvua
+                        </th>
+
+                        <th
+                            data-sw="Upepo"
+                            data-en="Wind">
+                            Upepo
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="historyTableBody">
+
+                    <tr>
+
+                        <td
+                            colspan="6"
+                            style="
+                                text-align:center;
+                                color:var(--text-muted);
+                                padding:25px;
+                            "
+                            data-sw="Inapakia kumbukumbu..."
+                            data-en="Loading records...">
+
+                            Inapakia kumbukumbu...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         GRAPH
+    ========================= -->
+
+    <div id="grafu"
+         class="tab-section">
+
+        <div class="section-heading">
+
+            <div>
+
+                <h2
+                    data-sw="Mwenendo wa Hali ya Hewa"
+                    data-en="Weather Trends">
+                    Mwenendo wa Hali ya Hewa
+                </h2>
+
+                <p
+                    data-sw="Mabadiliko ya joto na unyevu kwa muda."
+                    data-en="Temperature and humidity changes over time.">
+                    Mabadiliko ya joto na unyevu kwa muda.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="chart-container">
+
+            <canvas id="weatherChart"></canvas>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         STATION INFO
+    ========================= -->
+
+    <div id="mipangilio"
+         class="tab-section">
+
+        <div class="section-heading">
+
+            <div>
+
+                <h2
+                    data-sw="Taarifa za Kituo"
+                    data-en="Station Information">
+                    Taarifa za Kituo
+                </h2>
+
+                <p
+                    data-sw="Hali ya muunganisho wa kituo na taarifa zake."
+                    data-en="Station connection status and information.">
+                    Hali ya muunganisho wa kituo na taarifa zake.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="settings-card">
+
+            <h3>
+
+                <i class="fa-solid fa-wifi"></i>
+
+                <span
+                    data-sw="Mtandao na ESP32"
+                    data-en="Network & ESP32">
+                    Mtandao na ESP32
+                </span>
+
+            </h3>
+
+
+            <div class="setting-row">
+
+                <span
+                    data-sw="Hali ya Muunganisho"
+                    data-en="Connection Status">
+                    Hali ya Muunganisho
+                </span>
+
+                <strong
+                    id="setting-wifi-status"
+                    class="status-offline">
+                    Haijaunganishwa
+                </strong>
+
+            </div>
+
+
+            <div class="setting-row">
+
+                <span
+                    data-sw="Jina la Wi-Fi"
+                    data-en="Wi-Fi Name">
+                    Jina la Wi-Fi
+                </span>
+
+                <strong id="setting-wifi-ssid">
+                    Hakuna Kifaa
+                </strong>
+
+            </div>
+
+
+            <div class="setting-row">
+
+                <span
+                    data-sw="Toleo la Mfumo"
+                    data-en="System Version">
+                    Toleo la Mfumo
+                </span>
+
+                <strong>
+                    v1.0.2 Smart Ag
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    /* =========================================
+       LANGUAGE
+    ========================================= */
+
+    let currentLang = 'sw';
+
+
+    function t(sw, en) {
+
+        return currentLang === 'en'
+            ? en
+            : sw;
+
+    }
+
+
+    /* =========================================
+       DYNAMIC TRANSLATIONS
+    ========================================= */
+
+    const translations = {
+
+        rain: {
+
+            "Hakuna Mvua": {
+                sw: "Hakuna Mvua",
+                en: "No Rain"
+            },
+
+            "Mvua": {
+                sw: "Mvua",
+                en: "Rain"
+            },
+
+            "Mvua Ndogo": {
+                sw: "Mvua Ndogo",
+                en: "Light Rain"
+            },
+
+            "Mvua Kubwa": {
+                sw: "Mvua Kubwa",
+                en: "Heavy Rain"
+            },
+
+            "No Rain": {
+                sw: "Hakuna Mvua",
+                en: "No Rain"
+            },
+
+            "Rain": {
+                sw: "Mvua",
+                en: "Rain"
+            },
+
+            "Light Rain": {
+                sw: "Mvua Ndogo",
+                en: "Light Rain"
+            },
+
+            "Heavy Rain": {
+                sw: "Mvua Kubwa",
+                en: "Heavy Rain"
             }
-        };
 
-        function switchTab(tabId, element) {
-            document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
-            document.querySelectorAll('ul.nav-links li a').forEach(a => a.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            element.classList.add('active');
+        },
+
+        direction: {
+
+            "Kaskazini": {
+                sw: "Kaskazini",
+                en: "North"
+            },
+
+            "Kusini": {
+                sw: "Kusini",
+                en: "South"
+            },
+
+            "Mashariki": {
+                sw: "Mashariki",
+                en: "East"
+            },
+
+            "Magharibi": {
+                sw: "Magharibi",
+                en: "West"
+            },
+
+            "Kaskazini-Mashariki": {
+                sw: "Kaskazini-Mashariki",
+                en: "Northeast"
+            },
+
+            "Kaskazini-Magharibi": {
+                sw: "Kaskazini-Magharibi",
+                en: "Northwest"
+            },
+
+            "Kusini-Mashariki": {
+                sw: "Kusini-Mashariki",
+                en: "Southeast"
+            },
+
+            "Kusini-Magharibi": {
+                sw: "Kusini-Magharibi",
+                en: "Southwest"
+            },
+
+            "North": {
+                sw: "Kaskazini",
+                en: "North"
+            },
+
+            "South": {
+                sw: "Kusini",
+                en: "South"
+            },
+
+            "East": {
+                sw: "Mashariki",
+                en: "East"
+            },
+
+            "West": {
+                sw: "Magharibi",
+                en: "West"
+            },
+
+            "Northeast": {
+                sw: "Kaskazini-Mashariki",
+                en: "Northeast"
+            },
+
+            "Northwest": {
+                sw: "Kaskazini-Magharibi",
+                en: "Northwest"
+            },
+
+            "Southeast": {
+                sw: "Kusini-Mashariki",
+                en: "Southeast"
+            },
+
+            "Southwest": {
+                sw: "Kusini-Magharibi",
+                en: "Southwest"
+            }
+
         }
 
-        function setLanguage(lang) {
-            currentLang = lang;
-            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+    };
 
-            document.querySelectorAll('[data-sw]').forEach(el => {
-                el.innerText = el.getAttribute(`data-${lang}`);
+
+    function translateDynamic(value, type) {
+
+        if (value === null || value === undefined) {
+            return "--";
+        }
+
+        const cleanValue =
+            String(value).trim();
+
+        const group =
+            translations[type];
+
+        if (!group) {
+            return cleanValue;
+        }
+
+        if (group[cleanValue]) {
+            return group[cleanValue][currentLang];
+        }
+
+        return cleanValue;
+    }
+
+
+    /* =========================================
+       TAB SWITCH
+    ========================================= */
+
+    function switchTab(tabId, element) {
+
+        document
+            .querySelectorAll('.tab-section')
+            .forEach(section => {
+
+                section.classList.remove(
+                    'active-section'
+                );
+
             });
 
-            // Re-translate dynamic rain status element if needed
-            let rainEl = document.getElementById('val-rain-status');
-            let currentVal = rainEl.getAttribute('data-raw-status') || rainEl.innerText;
-            if (translations.rain[currentVal]) {
-                rainEl.innerText = translations.rain[currentVal][lang];
-            }
+
+        document
+            .querySelectorAll('.nav-links a')
+            .forEach(link => {
+
+                link.classList.remove('active');
+
+            });
+
+
+        const selected =
+            document.getElementById(tabId);
+
+        if (selected) {
+            selected.classList.add(
+                'active-section'
+            );
         }
 
-        // Live polling function to sync weather stats with Flask backend
-        async function fetchLiveWeather() {
-            try {
-                let res = await fetch('/get-data');
-                let data = await res.json();
-                
-                document.getElementById('val-temp').innerText = data.temperature;
-                document.getElementById('val-hum').innerText = data.humidity;
-                document.getElementById('val-rain').innerText = data.rainfall;
-                document.getElementById('val-wind-speed').innerText = data.wind_speed;
-                document.getElementById('val-wind-dir').innerText = data.wind_direction;
 
-                let rawRain = data.rain_status;
-                let rainEl = document.getElementById('val-rain-status');
-                rainEl.setAttribute('data-raw-status', rawRain);
-                rainEl.innerText = translations.rain[rawRain] ? translations.rain[rawRain][currentLang] : rawRain;
+        element.classList.add('active');
 
-                // Update live indicator status dot
-                document.getElementById('status-dot').style.color = '#10b981';
-                document.getElementById('station-status-text').innerText = currentLang === 'sw' ? 'Kituo kiko Hewani' : 'Station Live';
-            } catch (err) {
-                console.error('Error fetching live data:', err);
-            }
+
+        if (tabId === 'grafu') {
+
+            setTimeout(() => {
+
+                weatherChart.resize();
+
+            }, 50);
+
         }
 
-        setInterval(fetchLiveWeather, 5000);
-    </script>
+
+        if (tabId === 'historia') {
+            loadWeatherLogs();
+        }
+
+
+        if (tabId === 'takwimu') {
+            loadWeatherStats();
+        }
+
+    }
+
+
+    /* =========================================
+       DATE & TIME
+    ========================================= */
+
+    function updateDateTime() {
+
+        const now = new Date();
+
+        const locale =
+            currentLang === 'en'
+                ? 'en-US'
+                : 'sw-TZ';
+
+
+        const dateStr =
+            now.toLocaleDateString(
+                locale,
+                {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                }
+            );
+
+
+        const timeStr =
+            now.toLocaleTimeString(
+                locale,
+                {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }
+            );
+
+
+        document
+            .getElementById('current-date')
+            .innerText = dateStr;
+
+
+        document
+            .getElementById('current-time')
+            .innerText = timeStr;
+
+    }
+
+
+    updateDateTime();
+
+    setInterval(
+        updateDateTime,
+        1000
+    );
+
+
+    /* =========================================
+       CHART
+    ========================================= */
+
+    const ctx =
+        document
+            .getElementById('weatherChart')
+            .getContext('2d');
+
+
+    const weatherChart =
+        new Chart(
+            ctx,
+            {
+
+                type: 'line',
+
+                data: {
+
+                    labels: [],
+
+                    datasets: [
+
+                        {
+
+                            label:
+                                'Joto (°C)',
+
+                            data: [],
+
+                            borderColor:
+                                '#e46b55',
+
+                            backgroundColor:
+                                'rgba(228,107,85,0.08)',
+
+                            borderWidth: 2.5,
+
+                            tension: 0.4,
+
+                            fill: true,
+
+                            pointRadius: 3,
+
+                            pointHoverRadius: 5,
+
+                            yAxisID: 'y'
+
+                        },
+
+
+                        {
+
+                            label:
+                                'Unyevu (%)',
+
+                            data: [],
+
+                            borderColor:
+                                '#3597b8',
+
+                            backgroundColor:
+                                'rgba(53,151,184,0.08)',
+
+                            borderWidth: 2.5,
+
+                            tension: 0.4,
+
+                            fill: true,
+
+                            pointRadius: 3,
+
+                            pointHoverRadius: 5,
+
+                            yAxisID: 'y1'
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    interaction: {
+
+                        mode: 'index',
+
+                        intersect: false
+
+                    },
+
+                    scales: {
+
+                        x: {
+
+                            grid: {
+                                color:
+                                    'rgba(24,53,36,0.06)'
+                            },
+
+                            ticks: {
+
+                                color:
+                                    '#718078',
+
+                                font: {
+                                    size: 10
+                                }
+
+                            }
+
+                        },
+
+                        y: {
+
+                            position: 'left',
+
+                            title: {
+
+                                display: true,
+
+                                text:
+                                    'Joto (°C)',
+
+                                color:
+                                    '#e46b55'
+
+                            },
+
+                            grid: {
+
+                                color:
+                                    'rgba(24,53,36,0.06)'
+
+                            },
+
+                            ticks: {
+
+                                color:
+                                    '#e46b55'
+
+                            }
+
+                        },
+
+                        y1: {
+
+                            position: 'right',
+
+                            title: {
+
+                                display: true,
+
+                                text:
+                                    'Unyevu (%)',
+
+                                color:
+                                    '#3597b8'
+
+                            },
+
+                            grid: {
+
+                                drawOnChartArea:
+                                    false
+
+                            },
+
+                            ticks: {
+
+                                color:
+                                    '#3597b8'
+
+                            }
+
+                        }
+
+                    },
+
+                    plugins: {
+
+                        legend: {
+
+                            labels: {
+
+                                color:
+                                    '#183024',
+
+                                font: {
+                                    size: 11
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+
+    /* =========================================
+       LIVE WEATHER DATA
+    ========================================= */
+
+    function fetchLiveWeatherData() {
+
+        fetch(
+            `/get-data?lang=${currentLang}`
+        )
+
+        .then(response => {
+
+            if (!response.ok) {
+                throw new Error(
+                    'Server response error'
+                );
+            }
+
+            return response.json();
+
+        })
+
+        .then(data => {
+
+            document
+                .getElementById('temperatureValue')
+                .innerHTML =
+                    `${data.temperature}
+                     <span class="unit">°C</span>`;
+
+
+            document
+                .getElementById('humidityValue')
+                .innerHTML =
+                    `${data.humidity}
+                     <span class="unit">%</span>`;
+
+
+            document
+                .getElementById('rainAmountValue')
+                .innerHTML =
+                    `${data.rain_amount}
+                     <span class="unit">mm</span>`;
+
+
+            document
+                .getElementById('rainStatusValue')
+                .innerText =
+                    data.rain_availability;
+
+
+            document
+                .getElementById('windSpeedValue')
+                .innerHTML =
+                    `${data.wind_speed}
+                     <span class="unit">m/s</span>`;
+
+
+            document
+                .getElementById('windDirectionValue')
+                .innerText =
+                    data.wind_direction;
+
+
+            document
+                .getElementById('locationName')
+                .innerText =
+                    data.location;
+
+
+            /* WIFI */
+
+            const wifiStatusEl =
+                document.getElementById(
+                    'setting-wifi-status'
+                );
+
+
+            const wifiSsidEl =
+                document.getElementById(
+                    'setting-wifi-ssid'
+                );
+
+
+            if (data.wifi_status) {
+
+                wifiStatusEl.innerText =
+                    data.wifi_status;
+
+
+                if (
+                    data.is_online === true
+                ) {
+
+                    wifiStatusEl
+                        .classList
+                        .remove(
+                            'status-offline'
+                        );
+
+                    wifiStatusEl
+                        .classList
+                        .add(
+                            'status-online'
+                        );
+
+                } else {
+
+                    wifiStatusEl
+                        .classList
+                        .remove(
+                            'status-online'
+                        );
+
+                    wifiStatusEl
+                        .classList
+                        .add(
+                            'status-offline'
+                        );
+
+                }
+
+            }
+
+
+            wifiSsidEl.innerText =
+                data.wifi_ssid ||
+                t(
+                    'Hakuna Kifaa',
+                    'No Device'
+                );
+
+
+            /* CHART */
+
+            if (data.history) {
+
+                weatherChart
+                    .data
+                    .labels =
+                    data.history.timestamps;
+
+
+                weatherChart
+                    .data
+                    .datasets[0]
+                    .data =
+                    data.history.temperatures;
+
+
+                weatherChart
+                    .data
+                    .datasets[1]
+                    .data =
+                    data.history.humidities;
+
+
+                weatherChart.update(
+                    'none'
+                );
+
+            }
+
+        })
+
+        .catch(error => {
+
+            console.error(
+                'Weather data error:',
+                error
+            );
+
+        });
+
+    }
+
+
+    fetchLiveWeatherData();
+
+
+    setInterval(
+        fetchLiveWeatherData,
+        5000
+    );
+
+
+    /* =========================================
+       STATISTICS
+    ========================================= */
+
+    function loadWeatherStats() {
+
+        fetch(
+            `/get-stats?lang=${currentLang}`
+        )
+
+        .then(response =>
+            response.json()
+        )
+
+        .then(data => {
+
+            document
+                .getElementById(
+                    'stat-avg-temp'
+                )
+                .innerText =
+                    data.avg_temp + " °C";
+
+
+            document
+                .getElementById(
+                    'stat-max-temp'
+                )
+                .innerText =
+                    data.max_temp + " °C";
+
+
+            document
+                .getElementById(
+                    'stat-min-temp'
+                )
+                .innerText =
+                    data.min_temp + " °C";
+
+
+            document
+                .getElementById(
+                    'stat-avg-humidity'
+                )
+                .innerText =
+                    data.avg_humidity + " %";
+
+
+            document
+                .getElementById(
+                    'stat-total-rain'
+                )
+                .innerText =
+                    data.total_rain + " mm";
+
+
+            document
+                .getElementById(
+                    'stat-total-records'
+                )
+                .innerText =
+                    data.total_records;
+
+        })
+
+        .catch(error => {
+
+            console.error(
+                'Statistics error:',
+                error
+            );
+
+        });
+
+    }
+
+
+    /* =========================================
+       HISTORY
+    ========================================= */
+
+    function loadWeatherLogs() {
+
+        fetch(
+            `/get-logs?lang=${currentLang}`
+        )
+
+        .then(response =>
+            response.json()
+        )
+
+        .then(data => {
+
+            const tableBody =
+                document.getElementById(
+                    'historyTableBody'
+                );
+
+
+            tableBody.innerHTML = '';
+
+
+            if (!data.length) {
+
+                tableBody.innerHTML = `
+
+                    <tr>
+
+                        <td
+                            colspan="6"
+                            style="
+                                text-align:center;
+                                color:var(--text-muted);
+                                padding:25px;
+                            "
+                        >
+                            ${t(
+                                'Hakuna kumbukumbu bado.',
+                                'No records yet.'
+                            )}
+                        </td>
+
+                    </tr>
+
+                `;
+
+                return;
+
+            }
+
+
+            data.forEach(log => {
+
+                const row = document.createElement(
+                    'tr'
+                );
+
+
+                const dateCell =
+                    document.createElement(
+                        'td'
+                    );
+
+                dateCell.innerText =
+                    `${log.date} ${log.timestamp}`;
+
+
+                const tempCell =
+                    document.createElement(
+                        'td'
+                    );
+
+                tempCell.innerText =
+                    `${log.temperature} °C`;
+
+
+                const humidityCell =
+                    document.createElement(
+                        'td'
+                    );
+
+                humidityCell.innerText =
+                    `${log.humidity} %`;
+
+
+                const rainCell =
+                    document.createElement(
+                        'td'
+                    );
+
+                rainCell.innerText =
+                    `${log.rain_amount} mm`;
+
+
+                const statusCell =
+                    document.createElement(
+                        'td'
+                    );
+
+                statusCell.innerText =
+                    log.rain_availability;
+
+
+                const windCell =
+                    document.createElement(
+                        'td'
+                    );
+
+                windCell.innerText =
+                    `${log.wind_speed} m/s (${log.wind_direction})`;
+
+
+                row.appendChild(dateCell);
+                row.appendChild(tempCell);
+                row.appendChild(humidityCell);
+                row.appendChild(rainCell);
+                row.appendChild(statusCell);
+                row.appendChild(windCell);
+
+
+                tableBody.appendChild(row);
+
+            });
+
+        })
+
+        .catch(error => {
+
+            console.error(
+                'History error:',
+                error
+            );
+
+        });
+
+    }
+
+
+    /* =========================================
+       LANGUAGE SWITCH
+    ========================================= */
+
+    function setLanguage(lang, btn) {
+
+        currentLang = lang;
+
+
+        document
+            .getElementById('htmlRoot')
+            .setAttribute(
+                'lang',
+                lang
+            );
+
+
+        document
+            .querySelectorAll('.lang-btn')
+            .forEach(button => {
+
+                button.classList.remove(
+                    'active'
+                );
+
+            });
+
+
+        btn.classList.add(
+            'active'
+        );
+
+
+        document
+            .querySelectorAll('[data-sw]')
+            .forEach(element => {
+
+                const text =
+                    element.getAttribute(
+                        `data-${lang}`
+                    );
+
+
+                if (text) {
+
+                    element.innerText =
+                        text;
+
+                }
+
+            });
+
+
+        updateDateTime();
+
+
+        /*
+         * IMPORTANT:
+         * Reload dynamic values so values
+         * such as Kaskazini / North and
+         * Hakuna Mvua / No Rain also change.
+         */
+
+        fetchLiveWeatherData();
+
+        loadWeatherStats();
+
+        loadWeatherLogs();
+
+    }
+
+
+    /* =========================================
+       INITIAL LOAD
+    ========================================= */
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function() {
+
+            loadWeatherStats();
+
+            loadWeatherLogs();
+
+            fetchLiveWeatherData();
+
+        }
+    );
+
+</script>
+
 </body>
 </html>
+```
