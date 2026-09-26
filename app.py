@@ -124,7 +124,6 @@ def get_data():
     # Tuma taarifa za mtandao kulingana na hali halisi ya ESP32
     if is_online:
         response_data["wifi_status"] = "Imeunganishwa (Online)"
-        # weather_data['wifi_ssid'] tayari imesheheni jina halisi lililotumwa kutoka ESP32
     else:
         response_data["wifi_status"] = "Haijaunganishwa (Offline)"
         response_data["wifi_ssid"] = "Hakuna Kifaa"
@@ -201,25 +200,22 @@ def analyze_ai():
     Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
     """
     
-    max_retries = 3
-    delay = 2
+    # Orodha ya models za kujaribu moja hadi nyingine kiotomatiki kama ikitokea hitilafu
+    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
     
-    for attempt in range(max_retries):
+    for model_name in models_to_try:
         try:
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model=model_name,
                 contents=prompt
             )
             if response and response.text:
                 return jsonify({"status": "success", "analysis": response.text})
         except Exception as e:
-            if attempt < max_retries - 1:
-                time.sleep(delay)
-                continue
-            else:
-                return jsonify({"status": "error", "analysis": f"Seva za AI zina msongamano kwa sasa. Jaribu tena baadae. Hitilafu: {str(e)}"})
+            # Kama model hii imegoma, inajaribu inayofuata kimya kimya
+            continue
 
-    return jsonify({"status": "error", "analysis": "Kimeshindikana kupata jibu kutoka kwa AI."})
+    return jsonify({"status": "error", "analysis": "Seva za AI zina msongamano kwa sasa au miundombinu imebadilika. Jaribu tena baadae."})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
