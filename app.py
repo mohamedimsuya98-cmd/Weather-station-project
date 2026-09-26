@@ -47,13 +47,16 @@ weather_history = {
     "humidities": []
 }
 
+# Variable ya kuhifadhi muda wa mwisho ESP32 ilipotuma data
+last_update_time = None
+
 @app.route('/')
 def home():
     return render_template('index.html', data=weather_data)
 
 @app.route('/update', methods=['POST'])
 def update_weather():
-    global weather_data, weather_history
+    global weather_data, weather_history, last_update_time
     data = request.json
     
     if data:
@@ -64,8 +67,11 @@ def update_weather():
         weather_data['wind_speed'] = data.get('wind_speed', weather_data['wind_speed'])
         weather_data['wind_direction'] = data.get('wind_direction', weather_data['wind_direction'])
         
-        current_time = datetime.datetime.now().strftime("%H:%M:%S")
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        # Sasisha muda wa mwisho kifaa kilipowasiliana na seva
+        last_update_time = datetime.datetime.now()
+        
+        current_time = last_update_time.strftime("%H:%M:%S")
+        current_date = last_update_time.strftime("%Y-%m-%d")
         
         # 1. Hifadhi kwenye kumbukumbu za muda mfupi (in-memory history kwa ajili ya chart)
         weather_history["timestamps"].append(current_time)
@@ -97,8 +103,25 @@ def update_weather():
 
 @app.route('/get-data', methods=['GET'])
 def get_data():
+    global last_update_time
     response_data = weather_data.copy()
     response_data["history"] = weather_history
+    
+    # Angalia kama kifaa kimetuma data ndani ya sekunde 30 zilizopita
+    is_online = False
+    if last_update_time:
+        time_difference = (datetime.datetime.now() - last_update_time).total_seconds()
+        if time_difference < 30:
+            is_online = True
+
+    # Tuma taarifa za mtandao kulingana na hali halisi ya ESP32
+    if is_online:
+        response_data["wifi_status"] = "Imounganishwa (Online)"
+        response_data["wifi_ssid"] = "ESP32_Farm_Net"
+    else:
+        response_data["wifi_status"] = "Haijaunganishwa (Offline)"
+        response_data["wifi_ssid"] = "Hakuna Kifaa"
+
     return jsonify(response_data)
 
 # Njia ya kuchota historia yote iliyohifadhiwa kwenye database kwa ajili ya ukurasa wa Historia
@@ -175,7 +198,7 @@ def analyze_ai():
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.5-flash',
                 contents=prompt
             )
             if response and response.text:
