@@ -20,11 +20,10 @@ class WeatherLog(db.Model):
     rain_availability = db.Column(db.String(50), nullable=False)
     wind_speed = db.Column(db.Float, nullable=False)
     wind_direction = db.Column(db.String(50), nullable=False)
-    wifi_ssid = db.Column(db.String(50), nullable=True)  # Sehemu ya kuhifadhi jina la Wi-Fi kwenye DB
+    wifi_ssid = db.Column(db.String(50), nullable=True)
     timestamp = db.Column(db.String(20), nullable=False)
     date_recorded = db.Column(db.String(20), nullable=False)
 
-# Anzisha Database wakati app inapowaka
 with app.app_context():
     db.create_all()
 
@@ -45,7 +44,6 @@ weather_history = {
     "humidities": []
 }
 
-# Variable ya kuhifadhi muda wa mwisho ESP32 ilipotuma data
 last_update_time = None
 
 @app.route('/')
@@ -65,17 +63,13 @@ def update_weather():
         weather_data['wind_speed'] = data.get('wind_speed', weather_data['wind_speed'])
         weather_data['wind_direction'] = data.get('wind_direction', weather_data['wind_direction'])
         
-        # Kupokea jina la Wi-Fi kutoka kwa ESP32
         received_ssid = data.get('wifi_ssid', 'Haijulikani')
         weather_data['wifi_ssid'] = received_ssid
         
-        # Sasisha muda wa mwisho kifaa kilipowasiliana na seva
         last_update_time = datetime.datetime.now()
-        
         current_time = last_update_time.strftime("%H:%M:%S")
         current_date = last_update_time.strftime("%Y-%m-%d")
         
-        # 1. Hifadhi kwenye kumbukumbu za muda mfupi (in-memory history kwa ajili ya chart)
         weather_history["timestamps"].append(current_time)
         weather_history["temperatures"].append(float(weather_data['temperature']))
         weather_history["humidities"].append(float(weather_data['humidity']))
@@ -85,7 +79,6 @@ def update_weather():
             weather_history["temperatures"].pop(0)
             weather_history["humidities"].pop(0)
             
-        # 2. Hifadhi ya kudumu kwenye Database (SQLite) pamoja na wifi_ssid
         new_log = WeatherLog(
             temperature=float(weather_data['temperature']),
             humidity=float(weather_data['humidity']),
@@ -100,7 +93,7 @@ def update_weather():
         db.session.add(new_log)
         db.session.commit()
             
-        return jsonify({"status": "success", "message": "Data na jina la Wi-Fi zimepokelewa na kuhifadhiwa!"}), 200
+        return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
     
     return jsonify({"status": "error", "message": "Haikusomeka!"}), 400
 
@@ -110,14 +103,12 @@ def get_data():
     response_data = weather_data.copy()
     response_data["history"] = weather_history
     
-    # Angalia kama kifaa kimetuma data ndani ya sekunde 30 zilizopita
     is_online = False
     if last_update_time:
         time_difference = (datetime.datetime.now() - last_update_time).total_seconds()
         if time_difference < 30:
             is_online = True
 
-    # Tuma taarifa za mtandao kulingana na hali halisi ya ESP32
     if is_online:
         response_data["wifi_status"] = "Imeunganishwa (Online)"
     else:
@@ -126,7 +117,6 @@ def get_data():
 
     return jsonify(response_data)
 
-# Njia ya kuchota historia yote iliyohifadhiwa kwenye database kwa ajili ya ukurasa wa Historia
 @app.route('/get-logs', methods=['GET'])
 def get_logs():
     logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(50).all()
@@ -146,27 +136,18 @@ def get_logs():
         })
     return jsonify(logs_list)
 
-# Njia ya kuchakata na kurudisha takwimu za kina (Stats)
 @app.route('/get-stats', methods=['GET'])
 def get_stats():
     logs = WeatherLog.query.all()
     if not logs:
-        return jsonify({
-            "avg_temp": 0.0,
-            "max_temp": 0.0,
-            "min_temp": 0.0,
-            "avg_humidity": 0.0,
-            "total_rain": 0.0,
-            "avg_wind": 0.0,
-            "total_records": 0
-        })
+        return jsonify({"avg_temp": 0.0, "max_temp": 0.0, "min_temp": 0.0, "avg_humidity": 0.0, "total_rain": 0.0, "avg_wind": 0.0, "total_records": 0})
     
     temps = [log.temperature for log in logs]
     humidities = [log.humidity for log in logs]
     rains = [log.rain_amount for log in logs]
     winds = [log.wind_speed for log in logs]
     
-    stats_data = {
+    return jsonify({
         "avg_temp": round(sum(temps) / len(temps), 1),
         "max_temp": round(max(temps), 1),
         "min_temp": round(min(temps), 1),
@@ -174,10 +155,8 @@ def get_stats():
         "total_rain": round(sum(rains), 2),
         "avg_wind": round(sum(winds) / len(winds), 1),
         "total_records": len(logs)
-    }
-    return jsonify(stats_data)
+    })
 
-# Sehemu ya kutumia Groq AI badala ya Gemini
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
     groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -203,7 +182,7 @@ def analyze_ai():
     Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
     """
 
-payload = {
+    payload = {
         "model": "llama3-8b-8192",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7
