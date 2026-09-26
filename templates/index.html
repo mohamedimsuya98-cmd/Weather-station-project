@@ -82,6 +82,26 @@
             --sidebar-width: 250px;
         }
 
+        /* Dark Theme Variables */
+        [data-theme="dark"] {
+            --bg: #0d1511;
+            --surface: #14221a;
+            --surface-soft: #1b2e23;
+
+            --text: #ecf3ee;
+            --text-muted: #9aa89e;
+
+            --border: #23382c;
+
+            --green-100: #183323;
+            --green-700: #278653;
+            --green-900: #a9e8bd;
+
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 18px 45px rgba(0, 0, 0, 0.5);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -103,6 +123,7 @@
                 var(--bg);
             color: var(--text);
             min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         button,
@@ -381,6 +402,27 @@
             color: white;
         }
 
+        /* Theme Toggle Button Style */
+        .theme-toggle-btn {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-muted);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: var(--shadow-sm);
+            transition: 0.2s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            color: var(--green-700);
+            border-color: var(--green-700);
+        }
+
         /* ================================
            TABS
         ================================= */
@@ -429,6 +471,11 @@
             margin-bottom: 25px;
         }
 
+        [data-theme="dark"] .hero {
+            background: linear-gradient(135deg, #13271d 0%, #111e17 55%, #10232c 100%);
+            border-color: #213c2f;
+        }
+
         .hero-content {
             position: relative;
             z-index: 3;
@@ -450,6 +497,11 @@
             letter-spacing: 0.5px;
         }
 
+        [data-theme="dark"] .hero-badge {
+            background: rgba(20, 34, 26, 0.82);
+            border-color: #264634;
+        }
+
         .hero-title {
             font-size: clamp(27px, 3vw, 42px);
             line-height: 1.08;
@@ -464,6 +516,10 @@
             color: #607367;
             font-size: 13px;
             line-height: 1.7;
+        }
+
+        [data-theme="dark"] .hero-description {
+            color: #9cb0a3;
         }
 
         .hero-meta {
@@ -484,6 +540,12 @@
             color: #4e6255;
             font-size: 10px;
             font-weight: 700;
+        }
+
+        [data-theme="dark"] .hero-meta-item {
+            background: rgba(20, 34, 26, 0.75);
+            border-color: #233e2f;
+            color: #a4bba9;
         }
 
         .hero-meta-item i {
@@ -632,6 +694,10 @@
             border-color: #d2dfd5;
         }
 
+        [data-theme="dark"] .sensor-card:hover {
+            border-color: #2c4d3a;
+        }
+
         .sensor-card::before {
             content: "";
             position: absolute;
@@ -710,8 +776,8 @@
             margin-top: 9px;
             padding: 5px 8px;
             border-radius: 7px;
-            background: #f2f5f3;
-            color: #87938a;
+            background: var(--surface-soft);
+            color: var(--text-muted);
             font-size: 9px;
             font-weight: 800;
         }
@@ -722,30 +788,48 @@
             --accent: #e27b35;
             --icon-bg: #fff0e5;
         }
+        [data-theme="dark"] .temperature {
+            --icon-bg: #2d2019;
+        }
 
         .humidity {
             --accent: #258dcb;
             --icon-bg: #e7f5fc;
+        }
+        [data-theme="dark"] .humidity {
+            --icon-bg: #152733;
         }
 
         .rainfall {
             --accent: #478bb9;
             --icon-bg: #eaf4fa;
         }
+        [data-theme="dark"] .rainfall {
+            --icon-bg: #1a2a35;
+        }
 
         .rain-status {
             --accent: #4d9b57;
             --icon-bg: #e9f5ea;
+        }
+        [data-theme="dark"] .rain-status {
+            --icon-bg: #192d20;
         }
 
         .wind-speed {
             --accent: #765fb5;
             --icon-bg: #f0ebfa;
         }
+        [data-theme="dark"] .wind-speed {
+            --icon-bg: #262038;
+        }
 
         .wind-direction {
             --accent: #a87938;
             --icon-bg: #f8efe3;
+        }
+        [data-theme="dark"] .wind-direction {
+            --icon-bg: #322518;
         }
 
         /* ================================
@@ -874,8 +958,8 @@
         }
 
         th {
-            background: #f7faf7;
-            color: #66756b;
+            background: var(--surface-soft);
+            color: var(--text-muted);
             text-align: left;
             padding: 13px 15px;
             font-size: 10px;
@@ -888,8 +972,8 @@
         td {
             padding: 14px 15px;
             font-size: 11px;
-            border-bottom: 1px solid #edf1ed;
-            color: #39483f;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
         }
 
         tbody tr:last-child td {
@@ -897,7 +981,7 @@
         }
 
         tbody tr:hover {
-            background: #fbfdfb;
+            background: var(--surface-soft);
         }
 
         .table-status {
@@ -912,10 +996,18 @@
             color: #2374a3;
             background: #e8f5fc;
         }
+        [data-theme="dark"] .status-rain {
+            color: #56b3e9;
+            background: #142834;
+        }
 
         .status-dry {
             color: #5c7562;
             background: #eef4ef;
+        }
+        [data-theme="dark"] .status-dry {
+            color: #9cb8a5;
+            background: #19261d;
         }
 
         /* ================================
@@ -976,7 +1068,7 @@
             justify-content: space-between;
             gap: 15px;
             padding: 11px 0;
-            border-bottom: 1px solid #edf1ed;
+            border-bottom: 1px solid var(--border);
         }
 
         .info-row:last-child {
@@ -1006,18 +1098,26 @@
         }
 
         .device-state.waiting {
-            color: #66736a;
-            background: #eef2ef;
+            color: var(--text-muted);
+            background: var(--surface-soft);
         }
 
         .device-state.online {
             color: #247c46;
             background: #e6f6eb;
         }
+        [data-theme="dark"] .device-state.online {
+            color: #4cd67e;
+            background: #132f1f;
+        }
 
         .device-state.offline {
             color: #b23d3d;
             background: #fdeaea;
+        }
+        [data-theme="dark"] .device-state.offline {
+            color: #ff6b6b;
+            background: #361919;
         }
 
         /* ================================
@@ -1033,7 +1133,7 @@
         .empty-state i {
             font-size: 25px;
             margin-bottom: 10px;
-            color: #9cac9f;
+            color: var(--text-muted);
         }
 
         .empty-state p {
@@ -1046,7 +1146,7 @@
 
         .footer {
             text-align: center;
-            color: #8a978e;
+            color: var(--text-muted);
             font-size: 9px;
             padding: 25px 5px 10px;
         }
@@ -1379,6 +1479,16 @@
                 >
                     --
                 </div>
+
+                <!-- Kitufe cha Kubadili Theme (Dark/Light Mode) -->
+                <button
+                    class="theme-toggle-btn"
+                    id="themeToggleBtn"
+                    onclick="toggleTheme()"
+                    title="Badili Mwangaza"
+                >
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
 
                 <div class="language-switch">
 
@@ -2557,6 +2667,7 @@
        ========================================================= */
 
     let currentLang = "sw";
+    let currentTheme = "light";
     let weatherChart = null;
 
     /*
@@ -2622,6 +2733,51 @@
         fetchLiveWeatherData();
         loadWeatherStats();
         loadWeatherLogs();
+    }
+
+
+    /* =========================================================
+       THEME SWITCHING (DARK / LIGHT MODE)
+       ========================================================= */
+
+    function setTheme(theme) {
+        currentTheme = theme;
+        const htmlRoot = document.getElementById("htmlRoot");
+        const themeIcon = document.getElementById("themeIcon");
+
+        if (theme === "dark") {
+            htmlRoot.setAttribute("data-theme", "dark");
+            if (themeIcon) {
+                themeIcon.className = "fa-solid fa-sun";
+            }
+        } else {
+            htmlRoot.removeAttribute("data-theme");
+            if (themeIcon) {
+                themeIcon.className = "fa-solid fa-moon";
+            }
+        }
+
+        localStorage.setItem("weatherDashboardTheme", theme);
+
+        // Sasisha rangi za Chart kama ipo
+        if (weatherChart) {
+            const isDark = theme === "dark";
+            const textColor = isDark ? "#9aa89e" : "#87958c";
+            const gridColor = isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(120,145,128,0.10)";
+
+            weatherChart.options.scales.x.ticks.color = textColor;
+            weatherChart.options.scales.y.ticks.color = textColor;
+            weatherChart.options.scales.y.grid.color = gridColor;
+            weatherChart.update("none");
+        }
+    }
+
+    function toggleTheme() {
+        if (currentTheme === "dark") {
+            setTheme("light");
+        } else {
+            setTheme("dark");
+        }
     }
 
 
@@ -3640,6 +3796,10 @@
         const ctx =
             canvas.getContext("2d");
 
+        const isDark = currentTheme === "dark";
+        const textColor = isDark ? "#9aa89e" : "#87958c";
+        const gridColor = isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(120,145,128,0.10)";
+
 
         weatherChart =
             new Chart(ctx, {
@@ -3735,7 +3895,7 @@
                             },
 
                             ticks: {
-                                color: "#87958c",
+                                color: textColor,
                                 font: {
                                     size: 9
                                 }
@@ -3747,12 +3907,11 @@
                             beginAtZero: false,
 
                             grid: {
-                                color:
-                                    "rgba(120,145,128,0.10)"
+                                color: gridColor
                             },
 
                             ticks: {
-                                color: "#87958c",
+                                color: textColor,
                                 font: {
                                     size: 9
                                 }
@@ -3841,6 +4000,15 @@
             ) {
                 currentLang =
                     savedLanguage;
+            }
+
+            const savedTheme =
+                localStorage.getItem(
+                    "weatherDashboardTheme"
+                );
+
+            if (savedTheme === "dark" || savedTheme === "light") {
+                setTheme(savedTheme);
             }
 
 
