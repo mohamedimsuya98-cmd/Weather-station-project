@@ -278,7 +278,7 @@
                     </thead>
                     <tbody id="historyTableBody">
                         <tr>
-                            <td colspan="6" style="text-align: center; color: var(--text-gray);">Inapakia kumbukumbu...</td>
+                            <td colspan="6" style="text-align: center; color: var(--text-gray);" data-sw="Inapakia kumbukumbu..." data-en="Loading logs...">Inapakia kumbukumbu...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -300,7 +300,7 @@
         <div id="ushauri" class="tab-section">
             <div class="expert-card">
                 <h3><i class="fa-solid fa-stethoscope"></i> <span data-sw="Mchambuzi na Ushauri wa Kitaalamu" data-en="Expert Analyst & Advice">Mchambuzi na Ushauri wa Kitaalamu</span></h3>
-                <p id="expertText">Bonyeza kitufe hapa chini ili mfumo uchambue hali halisi ya sasa kutoka kwenye kituo chako cha shambani.</p>
+                <p id="expertText" data-sw="Bonyeza kitufe hapa chini ili mfumo uchambue hali halisi ya sasa kutoka kwenye kituo chako cha shambani." data-en="Click the button below to have the system analyze the current real-time condition from your field station.">Bonyeza kitufe hapa chini ili mfumo uchambue hali halisi ya sasa kutoka kwenye kituo chako cha shambani.</p>
                 <button class="btn-expert" onclick="chambuaDataUpya()" id="expertBtn">
                     <i class="fa-solid fa-arrow-rotate-right"></i> <span data-sw="Chambua Data za Sasa" data-en="Analyze Current Data">Chambua Data za Sasa</span>
                 </button>
@@ -336,6 +336,8 @@
     </div>
 
     <script>
+        let currentLang = 'sw'; // Tunahifadhi lugha inayotumika kwa sasa
+
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active-section'));
             document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
@@ -355,9 +357,10 @@
 
         function updateDateTime() {
             const now = new Date();
-            const dateStr = now.toLocaleDateString('sw-TZ', { month: 'short', day: 'numeric', year: 'numeric' });
+            const locale = currentLang === 'en' ? 'en-US' : 'sw-TZ';
+            const dateStr = now.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
             document.getElementById('current-date').innerText = dateStr;
-            const timeStr = now.toLocaleTimeString('sw-TZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const timeStr = now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('current-time').innerText = timeStr;
         }
         updateDateTime();
@@ -442,14 +445,14 @@
                         wifiStatusEl.innerText = data.wifi_status;
                         wifiStatusEl.style.color = data.wifi_status.includes("Online") ? "var(--green)" : "#ff6b6b";
                     } else {
-                        wifiStatusEl.innerText = "Haijaunganishwa (Offline)";
+                        wifiStatusEl.innerText = currentLang === 'en' ? "Offline" : "Haijaunganishwa (Offline)";
                         wifiStatusEl.style.color = "#ff6b6b";
                     }
 
                     if (data.wifi_ssid) {
                         wifiSsidEl.innerText = data.wifi_ssid;
                     } else {
-                        wifiSsidEl.innerText = "Hakuna Kifaa";
+                        wifiSsidEl.innerText = currentLang === 'en' ? "No Device" : "Hakuna Kifaa";
                     }
 
                     if (data.history) {
@@ -486,7 +489,8 @@
                     tableBody.innerHTML = '';
                     
                     if (data.length === 0) {
-                        tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-gray);">Hakuna kumbukumbu bado.</td></tr>`;
+                        const noLogsText = currentLang === 'en' ? "No logs yet." : "Hakuna kumbukumbu bado.";
+                        tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-gray);">${noLogsText}</td></tr>`;
                         return;
                     }
                     
@@ -513,19 +517,28 @@
         });
 
         function setLanguage(lang, btn) {
+            currentLang = lang; // Hifadhi lugha iliyochaguliwa
+            document.getElementById('htmlRoot').setAttribute('lang', lang);
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            
+            // Badilisha maandishi yote yenye attributi ya data-sw / data-en
             document.querySelectorAll('[data-sw]').forEach(el => {
                 const text = el.getAttribute(`data-${lang}`);
                 if (text) el.innerText = text;
             });
+
+            // Sasisha tarehe na wakati kwa lugha mpya
+            updateDateTime();
         }
 
         function chambuaDataUpya() {
             const expertText = document.getElementById('expertText');
             const expertBtn = document.getElementById('expertBtn');
             
-            expertText.innerText = "Inachambua taarifa za shambani kupitia mfumo wa kitaalamu, tafadhali subiri kidogo...";
+            expertText.innerText = currentLang === 'en' 
+                ? "Analyzing field data through the expert system, please wait a moment..." 
+                : "Inachambua taarifa za shambani kupitia mfumo wa kitaalamu, tafadhali subiri kidogo...";
             expertBtn.disabled = true;
             expertBtn.style.opacity = "0.5";
 
@@ -535,14 +548,17 @@
                     if(data.status === "success" || data.status === "warning") {
                         expertText.innerText = data.analysis;
                     } else {
-                        expertText.innerText = "Imeshindikana kupata uchambuzi: " + data.analysis;
+                        const errPrefix = currentLang === 'en' ? "Failed to get analysis: " : "Imeshindikana kupata uchambuzi: ";
+                        expertText.innerText = errPrefix + data.analysis;
                     }
                     expertBtn.disabled = false;
                     expertBtn.style.opacity = "1";
                 })
                 .catch(error => {
                     console.error('Hitilafu:', error);
-                    expertText.innerText = "Kimetokea kitendo cha kimtandao, tafadhali jaribu tena.";
+                    expertText.innerText = currentLang === 'en' 
+                        ? "A network error occurred, please try again." 
+                        : "Kimetokea kitendo cha kimtandao, tafadhali jaribu tena.";
                     expertBtn.disabled = false;
                     expertBtn.style.opacity = "1";
                 });
