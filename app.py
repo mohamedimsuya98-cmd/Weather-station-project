@@ -21,6 +21,7 @@ class WeatherLog(db.Model):
     rain_availability = db.Column(db.String(50), nullable=False)
     wind_speed = db.Column(db.Float, nullable=False)
     wind_direction = db.Column(db.String(50), nullable=False)
+    wifi_ssid = db.Column(db.String(50), nullable=True)  # Sehemu mpya ya kuhifadhi jina la Wi-Fi kwenye DB
     timestamp = db.Column(db.String(20), nullable=False)
     date_recorded = db.Column(db.String(20), nullable=False)
 
@@ -38,7 +39,8 @@ weather_data = {
     "rain_amount": "0.0",
     "rain_availability": "Hakuna Mvua",
     "wind_speed": "0.0",
-    "wind_direction": "Kaskazini"
+    "wind_direction": "Kaskazini",
+    "wifi_ssid": "Haijulikani"  # Kuweka thamani ya mwanzo
 }
 
 weather_history = {
@@ -67,6 +69,10 @@ def update_weather():
         weather_data['wind_speed'] = data.get('wind_speed', weather_data['wind_speed'])
         weather_data['wind_direction'] = data.get('wind_direction', weather_data['wind_direction'])
         
+        # Kupokea jina la Wi-Fi kutoka kwa ESP32
+        received_ssid = data.get('wifi_ssid', 'Haijulikani')
+        weather_data['wifi_ssid'] = received_ssid
+        
         # Sasisha muda wa mwisho kifaa kilipowasiliana na seva
         last_update_time = datetime.datetime.now()
         
@@ -83,7 +89,7 @@ def update_weather():
             weather_history["temperatures"].pop(0)
             weather_history["humidities"].pop(0)
             
-        # 2. Hifadhi ya kudumu kwenye Database (SQLite)
+        # 2. Hifadhi ya kudumu kwenye Database (SQLite) pamoja na wifi_ssid
         new_log = WeatherLog(
             temperature=float(weather_data['temperature']),
             humidity=float(weather_data['humidity']),
@@ -91,13 +97,14 @@ def update_weather():
             rain_availability=weather_data['rain_availability'],
             wind_speed=float(weather_data['wind_speed']),
             wind_direction=weather_data['wind_direction'],
+            wifi_ssid=received_ssid,
             timestamp=current_time,
             date_recorded=current_date
         )
         db.session.add(new_log)
         db.session.commit()
             
-        return jsonify({"status": "success", "message": "Data imepokelewa na kuhifadhiwa!"}), 200
+        return jsonify({"status": "success", "message": "Data na jina la Wi-Fi zimepokelewa na kuhifadhiwa!"}), 200
     
     return jsonify({"status": "error", "message": "Haikusomeka!"}), 400
 
@@ -116,8 +123,8 @@ def get_data():
 
     # Tuma taarifa za mtandao kulingana na hali halisi ya ESP32
     if is_online:
-        response_data["wifi_status"] = "Imounganishwa (Online)"
-        response_data["wifi_ssid"] = "ESP32_Farm_Net"
+        response_data["wifi_status"] = "Imeunganishwa (Online)"
+        # weather_data['wifi_ssid'] tayari imesheheni jina halisi lililotumwa kutoka ESP32
     else:
         response_data["wifi_status"] = "Haijaunganishwa (Offline)"
         response_data["wifi_ssid"] = "Hakuna Kifaa"
@@ -138,6 +145,7 @@ def get_logs():
             "rain_availability": log.rain_availability,
             "wind_speed": log.wind_speed,
             "wind_direction": log.wind_direction,
+            "wifi_ssid": log.wifi_ssid,
             "timestamp": log.timestamp,
             "date": log.date_recorded
         })
@@ -188,6 +196,7 @@ def analyze_ai():
     - Hali ya mvua: {weather_data['rain_availability']}
     - Kasi ya upepo: {weather_data['wind_speed']} m/s
     - Mwelekeo wa upepo: {weather_data['wind_direction']}
+    - Wi-Fi SSID: {weather_data['wifi_ssid']}
 
     Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
     """
