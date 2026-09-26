@@ -2,8 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import datetime
 import os
-import time
-from google import genai
+import requests
 
 app = Flask(__name__)
 
@@ -21,16 +20,13 @@ class WeatherLog(db.Model):
     rain_availability = db.Column(db.String(50), nullable=False)
     wind_speed = db.Column(db.Float, nullable=False)
     wind_direction = db.Column(db.String(50), nullable=False)
-    wifi_ssid = db.Column(db.String(50), nullable=True)  # Sehemu mpya ya kuhifadhi jina la Wi-Fi kwenye DB
+    wifi_ssid = db.Column(db.String(50), nullable=True)  # Sehemu ya kuhifadhi jina la Wi-Fi kwenye DB
     timestamp = db.Column(db.String(20), nullable=False)
     date_recorded = db.Column(db.String(20), nullable=False)
 
 # Anzisha Database wakati app inapowaka
 with app.app_context():
     db.create_all()
-
-# Sanidi Gemini Client
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 weather_data = {
     "location": "Shamba Langu, Dar es Salaam",
@@ -40,7 +36,7 @@ weather_data = {
     "rain_availability": "Hakuna Mvua",
     "wind_speed": "0.0",
     "wind_direction": "Kaskazini",
-    "wifi_ssid": "Haijulikani"  # Kuweka thamani ya mwanzo
+    "wifi_ssid": "Haijulikani"
 }
 
 weather_history = {
@@ -150,7 +146,7 @@ def get_logs():
         })
     return jsonify(logs_list)
 
-# Njia mpya ya kuchakata na kurudisha takwimu za kina (Stats)
+# Njia ya kuchakata na kurudisha takwimu za kina (Stats)
 @app.route('/get-stats', methods=['GET'])
 def get_stats():
     logs = WeatherLog.query.all()
@@ -181,12 +177,19 @@ def get_stats():
     }
     return jsonify(stats_data)
 
+# Sehemu ya kutumia Groq AI badala ya Gemini
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return jsonify({"status": "error", "analysis": "Samahani, API Key ya Gemini haijawekwa kwenye seva ya Render."})
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        return jsonify({"status": "error", "analysis": "Samahani, GROQ_API_KEY haijawekwa kwenye seva ya Render."})
 
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {groq_api_key}",
+        "Content-Type": "application/json"
+    }
+    
     prompt = f"""
     Wewe ni mtaalamu wa kilimo cha kisasa. Hizi hapa ni taarifa za sasa kutoka kwenye kituo cha hali ya hewa shambani:
     - Joto: {weather_data['temperature']} °C
@@ -199,23 +202,23 @@ def analyze_ai():
 
     Tafadhali toa ushauri mfupi na wa vitendo kwa mkulima kwa lugha ya Kiswahili ya kuvutia, ukizingatia kama kuna haja ya kumwagilia, kulinda mazao, au kuchukua hatua yoyote ya kiutendaji kulingana na takwimu hizi za sasa.
     """
-    
-    # Orodha ya models za kujaribu moja hadi nyingine kiotomatiki kama ikitokea hitilafu
-    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
-    
-    for model_name in models_to_try:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt
-            )
-            if response and response.text:
-                return jsonify({"status": "success", "analysis": response.text})
-        except Exception as e:
-            # Kama model hii imegoma, inajaribu inayofuata kimya kimya
-            continue
 
-    return jsonify({"status": "error", "analysis": "Seva za AI zina msongamano kwa sasa au miundombinu imebadilika. Jaribu tena baadae."})
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 200:
+            res_json = response.json()
+            analysis_text = res_json['choices'][0]['message']['content']
+            return jsonify({"status": "success", "analysis": analysis_text})
+        else:
+            return jsonify({"status": "error", "analysis": f"Hitilafu kutoka Groq: {response.text}"})
+    except Exception as e:
+        return jsonify({"status": "error", "analysis": f"Imeshindikana kuunganisha na AI: {str(e)}"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
