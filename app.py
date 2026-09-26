@@ -88,9 +88,15 @@ def update_weather():
             date_recorded=current_date
         )
         db.session.add(new_log)
+        
+        # --- USIMAMIZI WA UKUBWA WA DATABASE (Futa rekodi zilizopita zaidi ya siku 7) ---
+        siku_zilizopita = datetime.datetime.now() - datetime.timedelta(days=7)
+        tarehe_yakufuta = siku_zilizopita.strftime("%Y-%m-%d")
+        WeatherLog.query.filter(WeatherLog.date_recorded < tarehe_yakufuta).delete()
+        
         db.session.commit()
             
-        return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
+        return jsonify({"status": "success", "message": "Data imepokelewa na database imesafishwa!"}), 200
     
     return jsonify({"status": "error", "message": "Haikusomeka!"}), 400
 
@@ -199,7 +205,6 @@ def analyze_ai():
         wind_spd = float(weather_data.get('wind_speed', 0.0))
         wind_dir = weather_data.get('wind_direction', 'Kaskazini')
         
-        # Zuia kutoa uchambuzi wa uongo kama data zote zimesalia kuwa 0.0
         if temp == 0.0 and humidity == 0.0 and rain_amt == 0.0 and wind_spd == 0.0:
             analysis = (
                 "⚠️ **Tahadhari ya Mfumo:** Hakuna data halisi zilizopokelewa kutoka kwenye kihisi (Sensor) "
