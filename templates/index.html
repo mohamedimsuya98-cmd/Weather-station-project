@@ -319,11 +319,11 @@
                 <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: var(--text-gray); margin-top: 15px;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
                         <span data-sw="Hali ya Muunganisho:" data-en="Connection Status:">Hali ya Muunganisho:</span>
-                        <strong style="color: var(--green);" id="setting-wifi-status">Imounganishwa (Online)</strong>
+                        <strong style="color: #ff6b6b;" id="setting-wifi-status">Haijaunganishwa (Offline)</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
                         <span data-sw="Jina la Wi-Fi:" data-en="Wi-Fi Name:">Jina la Wi-Fi:</span>
-                        <strong style="color: var(--text-white);" id="setting-wifi-ssid">ESP32_Farm_Net</strong>
+                        <strong style="color: var(--text-white);" id="setting-wifi-ssid">Hakuna Kifaa</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding-bottom: 4px;">
                         <span data-sw="Toleo la Mfumo:" data-en="System Version:">Toleo la Mfumo:</span>
@@ -434,6 +434,24 @@
                     document.querySelector('#card-wind-speed .value').innerText = data.wind_speed + " m/s";
                     document.querySelector('#card-wind-dir .value').innerText = data.wind_direction;
                     document.getElementById('locationName').innerText = data.location;
+
+                    // Kusoma hali halisi ya mtandao na jina la Wi-Fi kutoka server
+                    const wifiStatusEl = document.getElementById('setting-wifi-status');
+                    const wifiSsidEl = document.getElementById('setting-wifi-ssid');
+
+                    if (data.wifi_status) {
+                        wifiStatusEl.innerText = data.wifi_status;
+                        wifiStatusEl.style.color = data.wifi_status.includes("Online") ? "var(--green)" : "#ff6b6b";
+                    } else {
+                        wifiStatusEl.innerText = "Haijaunganishwa (Offline)";
+                        wifiStatusEl.style.color = "#ff6b6b";
+                    }
+
+                    if (data.wifi_ssid) {
+                        wifiSsidEl.innerText = data.wifi_ssid;
+                    } else {
+                        wifiSsidEl.innerText = "Hakuna Kifaa";
+                    }
 
                     if (data.history) {
                         weatherChart.data.labels = data.history.timestamps;
