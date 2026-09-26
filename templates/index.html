@@ -152,7 +152,7 @@
             <li><a onclick="switchTab('historia', this)"><i class="fa-solid fa-clock-rotate-left"></i> <span data-sw="Historia" data-en="History">Historia</span></a></li>
             <li><a onclick="switchTab('grafu', this)"><i class="fa-solid fa-chart-pie"></i> <span data-sw="Grafu" data-en="Graphs">Grafu</span></a></li>
             <li><a onclick="switchTab('ushauri', this)"><i class="fa-solid fa-stethoscope"></i> <span data-sw="Ushauri" data-en="Advice">Ushauri</span></a></li>
-            <li><a onclick="switchTab('mipangilio', this)"><i class="fa-solid fa-gear"></i> <span data-sw="Mipangilio" data-en="Settings">Mipangilio</span></a></li>
+            <li><a onclick="switchTab('mipangilio', this)"><i class="fa-solid fa-circle-info"></i> <span data-sw="Taarifa za Kituo" data-en="Station Info">Taarifa za Kituo</span></a></li>
         </ul>
     </sidebar>
 
@@ -307,11 +307,11 @@
             </div>
         </div>
 
-        <!-- 6. MIPANGILIO -->
+        <!-- 6. TAARIFA ZA KITUO (STATION INFO) -->
         <div id="mipangilio" class="tab-section">
             <div class="info-card">
-                <h3><i class="fa-solid fa-gear"></i> <span data-sw="Mipangilio ya Kituo" data-en="Station Settings">Mipangilio ya Kituo</span></h3>
-                <p data-sw="Badilisha taarifa za kifaa chako cha ESP32 na muunganisho." data-en="Configure your ESP32 device settings and network connection.">Badilisha taarifa za kifaa chako cha ESP32 na muunganisho.</p>
+                <h3><i class="fa-solid fa-circle-info"></i> <span data-sw="Taarifa za Kituo" data-en="Station Info">Taarifa za Kituo</span></h3>
+                <p data-sw="Hapa unaweza kuona hali ya muunganisho wa kifaa chako cha ESP32 na mtandao." data-en="Here you can view the connection status of your ESP32 device and network.">Hapa unaweza kuona hali ya muunganisho wa kifaa chako cha ESP32 na mtandao.</p>
             </div>
 
             <div class="settings-card">
@@ -336,7 +336,7 @@
     </div>
 
     <script>
-        let currentLang = 'sw'; // Tunahifadhi lugha inayotumika kwa sasa
+        let currentLang = 'sw';
 
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active-section'));
@@ -517,18 +517,16 @@
         });
 
         function setLanguage(lang, btn) {
-            currentLang = lang; // Hifadhi lugha iliyochaguliwa
+            currentLang = lang;
             document.getElementById('htmlRoot').setAttribute('lang', lang);
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
-            // Badilisha maandishi yote yenye attributi ya data-sw / data-en
             document.querySelectorAll('[data-sw]').forEach(el => {
                 const text = el.getAttribute(`data-${lang}`);
                 if (text) el.innerText = text;
             });
 
-            // Sasisha tarehe na wakati kwa lugha mpya
             updateDateTime();
         }
 
