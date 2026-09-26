@@ -159,13 +159,13 @@ def get_stats():
 
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
-    groq_api_key = os.environ.get("GROQ_API_KEY")
-    if not groq_api_key:
-        return jsonify({"status": "error", "analysis": "Samahani, GROQ_API_KEY haijawekwa kwenye seva ya Render."})
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
+        return jsonify({"status": "error", "analysis": "Samahani, OPENAI_API_KEY haijawekwa kwenye seva ya Render."})
 
-    url = "https://api.groq.com/openai/v1/chat/completions"
+    url = "https://api.openai.com/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {groq_api_key}",
+        "Authorization": f"Bearer {openai_api_key}",
         "Content-Type": "application/json"
     }
     
@@ -183,7 +183,7 @@ def analyze_ai():
     """
 
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "gpt-4o-mini",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7
     }
@@ -195,7 +195,7 @@ def analyze_ai():
             analysis_text = res_json['choices'][0]['message']['content']
             return jsonify({"status": "success", "analysis": analysis_text})
         else:
-            return jsonify({"status": "error", "analysis": f"Hitilafu kutoka Groq: {response.text}"})
+            return jsonify({"status": "error", "analysis": f"Hitilafu kutoka OpenAI: {response.text}"})
     except Exception as e:
         return jsonify({"status": "error", "analysis": f"Imeshindikana kuunganisha na AI: {str(e)}"})
 
