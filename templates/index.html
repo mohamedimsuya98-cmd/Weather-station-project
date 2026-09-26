@@ -66,11 +66,11 @@
         .card i { font-size: 24px; color: var(--accent-blue); margin-bottom: 8px; }
         .card h3 { margin: 0 0 6px 0; font-size: 12px; color: var(--text-gray); }
         .card .value { font-size: 18px; font-weight: bold; margin: 0; color: var(--text-white); }
-        .ai-card, .info-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border-left: 5px solid var(--green); margin-bottom: 20px; }
-        .ai-card h3, .info-card h3 { margin-top: 0; color: var(--green); display: flex; align-items: center; gap: 10px; font-size: 15px; }
-        .ai-card p, .info-card p { color: var(--text-gray); line-height: 1.5; font-size: 13px; margin-bottom: 0; white-space: pre-line; }
-        .btn-ai { background: var(--green); color: var(--bg-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
-        .btn-ai:hover { opacity: 0.8; }
+        .expert-card, .info-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border-left: 5px solid var(--green); margin-bottom: 20px; }
+        .expert-card h3, .info-card h3 { margin-top: 0; color: var(--green); display: flex; align-items: center; gap: 10px; font-size: 15px; }
+        .expert-card p, .info-card p { color: var(--text-gray); line-height: 1.5; font-size: 13px; margin-bottom: 0; white-space: pre-line; }
+        .btn-expert { background: var(--green); color: var(--bg-dark); border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        .btn-expert:hover { opacity: 0.8; }
         
         .settings-card {
             background: var(--card-bg);
@@ -151,7 +151,7 @@
             <li><a onclick="switchTab('takwimu', this)"><i class="fa-solid fa-chart-line"></i> <span data-sw="Takwimu" data-en="Stats">Takwimu</span></a></li>
             <li><a onclick="switchTab('historia', this)"><i class="fa-solid fa-clock-rotate-left"></i> <span data-sw="Historia" data-en="History">Historia</span></a></li>
             <li><a onclick="switchTab('grafu', this)"><i class="fa-solid fa-chart-pie"></i> <span data-sw="Grafu" data-en="Graphs">Grafu</span></a></li>
-            <li><a onclick="switchTab('ai', this)"><i class="fa-solid fa-brain"></i> <span data-sw="AI" data-en="AI">AI</span></a></li>
+            <li><a onclick="switchTab('ushauri', this)"><i class="fa-solid fa-stethoscope"></i> <span data-sw="Ushauri" data-en="Advice">Ushauri</span></a></li>
             <li><a onclick="switchTab('mipangilio', this)"><i class="fa-solid fa-gear"></i> <span data-sw="Mipangilio" data-en="Settings">Mipangilio</span></a></li>
         </ul>
     </sidebar>
@@ -296,13 +296,13 @@
             </div>
         </div>
 
-        <!-- 5. AI -->
-        <div id="ai" class="tab-section">
-            <div class="ai-card">
-                <h3><i class="fa-solid fa-brain"></i> <span data-sw="Mchambuzi na Ushauri wa AI" data-en="AI Analyst & Advice">Mchambuzi na Ushauri wa AI</span></h3>
-                <p id="aiText">Bonyeza kitufe hapa chini ili AI ichambue hali halisi ya sasa kutoka kwenye kituo chako cha shambani.</p>
-                <button class="btn-ai" onclick="chambuaDataUpya()" id="aiBtn">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-sw="Chambua Data za Sasa" data-en="Analyze Current Data">Chambua Data za Sasa</span>
+        <!-- 5. USHAURI (EXPERT SYSTEM) -->
+        <div id="ushauri" class="tab-section">
+            <div class="expert-card">
+                <h3><i class="fa-solid fa-stethoscope"></i> <span data-sw="Mchambuzi na Ushauri wa Kitaalamu" data-en="Expert Analyst & Advice">Mchambuzi na Ushauri wa Kitaalamu</span></h3>
+                <p id="expertText">Bonyeza kitufe hapa chini ili mfumo uchambue hali halisi ya sasa kutoka kwenye kituo chako cha shambani.</p>
+                <button class="btn-expert" onclick="chambuaDataUpya()" id="expertBtn">
+                    <i class="fa-solid fa-arrow-rotate-right"></i> <span data-sw="Chambua Data za Sasa" data-en="Analyze Current Data">Chambua Data za Sasa</span>
                 </button>
             </div>
         </div>
@@ -435,7 +435,6 @@
                     document.querySelector('#card-wind-dir .value').innerText = data.wind_direction;
                     document.getElementById('locationName').innerText = data.location;
 
-                    // Kusoma hali halisi ya mtandao na jina la Wi-Fi kutoka server
                     const wifiStatusEl = document.getElementById('setting-wifi-status');
                     const wifiSsidEl = document.getElementById('setting-wifi-ssid');
 
@@ -523,29 +522,29 @@
         }
 
         function chambuaDataUpya() {
-            const aiText = document.getElementById('aiText');
-            const aiBtn = document.getElementById('aiBtn');
+            const expertText = document.getElementById('expertText');
+            const expertBtn = document.getElementById('expertBtn');
             
-            aiText.innerText = "Inachambua taarifa za shambani kupitia AI, tafadhali subiri kidogo...";
-            aiBtn.disabled = true;
-            aiBtn.style.opacity = "0.5";
+            expertText.innerText = "Inachambua taarifa za shambani kupitia mfumo wa kitaalamu, tafadhali subiri kidogo...";
+            expertBtn.disabled = true;
+            expertBtn.style.opacity = "0.5";
 
             fetch('/analyze-ai')
                 .then(response => response.json())
                 .then(data => {
-                    if(data.status === "success") {
-                        aiText.innerText = data.analysis;
+                    if(data.status === "success" || data.status === "warning") {
+                        expertText.innerText = data.analysis;
                     } else {
-                        aiText.innerText = "Imeshindikana kupata uchambuzi: " + data.analysis;
+                        expertText.innerText = "Imeshindikana kupata uchambuzi: " + data.analysis;
                     }
-                    aiBtn.disabled = false;
-                    aiBtn.style.opacity = "1";
+                    expertBtn.disabled = false;
+                    expertBtn.style.opacity = "1";
                 })
                 .catch(error => {
                     console.error('Hitilafu:', error);
-                    aiText.innerText = "Kimetokea kitendo cha kimtandao, tafadhali jaribu tena.";
-                    aiBtn.disabled = false;
-                    aiBtn.style.opacity = "1";
+                    expertText.innerText = "Kimetokea kitendo cha kimtandao, tafadhali jaribu tena.";
+                    expertBtn.disabled = false;
+                    expertBtn.style.opacity = "1";
                 });
         }
     </script>
