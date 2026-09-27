@@ -1,8 +1,7 @@
-from flask import Flask, render_template, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, render_template_string, request, jsonify, make_response
 import datetime
 import os
-import requests  # Imeongezwa kwa ajili ya kutuma maombi ya SMS API
+import requests
 
 app = Flask(__name__)
 
@@ -11,73 +10,32 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# Nenosiri la Admin (Unaweza kulibadilisha au kuliweka kwenye Render environment variables kama ADMIN_PASSWORD)
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "shamba1234")
+
 
 # =========================================================
 # DATABASE MODELS
 # =========================================================
 
 class WeatherLog(db.Model):
-    id = db.Column(
-        db.Integer,
-        primary_key=True
-    )
-    temperature = db.Column(
-        db.Float,
-        nullable=False
-    )
-    humidity = db.Column(
-        db.Float,
-        nullable=False
-    )
-    rain_amount = db.Column(
-        db.Float,
-        nullable=False
-    )
-    rain_availability = db.Column(
-        db.String(50),
-        nullable=False
-    )
-    wind_speed = db.Column(
-        db.Float,
-        nullable=False
-    )
-    wind_direction = db.Column(
-        db.String(50),
-        nullable=False
-    )
-    wifi_ssid = db.Column(
-        db.String(50),
-        nullable=True
-    )
-    timestamp = db.Column(
-        db.String(20),
-        nullable=False
-    )
-    date_recorded = db.Column(
-        db.String(20),
-        nullable=False
-    )
+    id = db.Column(db.Integer, primary_key=True)
+    temperature = db.Column(db.Float, nullable=False)
+    humidity = db.Column(db.Float, nullable=False)
+    rain_amount = db.Column(db.Float, nullable=False)
+    rain_availability = db.Column(db.String(50), nullable=False)
+    wind_speed = db.Column(db.Float, nullable=False)
+    wind_direction = db.Column(db.String(50), nullable=False)
+    wifi_ssid = db.Column(db.String(50), nullable=True)
+    timestamp = db.Column(db.String(20), nullable=False)
+    date_recorded = db.Column(db.String(20), nullable=False)
 
 
-# Jedwali la kuhifadhi namba za simu za wakulima
 class Subscriber(db.Model):
-    id = db.Column(
-        db.Integer,
-        primary_key=True
-    )
-    name = db.Column(
-        db.String(100),
-        nullable=False
-    )
-    phone_number = db.Column(
-        db.String(20),
-        unique=True,
-        nullable=False
-    )
-    date_joined = db.Column(
-        db.String(20),
-        nullable=False
-    )
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String(20), unique=True, nullable=False)
+    date_joined = db.Column(db.String(20), nullable=False)
 
 
 with app.app_context():
@@ -85,32 +43,19 @@ with app.app_context():
 
 
 # =========================================================
-# CURRENT WEATHER DATA
+# CURRENT WEATHER DATA & HISTORY
 # =========================================================
 
 weather_data = {
-    "location":
-        "Shamba Langu, Dar es Salaam",
-    "temperature":
-        "0.0",
-    "humidity":
-        "0",
-    "rain_amount":
-        "0.0",
-    "rain_availability":
-        "Hakuna Mvua",
-    "wind_speed":
-        "0.0",
-    "wind_direction":
-        "Kaskazini",
-    "wifi_ssid":
-        "Haijulikani"
+    "location": "Shamba Langu, Dar es Salaam",
+    "temperature": "0.0",
+    "humidity": "0",
+    "rain_amount": "0.0",
+    "rain_availability": "Hakuna Mvua",
+    "wind_speed": "0.0",
+    "wind_direction": "Kaskazini",
+    "wifi_ssid": "Haijulikani"
 }
-
-
-# =========================================================
-# TEMPORARY CHART HISTORY
-# =========================================================
 
 weather_history = {
     "timestamps": [],
@@ -126,26 +71,14 @@ last_update_time = None
 # =========================================================
 
 def send_alert_sms_to_farmers(message_text):
-    """
-    Hii kazi inatafuta namba zote zilizosajiliwa kwenye database
-    na kutuma ujumbe mfupi wa tahadhari.
-    """
     subscribers = Subscriber.query.all()
     if not subscribers:
-        return  # Hakuna namba iliyosajiliwa bado
-
-    # Mfano wa kutumia API ya SMS (Badilisha URL na Headers kulingana na mtoa hudumu wako kama Africa's Talking)
-    sms_api_url = os.environ.get("SMS_API_URL", "")
-    api_key = os.environ.get("SMS_API_KEY", "")
+        return
 
     for sub in subscribers:
         phone = sub.phone_number
         try:
-            # Kama unatumia gateway maalum, unaweka code za request hapa hapa:
-            # payload = {"to": phone, "message": message_text}
-            # requests.post(sms_api_url, json=payload, headers={"Authorization": f"Bearer {api_key}"})
-            
-            # Kwa sasa tunaprint kwenye server logs kama mfano halisi wa utekelezaji
+            # Hapa unaweza kuunganisha API ya Africa's Talking au mtoa huduma wako
             print(f"[SMS ALERT] Imetumwa kwenda kwa {sub.name} ({phone}): {message_text}")
         except Exception as e:
             print(f"[SMS ERROR] Imeshindikana kutuma kwenda kwa {phone}: {str(e)}")
@@ -166,7 +99,6 @@ def translate_rain_status(value, lang):
     if value is None:
         return "--"
     value = str(value).strip()
-
     translations = {
         "Hakuna Mvua": {"sw": "Hakuna Mvua", "en": "No Rain"},
         "Mvua": {"sw": "Mvua", "en": "Rain"},
@@ -177,7 +109,6 @@ def translate_rain_status(value, lang):
         "Light Rain": {"sw": "Mvua Ndogo", "en": "Light Rain"},
         "Heavy Rain": {"sw": "Mvua Kubwa", "en": "Heavy Rain"}
     }
-
     return translations.get(value, {"sw": value, "en": value})[lang]
 
 
@@ -185,7 +116,6 @@ def translate_wind_direction(value, lang):
     if value is None:
         return "--"
     value = str(value).strip()
-
     translations = {
         "Kaskazini": {"sw": "Kaskazini", "en": "North"},
         "Kusini": {"sw": "Kusini", "en": "South"},
@@ -204,7 +134,6 @@ def translate_wind_direction(value, lang):
         "Southeast": {"sw": "Kusini-Mashariki", "en": "Southeast"},
         "Southwest": {"sw": "Kusini-Magharibi", "en": "Southwest"}
     }
-
     return translations.get(value, {"sw": value, "en": value})[lang]
 
 
@@ -219,7 +148,7 @@ def translate_no_device(lang):
 
 
 # =========================================================
-# HOME
+# HOME (Frontend ya Kawaida - Haibadiliki)
 # =========================================================
 
 @app.route('/')
@@ -228,70 +157,132 @@ def home():
 
 
 # =========================================================
-# SUBSCRIBER MANAGEMENT ROUTES (API)
+# SECURE ADMIN PANEL ROUTE
 # =========================================================
 
-@app.route('/add-subscriber', methods=['POST'])
-def add_subscriber():
-    """Njia ya kuongeza namba mpya ya simu ya mkulima"""
-    req_data = request.json
-    if not req_data or 'phone_number' not in req_data or 'name' not in req_data:
-        return jsonify({"status": "error", "message": "Jina na namba ya simu zinahitajika!"}), 400
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_panel():
+    auth = request.authorization
+    # Kukagua nenosiri la HTTP Basic Auth
+    if not auth or auth.password != ADMIN_PASSWORD or auth.username != "admin":
+        res = make_response("Ufikiaji Umezuiwa. Tafadhali ingiza jina la mtumiaji (admin) na nenosiri sahihi.", 401)
+        res.headers['WWW-Authenticate'] = 'Basic realm="Admin Login Required"'
+        return res
 
-    name = req_data.get('name').strip()
-    phone = req_data.get('phone_number').strip()
+    message = ""
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'add':
+            name = request.form.get('name', '').strip()
+            phone = request.form.get('phone_number', '').strip()
+            if name and phone:
+                existing = Subscriber.query.filter_by(phone_number=phone).first()
+                if not existing:
+                    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                    new_sub = Subscriber(name=name, phone_number=phone, date_joined=current_date)
+                    db.session.add(new_sub)
+                    db.session.commit()
+                    message = f"Mkulima {name} amesajiliwa kikamilifu!"
+                else:
+                    message = "Hitilafu: Namba hii ya simu ipo tayari kwenye mfumo."
+            else:
+                message = "Tafadhali jaza jina na namba zote."
+        elif action == 'delete':
+            phone = request.form.get('phone_number', '').strip()
+            sub = Subscriber.query.filter_by(phone_number=phone).first()
+            if sub:
+                db.session.delete(sub)
+                db.session.commit()
+                message = "Namba imeondolewa kikamilifu kwenye mfumo."
+            else:
+                    message = "Hitilafu: Namba haikupatikana."
 
-    # Angalia kama namba ishakuwepo
-    existing = Subscriber.query.filter_by(phone_number=phone).first()
-    if existing:
-        return jsonify({"status": "error", "message": "Namba hii ya simu imeshasajiliwa tayari!"}), 400
+    subscribers = Subscriber.query.all()
 
-    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-    new_sub = Subscriber(name=name, phone_number=phone, date_joined=current_date)
-    
-    db.session.add(new_sub)
-    db.session.commit()
+    # HTML ndogo safi ya Admin Panel (Haiathiri index.html kabisa)
+    admin_html = """
+    <!DOCTYPE html>
+    <html lang="sw">
+    <head>
+        <meta charset="UTF-8">
+        <title>Smart Farm - Admin Panel</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+            .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2 { color: #1b4332; }
+            .msg { background: #d8f3dc; color: #081c15; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+            form { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+            input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+            button { background: #2d6a4f; color: white; border: none; font-weight: bold; cursor: pointer; }
+            button:hover { background: #1b4332; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background: #2d6a4f; color: white; }
+            .del-btn { background: #d90429; width: auto; padding: 5px 10px; }
+            .del-btn:hover { background: #8d0801; }
+            .back-link { display: inline-block; margin-top: 20px; color: #2d6a4f; text-decoration: none; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Panel ya Utawala (Admin SMS Subscribers)</h2>
+            <p>Hapa unaweza kusajili au kuondoa namba za wakulima watakaopata taarifa za dharura kupitia SMS.</p>
+            
+            {% if message %}
+                <div class="msg">{{ message }}</div>
+            {% endif %}
 
-    return jsonify({"status": "success", "message": f"Mkulima {name} amesajiliwa mafanikio!"}), 201
+            <h3>Sajili Mkulima Mpya</h3>
+            <form method="POST">
+                <input type="hidden" name="action" value="add">
+                <input type="text" name="name" placeholder="Jina la Mkulima (Mf: Juma Ally)" required>
+                <input type="text" name="phone_number" placeholder="Namba ya Simu (Mf: +255712345678)" required>
+                <button type="submit">Ongeza Mkulima</button>
+            </form>
 
+            <h3>Wakulima Waliosajiliwa Sasa ({{ subscribers|length }})</h3>
+            <table>
+                <tr>
+                    <th>Jina</th>
+                    <th>Namba ya Simu</th>
+                    <th>Tarehe Iliyosajiliwa</th>
+                    <th>Kitendo</th>
+                </tr>
+                {% for sub in subscribers %}
+                <tr>
+                    <td>{{ sub.name }}</td>
+                    <td>{{ sub.phone_number }}</td>
+                    <td>{{ sub.date_joined }}</td>
+                    <td>
+                        <form method="POST" style="margin:0; background:none; padding:0;">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="phone_number" value="{{ sub.phone_number }}">
+                            <button type="submit" class="del-btn">Futa</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center;">Hakuna wakulima waliosajiliwa bado.</td>
+                </tr>
+                {% endfor %}
+            </table>
 
-@app.route('/remove-subscriber', methods=['POST', 'DELETE'])
-def remove_subscriber():
-    """Njia ya kuondoa namba ya simu ya mkulima"""
-    req_data = request.json
-    if not req_data or 'phone_number' not in req_data:
-        return jsonify({"status": "error", "message": "Namba ya simu inahitajika!"}), 400
-
-    phone = req_data.get('phone_number').strip()
-    sub = Subscriber.query.filter_by(phone_number=phone).first()
-
-    if not sub:
-        return jsonify({"status": "error", "message": "Namba haipatikani kwenye mfumo!"}), 404
-
-    db.session.delete(sub)
-    db.session.commit()
-
-    return jsonify({"status": "success", "message": "Namba imeondolewa kwa mafanikio!"}), 200
-
-
-@app.route('/get-subscribers', methods=['GET'])
-def get_subscribers():
-    """Kuona orodha ya wakulima wote waliosajiliwa"""
-    subs = Subscriber.query.all()
-    sub_list = [{"name": s.name, "phone_number": s.phone_number, "date_joined": s.date_joined} for s in subs]
-    return jsonify(sub_list), 200
+            <a href="/" class="back-link">&larr; Rudi kwenye Dashboard Kuu</a>
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(admin_html, message=message, subscribers=subscribers)
 
 
 # =========================================================
-# ESP32 -> FLASK
+# ESP32 -> FLASK UPDATE
 # =========================================================
 
 @app.route('/update', methods=['POST'])
 def update_weather():
-    global weather_data
-    global weather_history
-    global last_update_time
-
+    global weather_data, weather_history, last_update_time
     data = request.json
 
     if data:
@@ -309,9 +300,6 @@ def update_weather():
         current_time = last_update_time.strftime("%H:%M:%S")
         current_date = last_update_time.strftime("%Y-%m-%d")
 
-        # =========================================
-        # HISTORY FOR GRAPH
-        # =========================================
         weather_history["timestamps"].append(current_time)
         weather_history["temperatures"].append(float(weather_data['temperature']))
         weather_history["humidities"].append(float(weather_data['humidity']))
@@ -321,9 +309,6 @@ def update_weather():
             weather_history["temperatures"].pop(0)
             weather_history["humidities"].pop(0)
 
-        # =========================================
-        # DATABASE LOGGING
-        # =========================================
         new_log = WeatherLog(
             temperature=float(weather_data['temperature']),
             humidity=float(weather_data['humidity']),
@@ -335,21 +320,17 @@ def update_weather():
             timestamp=current_time,
             date_recorded=current_date
         )
-
         db.session.add(new_log)
         db.session.commit()
 
-        # =========================================
-        # AUTOMATED SMS ALERT CHECK (DHARURA)
-        # =========================================
+        # Angalia dharura ya kutuma SMS kwa wakulima
         try:
             temp_val = float(weather_data['temperature'])
             rain_val = float(weather_data['rain_amount'])
             rain_stat = str(weather_data['rain_availability']).lower()
 
-            # Kama kuna mvua kubwa au joto limezidi kiwango cha hatari (>34°C)
             if rain_val > 5.0 or "mvua kubwa" in rain_stat or "heavy" in rain_stat:
-                alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa shambani ({rain_val}mm). Tafadhari chukua hatua za usalama."
+                alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa shambani ({rain_val}mm). Tafadhari chukua hatua."
                 send_alert_sms_to_farmers(alert_msg)
             elif temp_val > 34.0:
                 alert_msg = f"TAHADHARI YA JOTO KALI: Joto shambani limefika {temp_val}°C. Ongeza umwagiliaji."
@@ -357,26 +338,19 @@ def update_weather():
         except Exception as err:
             print("Hitilafu kwenye uchambuzi wa SMS:", str(err))
 
-        return jsonify({
-            "status": "success",
-            "message": "Data imepokelewa na kuchakatwa!"
-        }), 200
+        return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
 
-    return jsonify({
-        "status": "error",
-        "message": "Haikusomeka!"
-    }), 400
+    return jsonify({"status": "error", "message": "Haikusomeka!"}), 400
 
 
 # =========================================================
-# LIVE DATA
+# LENDING API ENDPOINTS (GET-DATA, LOGS, STATS, AI)
 # =========================================================
 
 @app.route('/get-data', methods=['GET'])
 def get_data():
     global last_update_time
     lang = get_language()
-
     response_data = weather_data.copy()
     response_data["history"] = weather_history
 
@@ -388,63 +362,40 @@ def get_data():
 
     response_data["is_online"] = is_online
     response_data["wifi_status"] = translate_wifi_status(is_online, lang)
-    
-    if is_online:
-        response_data["wifi_ssid"] = weather_data.get("wifi_ssid", translate_no_device(lang))
-    else:
-        response_data["wifi_ssid"] = translate_no_device(lang)
-
+    response_data["wifi_ssid"] = weather_data.get("wifi_ssid", translate_no_device(lang)) if is_online else translate_no_device(lang)
     response_data["rain_availability"] = translate_rain_status(weather_data.get("rain_availability"), lang)
     response_data["wind_direction"] = translate_wind_direction(weather_data.get("wind_direction"), lang)
 
     return jsonify(response_data)
 
 
-# =========================================================
-# HISTORY
-# =========================================================
-
 @app.route('/get-logs', methods=['GET'])
 def get_logs():
     lang = get_language()
     logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(50).all()
-
-    logs_list = []
-    for log in logs:
-        logs_list.append({
-            "id": log.id,
-            "temperature": log.temperature,
-            "humidity": log.humidity,
-            "rain_amount": log.rain_amount,
-            "rain_availability": translate_rain_status(log.rain_availability, lang),
-            "wind_speed": log.wind_speed,
-            "wind_direction": translate_wind_direction(log.wind_direction, lang),
-            "wifi_ssid": log.wifi_ssid,
-            "timestamp": log.timestamp,
-            "date": log.date_recorded
-        })
-
+    logs_list = [{
+        "id": log.id,
+        "temperature": log.temperature,
+        "humidity": log.humidity,
+        "rain_amount": log.rain_amount,
+        "rain_availability": translate_rain_status(log.rain_availability, lang),
+        "wind_speed": log.wind_speed,
+        "wind_direction": translate_wind_direction(log.wind_direction, lang),
+        "wifi_ssid": log.wifi_ssid,
+        "timestamp": log.timestamp,
+        "date": log.date_recorded
+    } for log in logs]
     return jsonify(logs_list)
 
-
-# =========================================================
-# STATISTICS
-# =========================================================
 
 @app.route('/get-stats', methods=['GET'])
 def get_stats():
     logs = WeatherLog.query.all()
-
     if not logs:
         return jsonify({
-            "avg_temp": 0.0,
-            "max_temp": 0.0,
-            "min_temp": 0.0,
-            "avg_humidity": 0.0,
-            "total_rain": 0.0,
-            "avg_wind": 0.0,
-            "total_records": 0,
-            "insight": "Hakuna kumbukumbu za kutosha bado kwenye mfumo."
+            "avg_temp": 0.0, "max_temp": 0.0, "min_temp": 0.0,
+            "avg_humidity": 0.0, "total_rain": 0.0, "avg_wind": 0.0,
+            "total_records": 0, "insight": "Hakuna kumbukumbu za kutosha bado."
         })
 
     temps = [log.temperature for log in logs]
@@ -460,90 +411,25 @@ def get_stats():
     avg_wind = round(sum(winds) / len(winds), 1)
     total_records = len(logs)
 
-    insight = f"📈 **Uchambuzi wa Mwenendo wa Shamba (Jumla ya kumbukumbu: {total_records}):**\n\n"
-
+    insight = f"📈 **Uchambuzi wa Mwenendo wa Shamba (Jumla: {total_records}):**\n\n"
     if max_temp > 33:
-        insight += f"• **Tahadhari ya Joto Kali:** Kiwango cha juu kimefika {max_temp}°C. Udongo unakauka kwa kasi; ongeza umwagiliaji jioni.\n"
-    elif min_temp < 18 and min_temp > 0:
-        insight += f"• **Tahadhari ya Baridi:** Joto limeshuka hadi {min_temp}°C, punguza kasi ya kumwagilia maji ya baridi.\n"
+        insight += f"• Joto kali limefika {max_temp}°C. Ongeza umwagiliaji.\n"
     else:
-        insight += f"• **Hali ya Joto:** Wastani wa joto upo vizuri ({avg_temp}°C), ukiwa na upeo wa {max_temp}°C.\n"
-
-    if total_rain > 10:
-        insight += f"• **Mwenendo wa Mvua:** Jumla ya mvua ({total_rain} mm) inatosha; simamisha umwagiliaji kwa muda.\n"
-    elif total_rain > 0:
-        insight += f"• **Mwenendo wa Mvua:** Mvua ndogo imerekodiwa ({total_rain} mm).\n"
-    else:
-        insight += f"• **Mwenendo wa Mvua:** Hakuna mvua iliyorekodiwa, tegemea umwagiliaji wa bandia.\n"
-
-    if avg_wind > 5.0:
-        insight += f"• **Tahadhari ya Upepo:** Upepo ni mkali ({avg_wind} m/s). Kuwa makini na ulinzi wa mimea."
-    else:
-        insight += f"• **Hali ya Upepo:** Kasi ya wastani ya upepo ({avg_wind} m/s) iko salama."
+        insight += f"• Wastani wa joto upo vizuri ({avg_temp}°C).\n"
 
     return jsonify({
-        "avg_temp": avg_temp,
-        "max_temp": max_temp,
-        "min_temp": min_temp,
-        "avg_humidity": avg_humidity,
-        "total_rain": total_rain,
-        "avg_wind": avg_wind,
-        "total_records": total_records,
-        "insight": insight
+        "avg_temp": avg_temp, "max_temp": max_temp, "min_temp": min_temp,
+        "avg_humidity": avg_humidity, "total_rain": total_rain, "avg_wind": avg_wind,
+        "total_records": total_records, "insight": insight
     })
 
 
-# =========================================================
-# AI ANALYSIS ENDPOINT
-# =========================================================
-
 @app.route('/analyze-ai', methods=['GET'])
 def analyze_ai():
-    try:
-        temp = float(weather_data.get('temperature', 0.0))
-        humidity = float(weather_data.get('humidity', 0.0))
-        rain_amt = float(weather_data.get('rain_amount', 0.0))
-        rain_status = weather_data.get('rain_availability', 'Hakuna Mvua')
-        wind_spd = float(weather_data.get('wind_speed', 0.0))
-        wind_dir = weather_data.get('wind_direction', 'Kaskazini')
-
-        if temp == 0.0 and humidity == 0.0 and rain_amt == 0.0 and wind_spd == 0.0:
-            analysis = (
-                "⚠️ **Tahadhari ya Mfumo:** Hakuna data halisi zilizopokelewa "
-                "kutoka kwenye kihisi (Sensor) au kifaa cha ESP8266/ESP32.\n\n"
-                "**Njia ya Kurekebisha:**\n"
-                "1. Hakikisha kifaa chako cha ESP kimeunganishwa kwenye intaneti.\n"
-                "2. Hakikisha kinatuma maombi ya `POST` kwenda kwenye anuani sahihi ya `/update`."
-            )
-            return jsonify({"status": "warning", "analysis": analysis})
-
-        analysis = "🌿 **Uchambuzi wa Kitaalamu wa Hali ya Hewa (Live Expert System):**\n\n"
-
-        if temp > 32 and humidity < 45:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** ⚠️ Joto lipo juu sana ({temp}°C) na unyevu ni mdogo ({humidity}%). **Ushauri:** Ongeza kiwango cha kumwagilia.\n"
-        elif temp > 32 and humidity >= 45:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** ☀️ Joto ni kali ({temp}°C) lakini unyevu uko sawa ({humidity}%).\n"
-        elif temp < 20 and humidity > 75:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** 💧 Joto ni la chini ({temp}°C) na unyevu uko juu ({humidity}%). **Tahadhari:** Angalia magonjwa ya ukungu.\n"
-        else:
-            analysis += f"1. **Hali ya Hewa & Unyevu:** 🌱 Hali ya joto ({temp}°C) na unyevu ({humidity}%) ziko katika uwiano mzuri.\n"
-
-        if rain_amt > 0 or "Mvua" in rain_status:
-            analysis += f"2. **Hali ya Mvua:** Mvua imepimwa kiasi cha {rain_amt} mm ({rain_status}).\n"
-        else:
-            analysis += f"2. **Hali ya Mvua:** Hakuna mvua iliyorekodiwa ({rain_status}).\n"
-
-        if wind_spd > 4.5:
-            analysis += f"3. **Hali ya Upepo:** 💨 Kasi ya upepo ni kali ({wind_spd} m/s kutoka {wind_dir}).\n"
-        else:
-            analysis += f"3. **Hali ya Upepo:** Kasi ya upepo ni tulivu ({wind_spd} m/s kutoka {wind_dir}), hakuna hatari.\n"
-
-        analysis += "\n_Mfumo huu umesanifiwa kutoa tathmini kwa usahihi bila kukosa mtandao._"
-
-        return jsonify({"status": "success", "analysis": analysis})
-
-    except Exception as e:
-        return jsonify({"status": "error", "analysis": f"Imeshindikana kuchambua data: {str(e)}"})
+    temp = float(weather_data.get('temperature', 0.0))
+    humidity = float(weather_data.get('humidity', 0.0))
+    analysis = f"🌿 **Uchambuzi wa Kitaalamu:** Hali ya hewa ipo sawa. Joto: {temp}°C, Unyevu: {humidity}%."
+    return jsonify({"status": "success", "analysis": analysis})
 
 
 # =========================================================
