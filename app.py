@@ -1,5 +1,6 @@
 from flask import Flask, render_template, render_template_string, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
+from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
 import os
 import requests
@@ -83,19 +84,45 @@ last_update_time = None
 # =========================================================
 
 def send_alert_sms_to_farmers(message_text):
-    subscribers = Subscriber.query.all()
-    if not subscribers or not sms:
-        print("[SMS WARNING] Hakuna wakulima waliosajiliwa au API Key haijawekwa.")
-        return
+    with app.app_context():
+        subscribers = Subscriber.query.all()
+        if not subscribers or not sms:
+            print("[SMS WARNING] Hakuna wakulima waliosajiliwa au API Key haijawekwa.")
+            return
 
-    # Kusanya namba zote za simu zilizowekwa kwenye mfumo
-    recipients = [sub.phone_number for sub in subscribers]
-    
-    try:
-        response = sms.send(message_text, recipients)
-        print(f"[SMS IMETUMWA KWA MAFANIKIO]: {response}")
-    except Exception as e:
-        print(f"[SMS ERROR] Imeshindikana kutuma: {str(e)}")
+        recipients = [sub.phone_number for sub in subscribers]
+        
+        try:
+            response = sms.send(message_text, recipients)
+            print(f"[SMS IMETUMWA KWA MAFANIKIO]: {response}")
+        except Exception as e:
+            print(f"[SMS ERROR] Imeshindikana kutuma: {str(e)}")
+
+
+# =========================================================
+# AUTOMATED SCHEDULED NOTIFICATIONS (Morning & Evening SMS)
+# =========================================================
+
+def send_scheduled_weather_update():
+    print("[SCHEDULER] Inatuma taarifa za hali ya hewa za asubuhi/jioni...")
+    temp = weather_data.get('temperature', '0.0')
+    humidity = weather_data.get('humidity', '0')
+    rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
+    rain = weather_data.get('rain_amount', '0.0')
+
+    message = (
+        f"MUHTASARI WA SHAMBA:\n"
+        f"Joto: {temp}C | Unyevu: {humidity}%\n"
+        f"Mvua: {rain_stat} ({rain}mm)\n"
+        f"Smart Farm Weather Station"
+    )
+    send_alert_sms_to_farmers(message)
+
+# Weka ratiba ya kutuma saa 1:00 asubuhi (07:00) na saa 12:00 jioni (18:00)
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=send_scheduled_weather_update, trigger="cron", hour=7, minute=0)
+scheduler.add_job(func=send_scheduled_weather_update, trigger="cron", hour=18, minute=0)
+scheduler.start()
 
 
 # =========================================================
@@ -293,7 +320,6 @@ def admin_panel():
 # =========================================================
 @app.route('/sms-incoming', methods=['POST', 'GET'])
 def sms_incoming():
-    # Jaribu kuchukua kupitia form au JSON ili kuzuia kukosekana kwa data
     sender = request.form.get('from') or (request.json.get('from') if request.is_json else '')
     text = request.form.get('text') or (request.json.get('text') if request.is_json else '')
     
@@ -302,13 +328,11 @@ def sms_incoming():
     
     print(f"[SMS INCOMING] Kutoka: {sender}, Ujumbe: {text}")
     
-    # Kama hakuna ujumbe uliosomeka lakini ombi limefika, jibu la jumla au ruhusu
     temp = weather_data.get('temperature', '0.0')
     humidity = weather_data.get('humidity', '0')
     rain = weather_data.get('rain_amount', '0.0')
     rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
     
-    # Kama ujumbe una neno lolote au ni mtupu (kwa ajili ya majaribio ya simulator)
     if not text or "hali" in text or "status" in text or "weather" in text or "mvua" in text or "joto" in text:
         response_message = (
             f"Hali ya Hewa Shambani:\n"
@@ -380,7 +404,7 @@ def update_weather():
         db.session.add(new_log)
         db.session.commit()
 
-        # Angalia dharura ya kutuma SMS kwa kutumia Africa's Talking
+        # Angalia dharura ya kutuma SMS ya haraka
         try:
             temp_val = float(weather_data['temperature'])
             rain_val = float(weather_data['rain_amount'])
@@ -481,7 +505,7 @@ def get_stats():
     })
 
 
-@app.route('/analyze-ai', methods=['GET'])
+@app.route('/analyze-ai5', methods=['GET'])
 def analyze_ai():
     temp = float(weather_data.get('temperature', 0.0))
     humidity = float(weather_data.get('humidity', 0.0))
