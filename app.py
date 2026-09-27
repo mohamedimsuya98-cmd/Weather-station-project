@@ -1,4 +1,4 @@
-from flask import Flask, render_template, render_template_string, request, jsonify, make_response
+from flask import Flask, render_template, render_template_string, request, jsonify, make_response, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
@@ -118,7 +118,6 @@ def send_scheduled_weather_update():
     )
     send_alert_sms_to_farmers(message)
 
-# Weka ratiba ya kutuma saa 1:00 asubuhi (07:00) na saa 12:00 jioni (18:00)
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=send_scheduled_weather_update, trigger="cron", hour=7, minute=0)
 scheduler.add_job(func=send_scheduled_weather_update, trigger="cron", hour=18, minute=0)
@@ -189,17 +188,13 @@ def translate_no_device(lang):
 
 
 # =========================================================
-# HOME (Frontend ya Kawaida)
+# HOME & ADMIN ROUTES
 # =========================================================
 
 @app.route('/')
 def home():
     return render_template('index.html', data=weather_data)
 
-
-# =========================================================
-# SECURE ADMIN PANEL ROUTE
-# =========================================================
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_panel():
@@ -209,7 +204,7 @@ def admin_panel():
         res.headers['WWW-Authenticate'] = 'Basic realm="Admin Login Required"'
         return res
 
-    message = ""
+    message = request.args.get('msg', '')
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add':
@@ -259,17 +254,24 @@ def admin_panel():
             th { background: #2d6a4f; color: white; }
             .del-btn { background: #d90429; width: auto; padding: 5px 10px; }
             .del-btn:hover { background: #8d0801; }
+            .test-btn { background: #1d3557; margin-bottom: 20px; }
+            .test-btn:hover { background: #457b9d; }
             .back-link { display: inline-block; margin-top: 20px; color: #2d6a4f; text-decoration: none; font-weight: bold; }
         </style>
     </head>
     <body>
         <div class="container">
             <h2>Panel ya Utawala (Admin SMS Subscribers)</h2>
-            <p>Hapa unaweza kusajili au kuondoa namba za wakulima watakaopata taarifa za dharura kupitia SMS.</p>
+            <p>Hapa unaweza kusajili namba za wakulima au kujaribu kutuma SMS ya mfano.</p>
             
             {% if message %}
                 <div class="msg">{{ message }}</div>
             {% endif %}
+
+            <h3>Jaribio la Mfumo wa SMS</h3>
+            <form action="/test-sms" method="GET" style="background:#e9ecef;">
+                <button type="submit" class="test-btn">📲 Bonyeza Kutuma SMS ya Jaribio Sasa</button>
+            </form>
 
             <h3>Sajili Mkulima Mpya</h3>
             <form method="POST">
@@ -315,9 +317,17 @@ def admin_panel():
     return render_template_string(admin_html, message=message, subscribers=subscribers)
 
 
+@app.route('/test-sms', methods=['GET'])
+def test_sms():
+    test_msg = "JARIBIO: Hali ya hewa shambani ni shwari. Smart Farm Weather Station inafanya kazi kikamilifu!"
+    send_alert_sms_to_farmers(test_msg)
+    return redirect(url_for('admin_panel', msg="SMS ya jaribio imetumwa kwenda kwa wakulima wote! Angalia simu yako."))
+
+
 # =========================================================
-# AFRICA'S TALKING INBOUND SMS WEBHOOK (On-Demand Status)
+# WEBHOOK & UPDATE ENDPOINTS
 # =========================================================
+
 @app.route('/sms-incoming', methods=['POST', 'GET'])
 def sms_incoming():
     sender = request.form.get('from') or (request.json.get('from') if request.is_json else '')
@@ -325,8 +335,6 @@ def sms_incoming():
     
     sender = sender.strip()
     text = text.strip().lower()
-    
-    print(f"[SMS INCOMING] Kutoka: {sender}, Ujumbe: {text}")
     
     temp = weather_data.get('temperature', '0.0')
     humidity = weather_data.get('humidity', '0')
@@ -342,24 +350,16 @@ def sms_incoming():
             f"Smart Farm Weather Station"
         )
     else:
-        response_message = (
-            "Karibu Smart Farm! "
-            "Tuma neno 'HALI' kupata taarifa za hivi punde za hali ya hewa."
-        )
+        response_message = "Karibu Smart Farm! Tuma neno 'HALI' kupata taarifa za hivi punde."
 
     if sms and sender:
         try:
             sms.send(response_message, [sender])
-            print(f"[SMS INCOMING] Jibu limetumwa kwa {sender}")
         except Exception as e:
-            print(f"[SMS INCOMING ERROR] Imeshindikana kujibu: {str(e)}")
+            print(f"[SMS ERROR]: {str(e)}")
             
     return jsonify({"status": "success", "message": "Processed"}), 200
 
-
-# =========================================================
-# ESP32 -> FLASK UPDATE
-# =========================================================
 
 @app.route('/update', methods=['POST'])
 def update_weather():
@@ -404,20 +404,19 @@ def update_weather():
         db.session.add(new_log)
         db.session.commit()
 
-        # Angalia dharura ya kutuma SMS ya haraka
         try:
             temp_val = float(weather_data['temperature'])
             rain_val = float(weather_data['rain_amount'])
             rain_stat = str(weather_data['rain_availability']).lower()
 
             if rain_val > 5.0 or "mvua kubwa" in rain_stat or "heavy" in rain_stat:
-                alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa shambani ({rain_val}mm). Tafadhali chukua hatua."
+                alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa ({rain_val}mm)."
                 send_alert_sms_to_farmers(alert_msg)
             elif temp_val > 34.0:
-                alert_msg = f"TAHADHARI YA JOTO KALI: Joto shambani limefika {temp_val}C. Ongeza umwagiliaji."
+                alert_msg = f"TAHADHARI YA JOTO: Joto shambani limefika {temp_val}C."
                 send_alert_sms_to_farmers(alert_msg)
         except Exception as err:
-            print("Hitilafu kwenye uchambuzi wa SMS:", str(err))
+            print("Hitilafu kwenye SMS:", str(err))
 
         return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
 
@@ -437,8 +436,7 @@ def get_data():
 
     is_online = False
     if last_update_time:
-        time_difference = (datetime.datetime.now() - last_update_time).total_seconds()
-        if time_difference < 30:
+        if (datetime.datetime.now() - last_update_time).total_seconds() < 30:
             is_online = True
 
     response_data["is_online"] = is_online
@@ -454,63 +452,28 @@ def get_data():
 def get_logs():
     lang = get_language()
     logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(50).all()
-    logs_list = [{
-        "id": log.id,
-        "temperature": log.temperature,
-        "humidity": log.humidity,
-        "rain_amount": log.rain_amount,
-        "rain_availability": translate_rain_status(log.rain_availability, lang),
-        "wind_speed": log.wind_speed,
-        "wind_direction": translate_wind_direction(log.wind_direction, lang),
-        "wifi_ssid": log.wifi_ssid,
-        "timestamp": log.timestamp,
-        "date": log.date_recorded
-    } for log in logs]
-    return jsonify(logs_list)
+    return jsonify([{
+        "id": log.id, "temperature": log.temperature, "humidity": log.humidity,
+        "rain_amount": log.rain_amount, "rain_availability": translate_rain_status(log.rain_availability, lang),
+        "wind_speed": log.wind_speed, "wind_direction": translate_wind_direction(log.wind_direction, lang),
+        "wifi_ssid": log.wifi_ssid, "timestamp": log.timestamp, "date": log.date_recorded
+    } for log in logs])
 
 
 @app.route('/get-stats', methods=['GET'])
 def get_stats():
     logs = WeatherLog.query.all()
     if not logs:
-        return jsonify({
-            "avg_temp": 0.0, "max_temp": 0.0, "min_temp": 0.0,
-            "avg_humidity": 0.0, "total_rain": 0.0, "avg_wind": 0.0,
-            "total_records": 0, "insight": "Hakuna kumbukumbu za kutosha bado."
-        })
-
-    temps = [log.temperature for log in logs]
-    humidities = [log.humidity for log in logs]
-    rains = [log.rain_amount for log in logs]
-    winds = [log.wind_speed for log in logs]
-
-    avg_temp = round(sum(temps) / len(temps), 1)
-    max_temp = round(max(temps), 1)
-    min_temp = round(min(temps), 1)
-    avg_humidity = round(sum(humidities) / len(humidities), 1)
-    total_rain = round(sum(rains), 2)
-    avg_wind = round(sum(winds) / len(winds), 1)
-    total_records = len(logs)
-
-    insight = f"📈 **Uchambuzi wa Mwenendo wa Shamba (Jumla: {total_records}):**\n\n"
-    if max_temp > 33:
-        insight += f"• Joto kali limefika {max_temp}C. Ongeza umwagiliaji.\n"
-    else:
-        insight += f"• Wastani wa joto upo vizuri ({avg_temp}C).\n"
-
+        return jsonify({"avg_temp": 0.0, "max_temp": 0.0, "min_temp": 0.0, "total_rain": 0.0, "insight": "Hakuna bado."})
+    temps = [l.temperature for l in logs]
     return jsonify({
-        "avg_temp": avg_temp, "max_temp": max_temp, "min_temp": min_temp,
-        "avg_humidity": avg_humidity, "total_rain": total_rain, "avg_wind": avg_wind,
-        "total_records": total_records, "insight": insight
+        "avg_temp": round(sum(temps)/len(temps), 1),
+        "max_temp": round(max(temps), 1),
+        "min_temp": round(min(temps), 1),
+        "total_rain": round(sum([l.rain_amount for l in logs]), 2),
+        "total_records": len(logs),
+        "insight": "Hali ya shamba ni shwari."
     })
-
-
-@app.route('/analyze-ai5', methods=['GET'])
-def analyze_ai():
-    temp = float(weather_data.get('temperature', 0.0))
-    humidity = float(weather_data.get('humidity', 0.0))
-    analysis = f"🌿 **Uchambuzi wa Kitaalamu:** Hali ya hewa ipo sawa. Joto: {temp}C, Unyevu: {humidity}%."
-    return jsonify({"status": "success", "analysis": analysis})
 
 
 # =========================================================
