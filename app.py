@@ -289,6 +289,50 @@ def admin_panel():
 
 
 # =========================================================
+# AFRICA'S TALKING INBOUND SMS WEBHOOK (On-Demand Status)
+# =========================================================
+
+@app.route('/sms-incoming', methods=['POST'])
+def sms_incoming():
+    sender = request.form.get('from', '').strip()
+    text = request.form.get('text', '').strip().lower()
+    
+    print(f"[SMS INCOMING] Kutoka: {sender}, Ujumbe: {text}")
+
+    response_message = ""
+
+    # Mkulima akiandika neno lenye kuhusiana na hali
+    if "hali" in text or "status" in text or "weather" in text or "mvua" in text or "joto" in text:
+        temp = weather_data.get('temperature', '0.0')
+        humidity = weather_data.get('humidity', '0')
+        rain = weather_data.get('rain_amount', '0.0')
+        rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
+        
+        response_message = (
+            f"Hali ya Hewa Shambani:\n"
+            f"Joto: {temp}C\n"
+            f"Unyevu: {humidity}%\n"
+            f"Mvua: {rain_stat} ({rain}mm)\n"
+            f"Smart Farm Weather Station"
+        )
+    else:
+        response_message = (
+            "Karibu Smart Farm! "
+            "Tuma neno 'HALI' au 'STATUS' kupata taarifa za hivi punde za hali ya hewa shambani."
+        )
+
+    # Kumtumia jibu mkulima aliyetuma ujumbe kupitia Africa's Talking
+    if sms and sender:
+        try:
+            sms.send(response_message, [sender])
+            print(f"[SMS INCOMING] Jibu limetumwa kwa {sender}")
+        except Exception as e:
+            print(f"[SMS INCOMING ERROR] Imeshindikana kujibu: {str(e)}")
+
+    return jsonify({"status": "success"}), 200
+
+
+# =========================================================
 # ESP32 -> FLASK UPDATE
 # =========================================================
 
@@ -342,7 +386,7 @@ def update_weather():
             rain_stat = str(weather_data['rain_availability']).lower()
 
             if rain_val > 5.0 or "mvua kubwa" in rain_stat or "heavy" in rain_stat:
-                alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa shambani ({rain_val}mm). Tafadhari chukua hatua."
+                alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa shambani ({rain_val}mm). Tafadhali chukua hatua."
                 send_alert_sms_to_farmers(alert_msg)
             elif temp_val > 34.0:
                 alert_msg = f"TAHADHARI YA JOTO KALI: Joto shambani limefika {temp_val}C. Ongeza umwagiliaji."
