@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 import datetime
 import os
 import requests
+import africastalking
 
 app = Flask(__name__)
 
@@ -11,8 +12,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Nenosiri la Admin (Unaweza kulibadilisha au kuliweka kwenye Render environment variables kama ADMIN_PASSWORD)
+# Nenosiri la Admin
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "shamba1234")
+
+# Taarifa za Africa's Talking kutoka kwenye Render Environment Variables
+AT_USERNAME = os.environ.get("AT_USERNAME", "sandbox")
+AT_API_KEY = os.environ.get("AT_API_KEY", "")
+
+if AT_API_KEY:
+    africastalking.initialize(AT_USERNAME, AT_API_KEY)
+    sms = africastalking.SMS
+else:
+    sms = None
 
 
 # =========================================================
@@ -68,21 +79,23 @@ last_update_time = None
 
 
 # =========================================================
-# SMS DISPATCHER FUNCTION
+# REAL SMS DISPATCHER FUNCTION (AFRICA'S TALKING)
 # =========================================================
 
 def send_alert_sms_to_farmers(message_text):
     subscribers = Subscriber.query.all()
-    if not subscribers:
+    if not subscribers or not sms:
+        print("[SMS WARNING] Hakuna wakulima waliosajiliwa au API Key haijawekwa.")
         return
 
-    for sub in subscribers:
-        phone = sub.phone_number
-        try:
-            # Hapa unaweza kuunganisha API ya Africa's Talking au mtoa huduma wako
-            print(f"[SMS ALERT] Imetumwa kwenda kwa {sub.name} ({phone}): {message_text}")
-        except Exception as e:
-            print(f"[SMS ERROR] Imeshindikana kutuma kwenda kwa {phone}: {str(e)}")
+    # Kusanya namba zote za simu zilizowekwa kwenye mfumo
+    recipients = [sub.phone_number for sub in subscribers]
+    
+    try:
+        response = sms.send(message_text, recipients)
+        print(f"[SMS IMETUMWA KWA MAFANIKIO]: {response}")
+    except Exception as e:
+        print(f"[SMS ERROR] Imeshindikana kutuma: {str(e)}")
 
 
 # =========================================================
@@ -149,7 +162,7 @@ def translate_no_device(lang):
 
 
 # =========================================================
-# HOME (Frontend ya Kawaida - Haibadiliki)
+# HOME (Frontend ya Kawaida)
 # =========================================================
 
 @app.route('/')
@@ -164,7 +177,6 @@ def home():
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_panel():
     auth = request.authorization
-    # Kukagua nenosiri la HTTP Basic Auth
     if not auth or auth.password != ADMIN_PASSWORD or auth.username != "admin":
         res = make_response("Ufikiaji Umezuiwa. Tafadhali ingiza jina la mtumiaji (admin) na nenosiri sahihi.", 401)
         res.headers['WWW-Authenticate'] = 'Basic realm="Admin Login Required"'
@@ -196,11 +208,10 @@ def admin_panel():
                 db.session.commit()
                 message = "Namba imeondolewa kikamilifu kwenye mfumo."
             else:
-                    message = "Hitilafu: Namba haikupatikana."
+                message = "Hitilafu: Namba haikupatikana."
 
     subscribers = Subscriber.query.all()
 
-    # HTML ndogo safi ya Admin Panel (Haiathiri index.html kabisa)
     admin_html = """
     <!DOCTYPE html>
     <html lang="sw">
@@ -324,7 +335,7 @@ def update_weather():
         db.session.add(new_log)
         db.session.commit()
 
-        # Angalia dharura ya kutuma SMS kwa wakulima
+        # Angalia dharura ya kutuma SMS kwa kutumia Africa's Talking
         try:
             temp_val = float(weather_data['temperature'])
             rain_val = float(weather_data['rain_amount'])
@@ -334,7 +345,7 @@ def update_weather():
                 alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa shambani ({rain_val}mm). Tafadhari chukua hatua."
                 send_alert_sms_to_farmers(alert_msg)
             elif temp_val > 34.0:
-                alert_msg = f"TAHADHARI YA JOTO KALI: Joto shambani limefika {temp_val}°C. Ongeza umwagiliaji."
+                alert_msg = f"TAHADHARI YA JOTO KALI: Joto shambani limefika {temp_val}C. Ongeza umwagiliaji."
                 send_alert_sms_to_farmers(alert_msg)
         except Exception as err:
             print("Hitilafu kwenye uchambuzi wa SMS:", str(err))
@@ -345,7 +356,7 @@ def update_weather():
 
 
 # =========================================================
-# LENDING API ENDPOINTS (GET-DATA, LOGS, STATS, AI)
+# API ENDPOINTS
 # =========================================================
 
 @app.route('/get-data', methods=['GET'])
@@ -414,9 +425,9 @@ def get_stats():
 
     insight = f"📈 **Uchambuzi wa Mwenendo wa Shamba (Jumla: {total_records}):**\n\n"
     if max_temp > 33:
-        insight += f"• Joto kali limefika {max_temp}°C. Ongeza umwagiliaji.\n"
+        insight += f"• Joto kali limefika {max_temp}C. Ongeza umwagiliaji.\n"
     else:
-        insight += f"• Wastani wa joto upo vizuri ({avg_temp}°C).\n"
+        insight += f"• Wastani wa joto upo vizuri ({avg_temp}C).\n"
 
     return jsonify({
         "avg_temp": avg_temp, "max_temp": max_temp, "min_temp": min_temp,
@@ -429,7 +440,7 @@ def get_stats():
 def analyze_ai():
     temp = float(weather_data.get('temperature', 0.0))
     humidity = float(weather_data.get('humidity', 0.0))
-    analysis = f"🌿 **Uchambuzi wa Kitaalamu:** Hali ya hewa ipo sawa. Joto: {temp}°C, Unyevu: {humidity}%."
+    analysis = f"🌿 **Uchambuzi wa Kitaalamu:** Hali ya hewa ipo sawa. Joto: {temp}C, Unyevu: {humidity}%."
     return jsonify({"status": "success", "analysis": analysis})
 
 
