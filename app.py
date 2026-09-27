@@ -477,21 +477,43 @@ def get_logs():
         "wifi_ssid": log.wifi_ssid, "timestamp": log.timestamp, "date": log.date_recorded
     } for log in logs])
 
-
 @app.route('/get-stats', methods=['GET'])
 def get_stats():
     logs = WeatherLog.query.all()
     if not logs:
-        return jsonify({"avg_temp": 0.0, "max_temp": 0.0, "min_temp": 0.0, "total_rain": 0.0, "insight": "Hakuna bado."})
+        return jsonify({
+            "avg_temp": 0.0, "avg_temperature": 0.0,
+            "max_temp": 0.0, "min_temp": 0.0,
+            "avg_humidity": 0.0,
+            "total_rain": 0.0, "total_rainfall": 0.0,
+            "avg_wind_speed": 0.0,
+            "total_records": 0,
+            "insight": "Hakuna bado."
+        })
+    
     temps = [l.temperature for l in logs]
+    humidities = [l.humidity for l in logs]
+    winds = [l.wind_speed for l in logs]
+    rains = [l.rain_amount for l in logs]
+
+    avg_t = round(sum(temps)/len(temps), 1)
+    avg_h = round(sum(humidities)/len(humidities), 1)
+    avg_w = round(sum(winds)/len(winds), 1) if winds else 0.0
+    tot_r = round(sum(rains), 2)
+
     return jsonify({
-        "avg_temp": round(sum(temps)/len(temps), 1),
+        "avg_temp": avg_t,
+        "avg_temperature": avg_t,
         "max_temp": round(max(temps), 1),
         "min_temp": round(min(temps), 1),
-        "total_rain": round(sum([l.rain_amount for l in logs]), 2),
+        "avg_humidity": avg_h,
+        "total_rain": tot_r,
+        "total_rainfall": tot_r,
+        "avg_wind_speed": avg_w,
         "total_records": len(logs),
         "insight": "Hali ya shamba ni shwari."
     })
+
 
 
 # =========================================================
