@@ -325,7 +325,7 @@ def test_sms():
 
 
 # =========================================================
-# WEBHOOK & UPDATE ENDPOINTS (IMEFANYIWA MAREKEBISHO HAPA)
+# WEBHOOK & UPDATE ENDPOINTS
 # =========================================================
 
 @app.route('/sms-incoming', methods=['POST', 'GET'])
@@ -367,7 +367,6 @@ def update_weather():
     data = request.json
 
     if data:
-        # Kupokea vigezo kutoka kwenye ESP32 JSON Payload
         temp = data.get('temperature', weather_data['temperature'])
         humidity = data.get('humidity', weather_data['humidity'])
         rain_val = data.get('rain', 0)
@@ -376,7 +375,6 @@ def update_weather():
         weather_data['temperature'] = str(temp)
         weather_data['humidity'] = str(humidity)
 
-        # Tafsiri ya taarifa za Mvua kutoka ESP32 (0 au 1)
         if rain_val == 1 or rain_val == True:
             weather_data['rain_amount'] = "5.0"
             weather_data['rain_availability'] = "Mvua"
@@ -384,7 +382,6 @@ def update_weather():
             weather_data['rain_amount'] = "0.0"
             weather_data['rain_availability'] = "Hakuna Mvua"
 
-        # Ukokotoaji wa Voltage/Speed ya Upepo kutoka thamani ya ADC
         wind_speed_val = round(float(wind_adc) * (3.3 / 4095.0), 2)
         weather_data['wind_speed'] = str(wind_speed_val)
         weather_data['wind_direction'] = "Kaskazini"
@@ -396,7 +393,6 @@ def update_weather():
         current_time = last_update_time.strftime("%H:%M:%S")
         current_date = last_update_time.strftime("%Y-%m-%d")
 
-        # Kuhifadhi kwenye History ya grafu
         weather_history["timestamps"].append(current_time)
         weather_history["temperatures"].append(float(temp))
         weather_history["humidities"].append(float(humidity))
@@ -406,7 +402,6 @@ def update_weather():
             weather_history["temperatures"].pop(0)
             weather_history["humidities"].pop(0)
 
-        # Kuhifadhi kwenye Database (SQLite)
         new_log = WeatherLog(
             temperature=float(temp),
             humidity=float(humidity),
@@ -421,7 +416,6 @@ def update_weather():
         db.session.add(new_log)
         db.session.commit()
 
-        # Ushauri wa SMS za Otomatiki kama vigezo vimevuka kiwango
         try:
             temp_val = float(temp)
             rain_amount_val = float(weather_data['rain_amount'])
@@ -477,6 +471,7 @@ def get_logs():
         "wifi_ssid": log.wifi_ssid, "timestamp": log.timestamp, "date": log.date_recorded
     } for log in logs])
 
+
 @app.route('/get-stats', methods=['GET'])
 def get_stats():
     logs = WeatherLog.query.all()
@@ -513,7 +508,6 @@ def get_stats():
         "total_records": len(logs),
         "insight": "Hali ya shamba ni shwari."
     })
-
 
 
 # =========================================================
