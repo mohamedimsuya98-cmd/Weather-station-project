@@ -91,7 +91,7 @@ def send_alert_sms_to_farmers(message_text):
             return
 
         recipients = [sub.phone_number for sub in subscribers]
-        
+
         try:
             response = sms.send(message_text, recipients)
             print(f"[SMS IMETUMWA KWA MAFANIKIO]: {response}")
@@ -325,22 +325,22 @@ def test_sms():
 
 
 # =========================================================
-# WEBHOOK & UPDATE ENDPOINTS
+# WEBHOOK & UPDATE ENDPOINTS (IMEFANYIWA MAREKEBISHO HAPA)
 # =========================================================
 
 @app.route('/sms-incoming', methods=['POST', 'GET'])
 def sms_incoming():
     sender = request.form.get('from') or (request.json.get('from') if request.is_json else '')
     text = request.form.get('text') or (request.json.get('text') if request.is_json else '')
-    
+
     sender = sender.strip()
     text = text.strip().lower()
-    
+
     temp = weather_data.get('temperature', '0.0')
     humidity = weather_data.get('humidity', '0')
     rain = weather_data.get('rain_amount', '0.0')
     rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
-    
+
     if not text or "hali" in text or "status" in text or "weather" in text or "mvua" in text or "joto" in text:
         response_message = (
             f"Hali ya Hewa Shambani:\n"
@@ -357,7 +357,7 @@ def sms_incoming():
             sms.send(response_message, [sender])
         except Exception as e:
             print(f"[SMS ERROR]: {str(e)}")
-            
+
     return jsonify({"status": "success", "message": "Processed"}), 200
 
 
@@ -367,32 +367,49 @@ def update_weather():
     data = request.json
 
     if data:
-        weather_data['temperature'] = data.get('temperature', weather_data['temperature'])
-        weather_data['humidity'] = data.get('humidity', weather_data['humidity'])
-        weather_data['rain_amount'] = data.get('rain_amount', weather_data['rain_amount'])
-        weather_data['rain_availability'] = data.get('rain_availability', weather_data['rain_availability'])
-        weather_data['wind_speed'] = data.get('wind_speed', weather_data['wind_speed'])
-        weather_data['wind_direction'] = data.get('wind_direction', weather_data['wind_direction'])
-        
-        received_ssid = data.get('wifi_ssid', 'Haijulikani')
+        # Kupokea vigezo kutoka kwenye ESP32 JSON Payload
+        temp = data.get('temperature', weather_data['temperature'])
+        humidity = data.get('humidity', weather_data['humidity'])
+        rain_val = data.get('rain', 0)
+        wind_adc = data.get('wind', 0)
+
+        weather_data['temperature'] = str(temp)
+        weather_data['humidity'] = str(humidity)
+
+        # Tafsiri ya taarifa za Mvua kutoka ESP32 (0 au 1)
+        if rain_val == 1 or rain_val == True:
+            weather_data['rain_amount'] = "5.0"
+            weather_data['rain_availability'] = "Mvua"
+        else:
+            weather_data['rain_amount'] = "0.0"
+            weather_data['rain_availability'] = "Hakuna Mvua"
+
+        # Ukokotoaji wa Voltage/Speed ya Upepo kutoka thamani ya ADC
+        wind_speed_val = round(float(wind_adc) * (3.3 / 4095.0), 2)
+        weather_data['wind_speed'] = str(wind_speed_val)
+        weather_data['wind_direction'] = "Kaskazini"
+
+        received_ssid = "CirkitWifi"
         weather_data['wifi_ssid'] = received_ssid
 
         last_update_time = datetime.datetime.now()
         current_time = last_update_time.strftime("%H:%M:%S")
         current_date = last_update_time.strftime("%Y-%m-%d")
 
+        # Kuhifadhi kwenye History ya grafu
         weather_history["timestamps"].append(current_time)
-        weather_history["temperatures"].append(float(weather_data['temperature']))
-        weather_history["humidities"].append(float(weather_data['humidity']))
+        weather_history["temperatures"].append(float(temp))
+        weather_history["humidities"].append(float(humidity))
 
         if len(weather_history["timestamps"]) > 20:
             weather_history["timestamps"].pop(0)
             weather_history["temperatures"].pop(0)
             weather_history["humidities"].pop(0)
 
+        # Kuhifadhi kwenye Database (SQLite)
         new_log = WeatherLog(
-            temperature=float(weather_data['temperature']),
-            humidity=float(weather_data['humidity']),
+            temperature=float(temp),
+            humidity=float(humidity),
             rain_amount=float(weather_data['rain_amount']),
             rain_availability=weather_data['rain_availability'],
             wind_speed=float(weather_data['wind_speed']),
@@ -404,13 +421,14 @@ def update_weather():
         db.session.add(new_log)
         db.session.commit()
 
+        # Ushauri wa SMS za Otomatiki kama vigezo vimevuka kiwango
         try:
-            temp_val = float(weather_data['temperature'])
-            rain_val = float(weather_data['rain_amount'])
+            temp_val = float(temp)
+            rain_amount_val = float(weather_data['rain_amount'])
             rain_stat = str(weather_data['rain_availability']).lower()
 
-            if rain_val > 5.0 or "mvua kubwa" in rain_stat or "heavy" in rain_stat:
-                alert_msg = f"TAHADHARI YA SHAMBA: Mvua kubwa imegunduliwa ({rain_val}mm)."
+            if rain_amount_val > 5.0 or "mvua" in rain_stat:
+                alert_msg = f"TAHADHARI YA SHAMBA: Mvua imegunduliwa ({rain_amount_val}mm)."
                 send_alert_sms_to_farmers(alert_msg)
             elif temp_val > 34.0:
                 alert_msg = f"TAHADHARI YA JOTO: Joto shambani limefika {temp_val}C."
