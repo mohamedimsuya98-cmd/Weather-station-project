@@ -9,7 +9,6 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
 
   <script>
-    // Kusajili Service Worker kwenye kivinjari cha simu
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
@@ -21,7 +20,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Smart Weather Station</title>
+    <title>Smart Farm Weather Station</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -335,8 +334,8 @@
         .connection-pill {
             display: flex;
             align-items: center;
-            gap: 7px;
-            padding: 9px 12px;
+            gap: 6px;
+            padding: 8px 12px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 999px;
@@ -728,25 +727,25 @@
         }
 
         .sensor-live {
-            display: inline-flex;
+            display: none; /* Itaonekana tu kama kifaa kipo Online */
             align-items: center;
             gap: 5px;
-            color: #87958c;
+            color: #27ae60;
             font-size: 9px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
+        .sensor-card.connected .sensor-live {
+            display: inline-flex;
+        }
+
         .sensor-live-dot {
             width: 5px;
             height: 5px;
-            background: #b7c0ba;
-            border-radius: 50%;
-        }
-
-        .sensor-card.connected .sensor-live-dot {
             background: #2fb765;
+            border-radius: 50%;
         }
 
         .sensor-label {
@@ -1347,12 +1346,12 @@
 
     <div class="brand">
         <div class="brand-icon">
-            <i class="fa-solid fa-cloud-sun"></i>
+            <i class="fa-solid fa-seedling"></i>
         </div>
 
         <div class="brand-text">
-            <strong>Smart Weather</strong>
-            <span>Environmental Monitoring</span>
+            <strong>Smart Farm</strong>
+            <span>Weather Station</span>
         </div>
     </div>
 
@@ -1407,7 +1406,7 @@
 
         <div class="sidebar-footer-value">
             <i class="fa-solid fa-circle-check"></i>
-            <span>Smart Weather Station</span>
+            <span>Smart Farm IoT</span>
         </div>
     </div>
 
@@ -1436,17 +1435,17 @@
 
                     <div
                         class="location-label"
-                        data-sw="Eneo la Kituo"
-                        data-en="Station Location"
+                        data-sw="Eneo la Shamba"
+                        data-en="Farm Location"
                     >
-                        Eneo la Kituo
+                        Eneo la Shamba
                     </div>
 
                     <div
                         class="location-value"
                         id="locationValue"
                     >
-                        DIT, Dar es Salaam
+                        Shamba Langu, Dar es Salaam
                     </div>
 
                 </div>
@@ -1455,6 +1454,7 @@
 
             <div class="header-right">
 
+                <!-- Compact Connection Status -->
                 <div
                     class="connection-pill"
                     id="connectionPill"
@@ -1466,10 +1466,10 @@
 
                     <span
                         id="connectionText"
-                        data-sw="Haijaunganishwa"
-                        data-en="Not Connected"
+                        data-sw="Offline"
+                        data-en="Offline"
                     >
-                        Haijaunganishwa
+                        Offline
                     </span>
                 </div>
 
@@ -1480,7 +1480,7 @@
                     --
                 </div>
 
-                <!-- Kitufe cha Kubadili Theme (Dark/Light Mode) -->
+                <!-- Theme Toggle Button -->
                 <button
                     class="theme-toggle-btn"
                     id="themeToggleBtn"
@@ -1531,30 +1531,30 @@
                 <div class="hero-content">
 
                     <span class="hero-badge">
-                        <i class="fa-solid fa-satellite-dish"></i>
+                        <i class="fa-solid fa-seedling"></i>
 
                         <span
-                            data-sw="Smart Weather Station"
-                            data-en="Smart Weather Station"
+                            data-sw="Smart Agriculture IoT"
+                            data-en="Smart Agriculture IoT"
                         >
-                            Smart Weather Station
+                            Smart Agriculture IoT
                         </span>
                     </span>
 
                     <h1
                         class="hero-title"
-                        data-sw="Fuatilia Mazingira kwa Data Halisi"
-                        data-en="Monitor the Environment with Real Data"
+                        data-sw="Fuatilia Hali ya Hewa ya Shamba Lako"
+                        data-en="Monitor Your Farm Weather Conditions"
                     >
-                        Fuatilia Mazingira kwa Data Halisi
+                        Fuatilia Hali ya Hewa ya Shamba Lako
                     </h1>
 
                     <p
                         class="hero-description"
-                        data-sw="Mfumo huu hukusanya na kuonyesha taarifa za mazingira kutoka kwenye sensors za kituo cha hali ya hewa."
-                        data-en="This system collects and displays environmental information from the weather station sensors."
+                        data-sw="Mfumo maalum wa IoT unaokusanya data za joto, unyevu, mvua na upepo moja kwa moja kutoka shambani kuongeza tija ya uzalishaji."
+                        data-en="Specialized IoT system collecting real-time temperature, humidity, rainfall and wind data directly from the farm to boost productivity."
                     >
-                        Mfumo huu hukusanya na kuonyesha taarifa za mazingira kutoka kwenye sensors za kituo cha hali ya hewa.
+                        Mfumo maalum wa IoT unaokusanya data za joto, unyevu, mvua na upepo moja kwa moja kutoka shambani kuongeza tija ya uzalishaji.
                     </p>
 
                     <div class="hero-meta">
@@ -1563,7 +1563,7 @@
                             <i class="fa-solid fa-location-dot"></i>
 
                             <span id="heroLocation">
-                                DIT, Dar es Salaam
+                                Shamba Langu, Dar es Salaam
                             </span>
                         </div>
 
@@ -1572,23 +1572,23 @@
                             <i class="fa-solid fa-microchip"></i>
 
                             <span
-                                data-sw="ESP32 Sensor Station"
-                                data-en="ESP32 Sensor Station"
+                                data-sw="ESP32 Farm Station"
+                                data-en="ESP32 Farm Station"
                             >
-                                ESP32 Sensor Station
+                                ESP32 Farm Station
                             </span>
 
                         </div>
 
                         <div class="hero-meta-item">
 
-                            <i class="fa-solid fa-database"></i>
+                            <i class="fa-solid fa-cloud-sun"></i>
 
                             <span
-                                data-sw="Data halisi"
-                                data-en="Real-time data"
+                                data-sw="Hali Halisi"
+                                data-en="Real-time Data"
                             >
-                                Data halisi
+                                Hali Halisi
                             </span>
 
                         </div>
@@ -1598,7 +1598,7 @@
                 </div>
 
 
-                <!-- Agricultural/environment visual -->
+                <!-- Agricultural visual -->
 
                 <div class="hero-visual">
 
@@ -1624,17 +1624,17 @@
                 <div>
 
                     <h2
-                        data-sw="Vipimo vya Mazingira"
-                        data-en="Environmental Measurements"
+                        data-sw="Hali ya Hewa ya Shamba"
+                        data-en="Farm Weather Conditions"
                     >
-                        Vipimo vya Mazingira
+                        Hali ya Hewa ya Shamba
                     </h2>
 
                     <p
-                        data-sw="Taarifa kutoka kwenye sensors za kituo"
-                        data-en="Data from the station sensors"
+                        data-sw="Vipimo vya sasa kutoka kwenye vitambuzi vya shambani"
+                        data-en="Current readings from farm sensors"
                     >
-                        Taarifa kutoka kwenye sensors za kituo
+                        Vipimo vya sasa kutoka kwenye vitambuzi vya shambani
                     </p>
 
                 </div>
@@ -1648,10 +1648,10 @@
 
                     <span
                         id="sensorStatusText"
-                        data-sw="Inasubiri data"
-                        data-en="Waiting for data"
+                        data-sw="Data haipokelewi"
+                        data-en="No data received"
                     >
-                        Inasubiri data
+                        Data haipokelewi
                     </span>
 
                 </div>
@@ -1943,17 +1943,17 @@
                 <div>
 
                     <h2
-                        data-sw="Takwimu za Kituo"
-                        data-en="Station Statistics"
+                        data-sw="Takwimu za Shamba"
+                        data-en="Farm Statistics"
                     >
-                        Takwimu za Kituo
+                        Takwimu za Shamba
                     </h2>
 
                     <p
-                        data-sw="Muhtasari wa data iliyokusanywa"
-                        data-en="Summary of collected data"
+                        data-sw="Muhtasari wa data zilizokusanywa shambani"
+                        data-en="Summary of collected farm data"
                     >
-                        Muhtasari wa data iliyokusanywa
+                        Muhtasari wa data zilizokusanywa shambani
                     </p>
 
                 </div>
@@ -2181,10 +2181,10 @@
                     </h2>
 
                     <p
-                        data-sw="Rekodi za vipimo vilivyopokelewa"
-                        data-en="Records of received measurements"
+                        data-sw="Rekodi za vipimo vilivyopokelewa kutoka shambani"
+                        data-en="Records of measurements received from the farm"
                     >
-                        Rekodi za vipimo vilivyopokelewa
+                        Rekodi za vipimo vilivyopokelewa kutoka shambani
                     </p>
 
                 </div>
@@ -2305,10 +2305,10 @@
                     </h2>
 
                     <p
-                        data-sw="Mabadiliko ya joto na unyevu kwa muda"
-                        data-en="Temperature and humidity changes over time"
+                        data-sw="Mabadiliko ya joto na unyevu shambani kwa muda"
+                        data-en="Temperature and humidity changes over time on the farm"
                     >
-                        Mabadiliko ya joto na unyevu kwa muda
+                        Mabadiliko ya joto na unyevu shambani kwa muda
                     </p>
 
                 </div>
@@ -2331,10 +2331,10 @@
 
                         <div
                             class="chart-subtitle"
-                            data-sw="Data kutoka kwenye kituo"
-                            data-en="Data from the station"
+                            data-sw="Data kutoka kwenye kituo cha shamba"
+                            data-en="Data from the farm station"
                         >
-                            Data kutoka kwenye kituo
+                            Data kutoka kwenye kituo cha shamba
                         </div>
 
                     </div>
@@ -2403,10 +2403,10 @@
                     </h2>
 
                     <p
-                        data-sw="Hali ya kifaa na mfumo"
-                        data-en="Device and system information"
+                        data-sw="Hali ya kifaa cha shambani na mfumo"
+                        data-en="Farm device and system information"
                     >
-                        Hali ya kifaa na mfumo
+                        Hali ya kifaa cha shambani na mfumo
                     </p>
 
                 </div>
@@ -2427,10 +2427,10 @@
                         <div>
 
                             <h3
-                                data-sw="ESP32 Sensor Station"
-                                data-en="ESP32 Sensor Station"
+                                data-sw="ESP32 Farm Station"
+                                data-en="ESP32 Farm Station"
                             >
-                                ESP32 Sensor Station
+                                ESP32 Farm Station
                             </h3>
 
                             <p
@@ -2465,10 +2465,10 @@
 
                                 <span
                                     id="deviceStateText"
-                                    data-sw="Haijaunganishwa"
-                                    data-en="Not Connected"
+                                    data-sw="Offline"
+                                    data-en="Offline"
                                 >
-                                    Haijaunganishwa
+                                    Offline
                                 </span>
 
                             </span>
@@ -2490,7 +2490,7 @@
                                 class="info-row-value"
                                 id="stationLocation"
                             >
-                                DIT, Dar es Salaam
+                                Shamba Langu, Dar es Salaam
                             </span>
 
                         </div>
@@ -2650,7 +2650,7 @@
         <footer class="footer">
 
             <span>
-                Smart Weather Station · DIT, Dar es Salaam
+                Smart Farm Weather Station · Shamba Langu, Dar es Salaam
             </span>
 
         </footer>
@@ -2662,21 +2662,13 @@
 
 <script>
     /* =========================================================
-       SMART WEATHER STATION
+       SMART FARM WEATHER STATION
        Frontend logic
        ========================================================= */
 
     let currentLang = "sw";
     let currentTheme = "light";
     let weatherChart = null;
-
-    /*
-     * Device state:
-     *
-     * waiting = ESP32 haijawahi kutuma data / hakuna data
-     * online  = backend imepokea data halisi hivi karibuni
-     * offline = kifaa kilikuwa kinatuma lakini sasa hakitumi
-     */
 
     let deviceState = "waiting";
 
@@ -2759,7 +2751,6 @@
 
         localStorage.setItem("weatherDashboardTheme", theme);
 
-        // Sasisha rangi za Chart kama ipo
         if (weatherChart) {
             const isDark = theme === "dark";
             const textColor = isDark ? "#9aa89e" : "#87958c";
@@ -3065,7 +3056,7 @@
 
             if (text) {
                 text.textContent =
-                    t("Kifaa Kipo Mtandaoni", "Device Online");
+                    t("Online", "Online");
             }
 
             if (sensorText) {
@@ -3080,7 +3071,7 @@
 
             if (stateText) {
                 stateText.textContent =
-                    t("Kipo Mtandaoni", "Online");
+                    t("Online", "Online");
             }
 
             if (status) {
@@ -3100,7 +3091,7 @@
 
             if (text) {
                 text.textContent =
-                    t("Kifaa Kimekatika", "Device Offline");
+                    t("Offline", "Offline");
             }
 
             if (sensorText) {
@@ -3115,7 +3106,7 @@
 
             if (stateText) {
                 stateText.textContent =
-                    t("Kimekatika", "Offline");
+                    t("Offline", "Offline");
             }
 
             if (status) {
@@ -3135,7 +3126,7 @@
 
             if (text) {
                 text.textContent =
-                    t("Haijaunganishwa", "Not Connected");
+                    t("Offline", "Offline");
             }
 
             if (sensorText) {
@@ -3150,12 +3141,12 @@
 
             if (stateText) {
                 stateText.textContent =
-                    t("Haijaunganishwa", "Not Connected");
+                    t("Offline", "Offline");
             }
 
             if (status) {
                 status.textContent =
-                    t("Haijaunganishwa", "Not Connected");
+                    t("Offline", "Offline");
             }
 
             if (statusSub) {
@@ -3323,16 +3314,6 @@
                 await response.json();
 
 
-            /*
-             * IMPORTANT:
-             *
-             * Backend ndiyo inaamua kama ESP32
-             * ipo online.
-             *
-             * Hatutatumia tu "fetch success"
-             * kusema device online.
-             */
-
             let isOnline = false;
 
             if (
@@ -3341,12 +3322,6 @@
             ) {
                 isOnline = true;
             }
-
-            /*
-             * Kama backend haijatumia is_online,
-             * tunaangalia kama imeleta sensor data
-             * halisi.
-             */
 
             const hasSensorData =
                 isValidValue(data.temperature) ||
@@ -3359,10 +3334,6 @@
                     data.wind_direction !== ""
                 );
 
-
-            /*
-             * Hatusemi Online kwa response ya Flask pekee.
-             */
 
             if (
                 data.is_online === true ||
@@ -3383,10 +3354,6 @@
             }
 
             else if (hasSensorData) {
-                /*
-                 * Fallback:
-                 * data halisi imefika.
-                 */
                 updateDeviceUI("online");
             }
 
@@ -3403,8 +3370,6 @@
             updateSensorValues(data);
 
 
-            /* Location */
-
             if (data.location) {
 
                 document.getElementById(
@@ -3420,8 +3385,6 @@
                 ).textContent = data.location;
             }
 
-
-            /* Wi-Fi */
 
             const wifiStatus =
                 document.getElementById("wifiStatus");
@@ -3461,8 +3424,6 @@
             }
 
 
-            /* Chart history */
-
             if (Array.isArray(data.history)) {
                 updateWeatherChart(data.history);
             }
@@ -3473,17 +3434,6 @@
                 "Weather data error:",
                 error
             );
-
-            /*
-             * Error ya fetch haimaanishi moja kwa moja
-             * ESP32 offline.
-             *
-             * Inaweza kuwa Flask server haipatikani.
-             *
-             * Kwa hiyo tunatumia offline ikiwa
-             * tulikuwa tumeshawahi kuwa online,
-             * vinginevyo waiting.
-             */
 
             if (deviceState === "online") {
 
@@ -4016,23 +3966,11 @@
 
             updateDateTime();
 
-            /*
-             * IMPORTANT:
-             * Initial state ni NOT CONNECTED.
-             *
-             * Hatuwezi kusema Online kabla
-             * ESP32 haijatuma data.
-             */
-
             updateDeviceUI("waiting");
 
             setSensorCardsState(false);
 
             initializeWeatherChart();
-
-            /*
-             * Load data.
-             */
 
             fetchLiveWeatherData();
 
@@ -4041,19 +3979,10 @@
             loadWeatherLogs();
 
 
-            /*
-             * Poll backend kila sekunde 5.
-             */
-
             setInterval(
                 fetchLiveWeatherData,
                 5000
             );
-
-
-            /*
-             * Stats na history kila sekunde 15.
-             */
 
             setInterval(
                 loadWeatherStats,
