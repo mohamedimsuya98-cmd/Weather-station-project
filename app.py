@@ -291,23 +291,25 @@ def admin_panel():
 # =========================================================
 # AFRICA'S TALKING INBOUND SMS WEBHOOK (On-Demand Status)
 # =========================================================
-
-@app.route('/sms-incoming', methods=['POST'])
+@app.route('/sms-incoming', methods=['POST', 'GET'])
 def sms_incoming():
-    sender = request.form.get('from', '').strip()
-    text = request.form.get('text', '').strip().lower()
+    # Jaribu kuchukua kupitia form au JSON ili kuzuia kukosekana kwa data
+    sender = request.form.get('from') or (request.json.get('from') if request.is_json else '')
+    text = request.form.get('text') or (request.json.get('text') if request.is_json else '')
+    
+    sender = sender.strip()
+    text = text.strip().lower()
     
     print(f"[SMS INCOMING] Kutoka: {sender}, Ujumbe: {text}")
-
-    response_message = ""
-
-    # Mkulima akiandika neno lenye kuhusiana na hali
-    if "hali" in text or "status" in text or "weather" in text or "mvua" in text or "joto" in text:
-        temp = weather_data.get('temperature', '0.0')
-        humidity = weather_data.get('humidity', '0')
-        rain = weather_data.get('rain_amount', '0.0')
-        rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
-        
+    
+    # Kama hakuna ujumbe uliosomeka lakini ombi limefika, jibu la jumla au ruhusu
+    temp = weather_data.get('temperature', '0.0')
+    humidity = weather_data.get('humidity', '0')
+    rain = weather_data.get('rain_amount', '0.0')
+    rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
+    
+    # Kama ujumbe una neno lolote au ni mtupu (kwa ajili ya majaribio ya simulator)
+    if not text or "hali" in text or "status" in text or "weather" in text or "mvua" in text or "joto" in text:
         response_message = (
             f"Hali ya Hewa Shambani:\n"
             f"Joto: {temp}C\n"
@@ -318,18 +320,17 @@ def sms_incoming():
     else:
         response_message = (
             "Karibu Smart Farm! "
-            "Tuma neno 'HALI' au 'STATUS' kupata taarifa za hivi punde za hali ya hewa shambani."
+            "Tuma neno 'HALI' kupata taarifa za hivi punde za hali ya hewa."
         )
 
-    # Kumtumia jibu mkulima aliyetuma ujumbe kupitia Africa's Talking
     if sms and sender:
         try:
             sms.send(response_message, [sender])
             print(f"[SMS INCOMING] Jibu limetumwa kwa {sender}")
         except Exception as e:
             print(f"[SMS INCOMING ERROR] Imeshindikana kujibu: {str(e)}")
-
-    return jsonify({"status": "success"}), 200
+            
+    return jsonify({"status": "success", "message": "Processed"}), 200
 
 
 # =========================================================
