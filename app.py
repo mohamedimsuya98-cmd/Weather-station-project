@@ -1,4 +1,5 @@
 from flask import Flask, render_template, render_template_string, request, jsonify, make_response
+from flask_sqlalchemy import SQLAlchemy
 import datetime
 import os
 import requests
