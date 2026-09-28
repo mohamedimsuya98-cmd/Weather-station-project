@@ -1,5 +1,6 @@
 from flask import Flask, render_template, render_template_string, request, jsonify, make_response, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
 import os
@@ -7,14 +8,7 @@ import requests
 import africastalking
 
 app = Flask(__name__)
-
-# Ongeza CORS Headers natively bila kuhitaji maktaba ya ziada
-@app.after_request
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
-    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
-    return response
+CORS(app)  # Inaruhusu Frontend kuchukua data bila vizuizi vya Browser
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -473,7 +467,6 @@ def get_data():
 @app.route('/get-logs', methods=['GET'])
 def get_logs():
     lang = get_language()
-    # Chukua rekodi 30 za mwisho kutoka database
     logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(30).all()
     
     formatted_logs = []
@@ -491,9 +484,7 @@ def get_logs():
             "date": log.date_recorded
         })
     
-    # Geuza mfuatano uanzie za zamani kwenda mpya ili graph ichore vizuri
     formatted_logs.reverse()
-    
     return jsonify(formatted_logs)
 
 
