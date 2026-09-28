@@ -1,5 +1,6 @@
 from flask import Flask, render_template, render_template_string, request, jsonify, make_response, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
 import os
@@ -7,6 +8,7 @@ import requests
 import africastalking
 
 app = Flask(__name__)
+CORS(app)  # Inaruhusu browser kusoma data bila vikwazo vya CORS
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -21,8 +23,12 @@ AT_USERNAME = os.environ.get("AT_USERNAME", "sandbox")
 AT_API_KEY = os.environ.get("AT_API_KEY", "")
 
 if AT_API_KEY:
-    africastalking.initialize(AT_USERNAME, AT_API_KEY)
-    sms = africastalking.SMS
+    try:
+        africastalking.initialize(AT_USERNAME, AT_API_KEY)
+        sms = africastalking.SMS
+    except Exception as e:
+        print("[SMS INIT ERROR]", str(e))
+        sms = None
 else:
     sms = None
 
@@ -364,18 +370,18 @@ def sms_incoming():
 @app.route('/update', methods=['POST'])
 def update_weather():
     global weather_data, weather_history, last_update_time
-    data = request.json
+    data = request.get_json(silent=True) or request.form
 
     if data:
-        temp = data.get('temperature', weather_data['temperature'])
-        humidity = data.get('humidity', weather_data['humidity'])
+        temp = float(data.get('temperature', weather_data['temperature']))
+        humidity = float(data.get('humidity', weather_data['humidity']))
         rain_val = data.get('rain', 0)
         wind_adc = data.get('wind', 0)
 
         weather_data['temperature'] = str(temp)
         weather_data['humidity'] = str(humidity)
 
-        if rain_val == 1 or rain_val == True:
+        if str(rain_val) in ['1', 'true', 'True']:
             weather_data['rain_amount'] = "5.0"
             weather_data['rain_availability'] = "Mvua"
         else:
@@ -386,7 +392,6 @@ def update_weather():
         weather_data['wind_speed'] = str(wind_speed_val)
         weather_data['wind_direction'] = "Kaskazini"
 
-        # Tunasoma jina la mtandao (SSID) linalokuja na kifaa. Ikiwa halipo, weka "Haijulikani"
         received_ssid = data.get('ssid', 'Haijulikani')
         weather_data['wifi_ssid'] = received_ssid
 
@@ -395,17 +400,17 @@ def update_weather():
         current_date = last_update_time.strftime("%Y-%m-%d")
 
         weather_history["timestamps"].append(current_time)
-        weather_history["temperatures"].append(float(temp))
-        weather_history["humidities"].append(float(humidity))
+        weather_history["temperatures"].append(temp)
+        weather_history["humidities"].append(humidity)
 
-        if len(weather_history["timestamps"]) > 20:
+        if len(weather_history["timestamps"]) > 30:
             weather_history["timestamps"].pop(0)
             weather_history["temperatures"].pop(0)
             weather_history["humidities"].pop(0)
 
         new_log = WeatherLog(
-            temperature=float(temp),
-            humidity=float(humidity),
+            temperature=temp,
+            humidity=humidity,
             rain_amount=float(weather_data['rain_amount']),
             rain_availability=weather_data['rain_availability'],
             wind_speed=float(weather_data['wind_speed']),
@@ -417,19 +422,16 @@ def update_weather():
         db.session.add(new_log)
         db.session.commit()
 
+        # SMS trigger
         try:
-            temp_val = float(temp)
-            rain_amount_val = float(weather_data['rain_amount'])
-            rain_stat = str(weather_data['rain_availability']).lower()
-
-            if rain_amount_val > 5.0 or "mvua" in rain_stat:
-                alert_msg = f"TAHADHARI YA SHAMBA: Mvua imegunduliwa ({rain_amount_val}mm)."
+            if float(weather_data['rain_amount']) > 5.0:
+                alert_msg = f"TAHADHARI YA SHAMBA: Mvua imegunduliwa ({weather_data['rain_amount']}mm)."
                 send_alert_sms_to_farmers(alert_msg)
-            elif temp_val > 34.0:
-                alert_msg = f"TAHADHARI YA JOTO: Joto shambani limefika {temp_val}C."
+            elif temp > 34.0:
+                alert_msg = f"TAHADHARI YA JOTO: Joto shambani limefika {temp}C."
                 send_alert_sms_to_farmers(alert_msg)
         except Exception as err:
-            print("Hitilafu kwenye SMS:", str(err))
+            print("[SMS TRIGGER ERROR]:", str(err))
 
         return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
 
@@ -450,7 +452,7 @@ def get_data():
 
     is_online = False
     if last_update_time:
-        if (datetime.datetime.now() - last_update_time).total_seconds() < 30:
+        if (datetime.datetime.now() - last_update_time).total_seconds() < 60:
             is_online = True
 
     response_data["is_online"] = is_online
@@ -465,37 +467,28 @@ def get_data():
 @app.route('/get-logs', methods=['GET'])
 def get_logs():
     lang = get_language()
-    # Tunachukua rekodi kutoka database
-    all_logs = WeatherLog.query.order_by(WeatherLog.id.desc()).all()
+    # Chukua rekodi 30 za mwisho kutoka database
+    logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(30).all()
     
-    filtered_logs = []
-    seen_hours = set()
+    formatted_logs = []
+    for log in logs:
+        formatted_logs.append({
+            "id": log.id, 
+            "temperature": log.temperature, 
+            "humidity": log.humidity,
+            "rain_amount": log.rain_amount, 
+            "rain_availability": translate_rain_status(log.rain_availability, lang),
+            "wind_speed": log.wind_speed, 
+            "wind_direction": translate_wind_direction(log.wind_direction, lang),
+            "wifi_ssid": log.wifi_ssid, 
+            "timestamp": log.timestamp, 
+            "date": log.date_recorded
+        })
     
-    # Tunachuja ili kuleta rekodi moja pekee kwa kila saa (kuzuia fujo za data za kila sekunde)
-    for log in all_logs:
-        # Tunatumia tarehe na saa (YYYY-MM-DD HH) kama ufunguo
-        hour_key = f"{log.date_recorded} {log.timestamp[:2]}"
-        
-        if hour_key not in seen_hours:
-            seen_hours.add(hour_key)
-            filtered_logs.append({
-                "id": log.id, 
-                "temperature": log.temperature, 
-                "humidity": log.humidity,
-                "rain_amount": log.rain_amount, 
-                "rain_availability": translate_rain_status(log.rain_availability, lang),
-                "wind_speed": log.wind_speed, 
-                "wind_direction": translate_wind_direction(log.wind_direction, lang),
-                "wifi_ssid": log.wifi_ssid, 
-                "timestamp": log.timestamp, 
-                "date": log.date_recorded
-            })
-            
-        # Tunazuia zisiwe nyingi sana kwenye Dashboard (tunachukua hadi masaa 15 ya nyuma)
-        if len(filtered_logs) >= 15:
-            break
-            
-    return jsonify(filtered_logs)
+    # Geuza mfuatano uanzie za zamani kwenda mpya ili graph ichore vizuri
+    formatted_logs.reverse()
+    
+    return jsonify(formatted_logs)
 
 
 @app.route('/get-stats', methods=['GET'])
