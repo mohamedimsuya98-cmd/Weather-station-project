@@ -386,8 +386,9 @@ def update_weather():
         weather_data['wind_speed'] = str(wind_speed_val)
         weather_data['wind_direction'] = "Kaskazini"
 
-        received_ssid = "CirkitWifi"
-        weather_data['wifi_ssid'] = received_ssid
+       # Badala ya kuweka jina la kudumu, chukua kutoka kwa data zilizotumwa au weka default kama halipo
+received_ssid = data.get('ssid', 'Haijulikani')
+weather_data['wifi_ssid'] = received_ssid
 
         last_update_time = datetime.datetime.now()
         current_time = last_update_time.strftime("%H:%M:%S")
