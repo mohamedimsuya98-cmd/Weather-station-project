@@ -463,13 +463,37 @@ def get_data():
 @app.route('/get-logs', methods=['GET'])
 def get_logs():
     lang = get_language()
-    logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(50).all()
-    return jsonify([{
-        "id": log.id, "temperature": log.temperature, "humidity": log.humidity,
-        "rain_amount": log.rain_amount, "rain_availability": translate_rain_status(log.rain_availability, lang),
-        "wind_speed": log.wind_speed, "wind_direction": translate_wind_direction(log.wind_direction, lang),
-        "wifi_ssid": log.wifi_ssid, "timestamp": log.timestamp, "date": log.date_recorded
-    } for log in logs])
+    # Tunachukua rekodi kutoka database
+    all_logs = WeatherLog.query.order_by(WeatherLog.id.desc()).all()
+    
+    filtered_logs = []
+    seen_hours = set()
+    
+    # Tunachuja ili kuleta rekodi moja pekee kwa kila saa (kuzuia fujo za data za kila sekunde)
+    for log in all_logs:
+        # Tunatumia tarehe na saa (YYYY-MM-DD HH) kama ufunguo
+        hour_key = f"{log.date_recorded} {log.timestamp[:2]}"
+        
+        if hour_key not in seen_hours:
+            seen_hours.add(hour_key)
+            filtered_logs.append({
+                "id": log.id, 
+                "temperature": log.temperature, 
+                "humidity": log.humidity,
+                "rain_amount": log.rain_amount, 
+                "rain_availability": translate_rain_status(log.rain_availability, lang),
+                "wind_speed": log.wind_speed, 
+                "wind_direction": translate_wind_direction(log.wind_direction, lang),
+                "wifi_ssid": log.wifi_ssid, 
+                "timestamp": log.timestamp, 
+                "date": log.date_recorded
+            })
+            
+        # Tunazuia zisiwe nyingi sana kwenye Dashboard (tunachukua hadi masaa 15 ya nyuma)
+        if len(filtered_logs) >= 15:
+            break
+            
+    return jsonify(filtered_logs)
 
 
 @app.route('/get-stats', methods=['GET'])
