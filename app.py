@@ -1,6 +1,5 @@
 from flask import Flask, render_template, render_template_string, request, jsonify, make_response, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
 import os
@@ -8,7 +7,14 @@ import requests
 import africastalking
 
 app = Flask(__name__)
-CORS(app)  # Inaruhusu browser kusoma data bila vikwazo vya CORS
+
+# Ongeza CORS Headers natively bila kuhitaji maktaba ya ziada
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+    return response
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
