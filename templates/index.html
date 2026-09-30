@@ -8,121 +8,184 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <style>
         * { box-sizing: border-box; }
 
-        :root {
-            --agri-green: #15803d;
-            --agri-dark: #166534;
-            --agri-soft: #f5f7f2;
-            --agri-border: #e5ebe5;
-            --agri-text: #1f2937;
-        }
-
         body {
             background:
-                radial-gradient(circle at 5% 0%, rgba(22,101,52,.10), transparent 30rem),
-                radial-gradient(circle at 95% 15%, rgba(14,165,233,.06), transparent 24rem),
-                var(--agri-soft);
-            color: var(--agri-text);
+                radial-gradient(circle at top left, rgba(16,185,129,.10), transparent 32rem),
+                #f6f8f7;
         }
 
-        .loader { width:22px; height:22px; border:3px solid rgba(255,255,255,.35); border-top-color:white; border-radius:999px; animation:spinner .8s linear infinite; }
-        @keyframes spinner { to { transform:rotate(360deg); } }
-
-        .metric-card, #early-warnings-card, .bg-white.rounded-3xl, .bg-white.rounded-2xl {
-            transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+        .loader {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255,255,255,.35);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spinner .8s linear infinite;
         }
-        .metric-card:hover { transform:translateY(-3px); box-shadow:0 18px 40px rgba(15,23,42,.09); }
-        .metric-card { position:relative; overflow:hidden; }
-        .metric-card::after { content:""; position:absolute; right:-28px; bottom:-34px; width:100px; height:100px; border-radius:50%; background:rgba(22,101,52,.035); pointer-events:none; }
 
-        .status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
-        .modal-backdrop { background:rgba(15,23,42,.62); backdrop-filter:blur(8px); }
-        .hidden-soft { display:none !important; }
-        .chart-wrap { position:relative; height:330px; }
+        @keyframes spinner {
+            to { transform: rotate(360deg); }
+        }
 
-        /* Professional AgriTech visual layer — keeps existing JS hooks intact. */
-        nav { box-shadow:0 8px 28px rgba(15,23,42,.12) !important; }
-        main { position:relative; }
-        #dashboard-section { padding-bottom:1.5rem; }
-        #dashboard-section > div { border-color:var(--agri-border); }
+        .metric-card {
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
 
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 35px rgba(15,23,42,.08);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+
+        .modal-backdrop {
+            background: rgba(15,23,42,.55);
+            backdrop-filter: blur(6px);
+        }
+
+        .hidden-soft { display: none !important; }
+
+        .chart-wrap {
+            position: relative;
+            height: 300px;
+        }
+    
+        /* ===== PROFESSIONAL AGRITECH / IOT VISUAL SYSTEM ===== */
+        :root {
+            --sf-primary: #176B4D;
+            --sf-primary-dark: #0F4C3A;
+            --sf-tech: #2563A6;
+            --sf-teal: #168A83;
+            --sf-page: #F4F7F5;
+            --sf-surface: #FFFFFF;
+            --sf-surface-soft: #FBFDFC;
+            --sf-text: #17221D;
+            --sf-muted: #53645B;
+            --sf-faint: #7A8981;
+            --sf-border: #DCE6E0;
+            --sf-success: #198754;
+            --sf-warning: #B7791F;
+            --sf-danger: #C2413B;
+            --sf-info: #2563A6;
+            --sf-radius: 12px;
+            --sf-shadow: 0 1px 3px rgba(23, 34, 29, .06);
+            --sf-shadow-raised: 0 8px 24px rgba(23, 34, 29, .08);
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: Inter, "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--sf-text);
+            background: var(--sf-page) !important;
+            font-feature-settings: "tnum" 1, "cv02" 1, "cv03" 1;
+        }
+        nav {
+            background: var(--sf-primary-dark) !important;
+            box-shadow: 0 1px 0 rgba(255,255,255,.08), 0 5px 18px rgba(15,76,58,.14) !important;
+        }
+        nav .w-10 { background: rgba(255,255,255,.13) !important; border: 1px solid rgba(255,255,255,.14); }
+        main { padding-bottom: 2.5rem !important; }
+        #dashboard-section { gap: 1.25rem !important; }
+        #dashboard-section > div:not(.hidden), #dashboard-section > section:not(.hidden) {
+            border-color: var(--sf-border) !important;
+            box-shadow: var(--sf-shadow) !important;
+        }
+        h1, h2, h3 { letter-spacing: -.025em; color: var(--sf-text); }
+        button, select, input { min-height: 42px; }
+        button { transition: background-color .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
+        button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid rgba(37,99,166,.25); outline-offset: 2px; }
+        button:hover:not(:disabled) { transform: translateY(-1px); }
+        button:disabled { cursor: not-allowed; opacity: .62; }
+        select, input { border-color: #C9D7CE !important; background-color: #fff; }
+        #alert-box { border-radius: var(--sf-radius) !important; box-shadow: var(--sf-shadow); }
+        #dashboard-section > .bg-white, #dashboard-section > div.bg-white {
+            border-radius: var(--sf-radius) !important;
+        }
+        /* Farm context header */
         #dashboard-section > div:first-child {
-            position:relative; overflow:hidden;
-            background:linear-gradient(135deg,#ffffff 0%,#f8fbf7 70%,#edf8f0 100%);
-            box-shadow:0 12px 35px rgba(22,101,52,.07);
+            padding: 1.35rem !important;
+            border-left: 4px solid var(--sf-primary) !important;
         }
-        #dashboard-section > div:first-child::before {
-            content:""; position:absolute; width:230px; height:230px; border-radius:50%;
-            background:rgba(34,197,94,.08); right:-80px; top:-105px;
+        #farm-location:empty::after { content: "Location unavailable"; color: var(--sf-faint); }
+        #station-status { letter-spacing: .04em; }
+        /* Make the decision module a calm operational summary, not decoration. */
+        #decision-headline { color: #fff !important; line-height: 1.24; max-width: 48rem; }
+        #advisories-list > div { border: 1px solid rgba(255,255,255,.12); }
+        #dashboard-section .bg-gradient-to-br { background: linear-gradient(135deg, #0F4C3A 0%, #176B4D 55%, #168A83 100%) !important; border-radius: var(--sf-radius) !important; box-shadow: 0 10px 26px rgba(15,76,58,.15) !important; }
+        /* Alerts */
+        #early-warnings-card { background: #FFF9ED !important; border-color: #F0D69A !important; border-left: 4px solid var(--sf-warning) !important; border-radius: var(--sf-radius) !important; }
+        #early-warnings-list li { line-height: 1.45; }
+        #early-warnings-list li::marker { color: var(--sf-warning); }
+        /* Sensor cards */
+        .metric-card {
+            position: relative;
+            min-height: 164px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            overflow: hidden;
+            border-radius: var(--sf-radius) !important;
+            border-color: var(--sf-border) !important;
+            box-shadow: var(--sf-shadow) !important;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease !important;
         }
-        #dashboard-section > div:first-child > div { position:relative; z-index:1; }
-
-        #farm-location { font-weight:600; }
-        #station-status { letter-spacing:.02em; }
-
-        #early-warnings-card {
-            box-shadow:0 10px 30px rgba(245,158,11,.08);
-            border-left:4px solid #f59e0b;
+        .metric-card:hover { transform: translateY(-3px) !important; border-color: #B7CBBF !important; box-shadow: var(--sf-shadow-raised) !important; }
+        .metric-card > p:first-child { display: flex; align-items: center; gap: .45rem; }
+        .metric-card > p:first-child::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: .75; }
+        .metric-card .text-3xl { font-size: 2rem !important; line-height: 1.05; letter-spacing: -.045em; color: var(--sf-text); }
+        .metric-card > p:last-child { margin-top: auto !important; padding-top: .85rem; border-top: 1px solid #EEF3EF; }
+        /* Forecast and history */
+        #forecast-container > div { border-radius: 10px !important; border-color: #E1EAE4 !important; box-shadow: none !important; transition: background .16s ease, transform .16s ease; }
+        #forecast-container > div:hover { background: #F1F7F3 !important; transform: translateY(-2px); }
+        #forecast-container img { filter: saturate(.9); }
+        .chart-wrap { height: 340px !important; border: 1px solid #E5ECE7; border-radius: 10px; padding: .75rem; background: #FCFDFC; }
+        /* Station health and technical setup */
+        #health-icon { border: 1px solid #BEE3CD; }
+        #station-code { font-variant-numeric: tabular-nums; }
+        #dashboard-section .bg-slate-900 { background: #17221D !important; border-radius: var(--sf-radius) !important; box-shadow: var(--sf-shadow) !important; }
+        /* Modals and auth */
+        .modal-backdrop { background: rgba(16,31,24,.56) !important; backdrop-filter: blur(5px); }
+        #auth-section > div, [id$="-modal"] > div { border-radius: 14px !important; border-color: var(--sf-border) !important; }
+        #auth-section > div { box-shadow: 0 12px 34px rgba(23,34,29,.10) !important; }
+        /* Accessible UI state treatment */
+        .status-dot { box-shadow: 0 0 0 3px rgba(25,135,84,.12); }
+        .text-10px { font-size: .6875rem !important; }
+        @media (max-width: 1023px) {
+            #dashboard-section > div:first-child { padding: 1.1rem !important; }
+            .metric-card { min-height: 150px; }
         }
-        #early-warnings-list li {
-            background:rgba(255,255,255,.72); border:1px solid rgba(245,158,11,.18);
-            border-radius:14px; padding:10px 12px;
-        }
-
-        /* Sensor cards: strong numeric hierarchy */
-        .metric-card .text-3xl { letter-spacing:-.04em; line-height:1; }
-        .metric-card p:first-child { font-size:.68rem; }
-        .metric-card .sensor-icon {
-            width:42px; height:42px; border-radius:14px; display:flex; align-items:center; justify-content:center;
-            background:#f0fdf4; color:#15803d; font-size:1.1rem; margin-bottom:14px;
-        }
-        .metric-card[data-tone="blue"] .sensor-icon { background:#eff6ff; color:#2563eb; }
-        .metric-card[data-tone="rain"] .sensor-icon { background:#eef2ff; color:#4f46e5; }
-        .metric-card[data-tone="wind"] .sensor-icon { background:#f0fdfa; color:#0f766e; }
-        .metric-card[data-tone="soil"] .sensor-icon { background:#f0fdf4; color:#16a34a; }
-        .metric-card[data-tone="crop"] .sensor-icon { background:#f8fafc; color:#475569; }
-
-        /* Decision panel becomes the main "Farm Insight" surface. */
-        #decision-headline { max-width:720px; letter-spacing:-.02em; }
-        #advisories-list > * {
-            background:rgba(255,255,255,.11); border:1px solid rgba(255,255,255,.13);
-            border-radius:14px; padding:10px 12px;
-        }
-
-        /* Station health */
-        #health-icon { box-shadow:0 8px 22px rgba(22,101,52,.10); }
-        #station-code { letter-spacing:.08em; }
-
-        /* Forecast */
-        #forecast-container > * {
-            border:1px solid #e7ece8; border-radius:18px; background:#fbfdfb;
-            box-shadow:0 5px 18px rgba(15,23,42,.035); transition:transform .18s ease, box-shadow .18s ease;
-        }
-        #forecast-container > *:hover { transform:translateY(-2px); box-shadow:0 12px 25px rgba(15,23,42,.07); }
-
-        /* History */
-        #history-chart { border-radius:14px; }
-        #history-days:focus { outline:none; box-shadow:0 0 0 3px rgba(34,197,94,.16); }
-
-        /* Setup footer */
-        #dashboard-section > div:last-child {
-            background:linear-gradient(135deg,#0f172a,#17251b) !important;
-            box-shadow:0 15px 35px rgba(15,23,42,.13);
-        }
-
-        @media (max-width: 640px) {
-            .chart-wrap { height:270px; }
-            #dashboard-section { gap:1rem; }
-            .metric-card { min-height:150px; }
+        @media (max-width: 639px) {
+            main { padding-left: 1rem !important; padding-right: 1rem !important; padding-top: 1rem !important; }
+            nav .h-16 { height: auto !important; min-height: 4rem; padding-top: .55rem; padding-bottom: .55rem; }
+            nav #user-display { display: none !important; }
+            #dashboard-section { gap: 1rem !important; }
+            #dashboard-section > div:first-child { border-left-width: 3px !important; }
+            .metric-card { min-height: 144px; padding: 1rem !important; }
+            .metric-card .text-3xl { font-size: 1.75rem !important; }
+            #forecast-container { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+            .chart-wrap { height: 260px !important; padding: .4rem; }
+            [id$="-modal"] { align-items: flex-end !important; padding: 0 !important; }
+            [id$="-modal"] > div { width: 100% !important; max-width: none !important; max-height: 90vh; overflow-y: auto; border-radius: 16px 16px 0 0 !important; }
         }
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
         }
+
     </style>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
 </head>
 
 <body class="font-sans text-slate-800 min-h-screen">
@@ -221,52 +284,66 @@
     <!-- DASHBOARD -->
     <section id="dashboard-section" class="hidden space-y-5">
 
-        <!-- FARM HEADER / STATUS -->
+        <!-- FARM HEADER -->
         <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="text-2xl text-emerald-700"><i class="fa-solid fa-wheat-awn"></i></span>
-                        <div>
-                            <h1 class="text-2xl font-extrabold text-slate-900" data-i18n="dash_title">Dashboard ya Shamba</h1>
-                            <p class="text-xs text-slate-500 mt-0.5">Real-time environmental monitoring &amp; farming decision support</p>
-                        </div>
+                        <span class="text-2xl">🌾</span>
+                        <h1 class="text-2xl font-extrabold text-slate-900" data-i18n="dash_title">Dashboard ya Shamba</h1>
                     </div>
-                    <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
                         <span id="farm-location" class="text-slate-500"></span>
                         <span class="text-slate-300">•</span>
                         <span id="crop-badge" class="hidden bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg font-semibold"></span>
                         <span class="text-slate-300">•</span>
                         <span data-i18n="station_status_label">Hali ya Sensor:</span>
-                        <span id="station-status" class="font-bold px-2 py-1 rounded-full text-xs bg-slate-100 text-slate-600">...</span>
+                        <span id="station-status"
+                              class="font-bold px-2 py-1 rounded-full text-xs bg-slate-100 text-slate-600">...</span>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    <select id="farm-select" onchange="loadDashboardData()" class="px-4 py-2.5 border border-slate-300 rounded-xl bg-slate-50 font-semibold text-sm outline-none focus:ring-2 focus:ring-emerald-500"></select>
-                    <button onclick="openEditFarmModal()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2.5 rounded-xl font-bold text-sm" data-i18n="btn_edit">✏️ Badili</button>
-                    <button onclick="openAddFarmModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-xl font-bold text-sm" data-i18n="btn_add">+ Ongeza</button>
-                    <button onclick="handleDeleteFarm()" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2.5 rounded-xl font-bold text-sm" title="Delete">🗑️</button>
-                    <button onclick="openStationModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2.5 rounded-xl font-bold text-sm" data-i18n="station_setup_btn">⚙️ Kituo</button>
+                    <select id="farm-select"
+                            onchange="loadDashboardData()"
+                            class="px-4 py-2.5 border border-slate-300 rounded-xl bg-slate-50 font-semibold text-sm outline-none focus:ring-2 focus:ring-emerald-500"></select>
+
+                    <button onclick="openEditFarmModal()"
+                            class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2.5 rounded-xl font-bold text-sm"
+                            data-i18n="btn_edit">✏️ Badili</button>
+
+                    <button onclick="openAddFarmModal()"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-xl font-bold text-sm"
+                            data-i18n="btn_add">+ Ongeza</button>
+
+                    <button onclick="handleDeleteFarm()"
+                            class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2.5 rounded-xl font-bold text-sm"
+                            title="Delete">🗑️</button>
+
+                    <button onclick="openStationModal()"
+                            class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2.5 rounded-xl font-bold text-sm"
+                            data-i18n="station_setup_btn">⚙️ Kituo</button>
                 </div>
             </div>
         </div>
 
-        <!-- FARM INSIGHT + STATION HEALTH -->
+        <!-- DECISION SUMMARY -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
             <div class="lg:col-span-2 bg-gradient-to-br from-emerald-700 to-teal-700 text-white rounded-3xl shadow-lg p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <div class="flex items-center gap-2 text-emerald-100">
-                            <i class="fa-solid fa-seedling"></i>
-                            <p class="text-xs font-bold uppercase tracking-wider" data-i18n="decision_title">Uamuzi wa Kilimo</p>
-                        </div>
+                        <p class="text-emerald-100 text-xs font-bold uppercase tracking-wider" data-i18n="decision_title">Uamuzi wa Kilimo</p>
                         <h2 id="decision-headline" class="text-xl sm:text-2xl font-extrabold mt-2">...</h2>
                     </div>
-                    <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-xl"><i class="fa-solid fa-compass"></i></div>
+                    <div class="text-3xl">🧭</div>
                 </div>
+
                 <div id="advisories-list" class="mt-5 space-y-2 text-sm"></div>
-                <p class="mt-5 text-xs text-emerald-100 border-t border-white/15 pt-4" data-i18n="decision_note">Mfumo unatoa decision-support ya jumla; mkulima bado anapaswa kuangalia hali halisi ya shamba.</p>
+
+                <p class="mt-5 text-xs text-emerald-100 border-t border-white/15 pt-4" data-i18n="decision_note">
+                    Mfumo unatoa decision-support ya jumla; mkulima bado anapaswa kuangalia hali halisi ya shamba.
+                </p>
             </div>
 
             <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
@@ -275,14 +352,18 @@
                         <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="station_health">Afya ya Kituo</p>
                         <p id="station-code" class="font-extrabold text-slate-900 mt-2">----</p>
                     </div>
-                    <div id="health-icon" class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-xl"><i class="fa-solid fa-satellite-dish"></i></div>
+                    <div id="health-icon" class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-xl">📡</div>
                 </div>
+
                 <div class="mt-5 space-y-3 text-sm">
-                    <div class="flex justify-between gap-4"><span class="text-slate-500" data-i18n="last_seen">Mwisho kuonekana</span><span id="last-seen" class="font-semibold text-right">--</span></div>
-                    <div class="flex justify-between gap-4"><span class="text-slate-500" data-i18n="last_data">Data ya mwisho</span><span id="last-updated-time" class="font-semibold text-right">--</span></div>
-                </div>
-                <div class="mt-5 rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2.5 text-xs text-emerald-800 flex items-center gap-2">
-                    <span class="status-dot bg-emerald-500"></span> <span>Station monitoring active</span>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500" data-i18n="last_seen">Mwisho kuonekana</span>
+                        <span id="last-seen" class="font-semibold text-right">--</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500" data-i18n="last_data">Data ya mwisho</span>
+                        <span id="last-updated-time" class="font-semibold text-right">--</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -290,65 +371,64 @@
         <!-- EARLY WARNINGS -->
         <div id="early-warnings-card" class="bg-amber-50 border border-amber-200 rounded-3xl p-5">
             <div class="flex items-center gap-2 text-amber-900">
-                <span class="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation"></i></span>
-                <div>
-                    <h2 class="font-extrabold" data-i18n="early_warnings_title">Tahadhari za Mapema</h2>
-                    <p class="text-xs text-amber-700">Environmental conditions that may require attention</p>
-                </div>
+                <span class="text-xl">⚠️</span>
+                <h2 class="font-extrabold" data-i18n="early_warnings_title">Tahadhari za Mapema</h2>
             </div>
             <ul id="early-warnings-list" class="mt-3 space-y-2 text-sm text-amber-900"></ul>
         </div>
 
         <!-- LIVE SENSOR CARDS -->
-        <div>
-            <div class="flex items-end justify-between mb-3 px-1">
-                <div>
-                    <p class="text-xs font-bold uppercase tracking-widest text-emerald-700">Live Sensors</p>
-                    <h2 class="text-lg font-extrabold text-slate-900">Current Farm Conditions</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+
+            <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-amber-500">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_temp">Joto</p>
+                <div class="mt-3 flex items-baseline gap-1">
+                    <span id="val-temp" class="text-3xl font-extrabold">--</span>
+                    <span class="text-slate-500 font-semibold">°C</span>
                 </div>
-                <span class="text-xs text-slate-500 hidden sm:block"><i class="fa-solid fa-circle text-emerald-500 mr-1 text-[7px]"></i> Real-time data</span>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
 
-                <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-amber-500" data-tone="temp">
-                    <div class="sensor-icon"><i class="fa-solid fa-temperature-half"></i></div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_temp">Joto</p>
-                    <div class="mt-3 flex items-baseline gap-1"><span id="val-temp" class="text-3xl font-extrabold">--</span><span class="text-slate-500 font-semibold">°C</span></div>
+            <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-blue-500">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_hum">Unyevu wa Hewa</p>
+                <div class="mt-3 flex items-baseline gap-1">
+                    <span id="val-hum" class="text-3xl font-extrabold">--</span>
+                    <span class="text-slate-500 font-semibold">%</span>
                 </div>
+            </div>
 
-                <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-blue-500" data-tone="blue">
-                    <div class="sensor-icon"><i class="fa-solid fa-droplet"></i></div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_hum">Unyevu wa Hewa</p>
-                    <div class="mt-3 flex items-baseline gap-1"><span id="val-hum" class="text-3xl font-extrabold">--</span><span class="text-slate-500 font-semibold">%</span></div>
+            <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-indigo-500">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_rain">Mvua</p>
+                <div class="mt-3 flex items-baseline gap-1">
+                    <span id="val-rain" class="text-3xl font-extrabold">--</span>
+                    <span class="text-slate-500 font-semibold">mm</span>
                 </div>
+                <p id="rain-status" class="text-xs text-slate-500 mt-2">--</p>
+            </div>
 
-                <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-indigo-500" data-tone="rain">
-                    <div class="sensor-icon"><i class="fa-solid fa-cloud-rain"></i></div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_rain">Mvua</p>
-                    <div class="mt-3 flex items-baseline gap-1"><span id="val-rain" class="text-3xl font-extrabold">--</span><span class="text-slate-500 font-semibold">mm</span></div>
-                    <p id="rain-status" class="text-xs text-slate-500 mt-2">--</p>
+            <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-teal-500">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_wind">Upepo</p>
+                <div class="mt-3 flex items-baseline gap-1">
+                    <span id="val-wind" class="text-3xl font-extrabold">--</span>
+                    <span class="text-slate-500 font-semibold">km/h</span>
                 </div>
+                <p id="wind-direction" class="text-xs text-slate-500 mt-2">--</p>
+            </div>
 
-                <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-teal-500" data-tone="wind">
-                    <div class="sensor-icon"><i class="fa-solid fa-wind"></i></div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_wind">Upepo</p>
-                    <div class="mt-3 flex items-baseline gap-1"><span id="val-wind" class="text-3xl font-extrabold">--</span><span class="text-slate-500 font-semibold">km/h</span></div>
-                    <p id="wind-direction" class="text-xs text-slate-500 mt-2">--</p>
+            <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-emerald-500">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_soil">Unyevu wa Udongo</p>
+                <div class="mt-3 flex items-baseline gap-1">
+                    <span id="val-soil" class="text-3xl font-extrabold">--</span>
+                    <span class="text-slate-500 font-semibold">%</span>
                 </div>
+                <p id="soil-status" class="text-xs text-slate-500 mt-2">--</p>
+            </div>
 
-                <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-emerald-500" data-tone="soil">
-                    <div class="sensor-icon"><i class="fa-solid fa-seedling"></i></div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_soil">Unyevu wa Udongo</p>
-                    <div class="mt-3 flex items-baseline gap-1"><span id="val-soil" class="text-3xl font-extrabold">--</span><span class="text-slate-500 font-semibold">%</span></div>
-                    <p id="soil-status" class="text-xs text-slate-500 mt-2">--</p>
+            <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-slate-500">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_crop">Zao</p>
+                <div class="mt-3">
+                    <span id="val-crop" class="text-lg font-extrabold text-slate-800">--</span>
                 </div>
-
-                <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-slate-500" data-tone="crop">
-                    <div class="sensor-icon"><i class="fa-solid fa-wheat-awn"></i></div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_crop">Zao</p>
-                    <div class="mt-3"><span id="val-crop" class="text-lg font-extrabold text-slate-800">--</span></div>
-                    <p class="text-xs text-slate-500 mt-2" data-i18n="crop_context">Muktadha wa ushauri</p>
-                </div>
+                <p class="text-xs text-slate-500 mt-2" data-i18n="crop_context">Muktadha wa ushauri</p>
             </div>
         </div>
 
@@ -356,11 +436,19 @@
         <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
                 <div>
-                    <h2 class="text-lg font-extrabold flex items-center gap-2"><span class="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center"><i class="fa-solid fa-cloud-sun"></i></span><span data-i18n="forecast_title">Utabiri wa Masaa 24 Yajayo</span></h2>
-                    <p class="text-xs text-slate-500 mt-1"><span data-i18n="forecast_for">Kwa eneo:</span> <span id="forecast-location" class="font-semibold text-emerald-700">--</span></p>
+                    <h2 class="text-lg font-extrabold flex items-center gap-2">
+                        <span>📅</span>
+                        <span data-i18n="forecast_title">Utabiri wa Masaa 24 Yajayo</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        <span data-i18n="forecast_for">Kwa eneo:</span>
+                        <span id="forecast-location" class="font-semibold text-emerald-700">--</span>
+                    </p>
                 </div>
             </div>
+
             <div id="forecast-container" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3"></div>
+
             <div class="mt-5 bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
                 <p class="text-xs font-bold uppercase tracking-wider text-emerald-700" data-i18n="forecast_actions">Maamuzi yanayoweza kusaidiwa na forecast</p>
                 <ul id="farming-actions" class="mt-2 space-y-1 text-sm text-emerald-900"></ul>
@@ -371,23 +459,39 @@
         <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
-                    <h2 class="text-lg font-extrabold flex items-center gap-2"><span class="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></span><span data-i18n="history_title">Historia na Mwelekeo</span></h2>
-                    <p class="text-xs text-slate-500 mt-1" data-i18n="history_subtitle">Tumia historia kuona mwelekeo wa hali ya shamba, si tukio la dakika moja tu.</p>
+                    <h2 class="text-lg font-extrabold flex items-center gap-2">
+                        <span>📈</span>
+                        <span data-i18n="history_title">Historia na Mwelekeo</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1" data-i18n="history_subtitle">
+                        Tumia historia kuona mwelekeo wa hali ya shamba, si tukio la dakika moja tu.
+                    </p>
                 </div>
-                <select id="history-days" onchange="loadHistory()" class="px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold">
-                    <option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option>
+
+                <select id="history-days" onchange="loadHistory()"
+                        class="px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold">
+                    <option value="7">7 days</option>
+                    <option value="14">14 days</option>
+                    <option value="30">30 days</option>
                 </select>
             </div>
-            <div class="chart-wrap"><canvas id="history-chart"></canvas></div>
+
+            <div class="chart-wrap">
+                <canvas id="history-chart"></canvas>
+            </div>
         </div>
 
         <!-- SENSOR SETUP INFO -->
         <div class="bg-slate-900 text-white rounded-3xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <p class="text-xs uppercase tracking-wider text-slate-400 font-bold" data-i18n="sensor_setup_note">Sensor setup</p>
-                <p class="font-semibold mt-1" data-i18n="sensor_setup_text">API key haionyeshwi moja kwa moja kwenye dashboard. Tumia Kituo kwa kuiona wakati wa ku-configure ESP32.</p>
+                <p class="font-semibold mt-1" data-i18n="sensor_setup_text">
+                    API key haionyeshwi moja kwa moja kwenye dashboard. Tumia Kituo kwa kuiona wakati wa ku-configure ESP32.
+                </p>
             </div>
-            <button onclick="openStationModal()" class="bg-white text-slate-900 hover:bg-slate-100 px-4 py-2.5 rounded-xl font-bold text-sm" data-i18n="open_station">Fungua Setup</button>
+            <button onclick="openStationModal()"
+                    class="bg-white text-slate-900 hover:bg-slate-100 px-4 py-2.5 rounded-xl font-bold text-sm"
+                    data-i18n="open_station">Fungua Setup</button>
         </div>
 
     </section>
@@ -1345,6 +1449,48 @@
     // Initial load
     applyTranslations();
     checkUserStatus();
+</script>
+
+
+<!-- Non-destructive UX enhancement layer: existing IDs, classes, APIs, functions, and data bindings remain unchanged. -->
+<script>
+(function () {
+  const decorate = () => {
+    const metricIcons = ['thermometer', 'droplets', 'cloud-rain', 'wind', 'sprout', 'wheat'];
+    document.querySelectorAll('.metric-card > p:first-child').forEach((label, index) => {
+      if (label.querySelector('[data-lucide]')) return;
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', metricIcons[index] || 'activity');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.className = 'w-4 h-4';
+      label.prepend(icon);
+    });
+    const targets = [
+      ['#early-warnings-card h2', 'triangle-alert'],
+      ['#dashboard-section h2[data-i18n="forecasttitle"]', 'cloud-sun'],
+      ['#dashboard-section h2[data-i18n="historytitle"]', 'chart-no-axes-combined'],
+      ['#health-icon', 'radio-tower']
+    ];
+    targets.forEach(([selector, name]) => {
+      const target = document.querySelector(selector);
+      if (!target || target.querySelector('[data-lucide]')) return;
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', name);
+      icon.setAttribute('aria-hidden', 'true');
+      icon.className = 'w-5 h-5 inline-block align-text-bottom mr-1.5';
+      target.prepend(icon);
+    });
+    const warnings = document.getElementById('early-warnings-list');
+    if (warnings) warnings.setAttribute('aria-live', 'polite');
+    const station = document.getElementById('station-status');
+    if (station) station.setAttribute('aria-live', 'polite');
+    if (window.lucide) window.lucide.createIcons();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', decorate);
+  else decorate();
+  window.setTimeout(decorate, 600);
+  window.setTimeout(decorate, 1800);
+})();
 </script>
 
 </body>
