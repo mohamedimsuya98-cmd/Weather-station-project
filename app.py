@@ -1,535 +1,410 @@
-from flask import Flask, render_template, render_template_string, request, jsonify, make_response, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
-from apscheduler.schedulers.background import BackgroundScheduler
-import datetime
 import os
-import requests
+import secrets
+from datetime import datetime, timedelta
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from apscheduler.schedulers.background import BackgroundScheduler
 import africastalking
 
 app = Flask(__name__)
-CORS(app)  # Inaruhusu Frontend kuchukua data bila vizuizi vya Browser
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'smart_farm_secret_key_2026_x89z')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smart_farm.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
-# Nenosiri la Admin
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "shamba1234")
+# --- AFRICA'S TALKING SETUP ---
+USERNAME = os.environ.get('AT_USERNAME', 'sandbox')
+API_KEY = os.environ.get('AT_API_KEY', 'your_africastalking_api_key')
+africastalking.initialize(USERNAME, API_KEY)
+sms = africastalking.SMS
 
-# Taarifa za Africa's Talking kutoka kwenye Render Environment Variables
-AT_USERNAME = os.environ.get("AT_USERNAME", "sandbox")
-AT_API_KEY = os.environ.get("AT_API_KEY", "")
+# ==================== DATABASE MODELS ====================
 
-if AT_API_KEY:
-    try:
-        africastalking.initialize(AT_USERNAME, AT_API_KEY)
-        sms = africastalking.SMS
-    except Exception as e:
-        print("[SMS INIT ERROR]", str(e))
-        sms = None
-else:
-    sms = None
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), default='farmer')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    farms = db.relationship('Farm', backref='owner', lazy=True, cascade="all, delete-orphan")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 
-# =========================================================
-# DATABASE MODELS
-# =========================================================
+class Farm(db.Model):
+    __tablename__ = 'farms'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    location = db.Column(db.String(100), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    stations = db.relationship('Station', backref='farm', lazy=True, cascade="all, delete-orphan")
+    subscribers = db.relationship('Subscriber', backref='farm', lazy=True, cascade="all, delete-orphan")
+
+
+class Station(db.Model):
+    __tablename__ = 'stations'
+    id = db.Column(db.Integer, primary_key=True)
+    station_code = db.Column(db.String(50), unique=True, nullable=False)
+    api_key = db.Column(db.String(64), unique=True, nullable=False)
+    farm_id = db.Column(db.Integer, db.ForeignKey('farms.id'), nullable=False)
+    is_online = db.Column(db.Boolean, default=False)
+    last_seen = db.Column(db.DateTime, nullable=True)
+
+    logs = db.relationship('WeatherLog', backref='station', lazy=True, cascade="all, delete-orphan")
+
 
 class WeatherLog(db.Model):
+    __tablename__ = 'weather_logs'
     id = db.Column(db.Integer, primary_key=True)
+    station_id = db.Column(db.Integer, db.ForeignKey('stations.id'), nullable=False)
     temperature = db.Column(db.Float, nullable=False)
     humidity = db.Column(db.Float, nullable=False)
-    rain_amount = db.Column(db.Float, nullable=False)
-    rain_availability = db.Column(db.String(50), nullable=False)
-    wind_speed = db.Column(db.Float, nullable=False)
-    wind_direction = db.Column(db.String(50), nullable=False)
-    wifi_ssid = db.Column(db.String(50), nullable=True)
-    timestamp = db.Column(db.String(20), nullable=False)
-    date_recorded = db.Column(db.String(20), nullable=False)
+    rain = db.Column(db.Float, default=0.0)
+    wind_speed = db.Column(db.Float, default=0.0)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Subscriber(db.Model):
+    __tablename__ = 'subscribers'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    phone_number = db.Column(db.String(20), unique=True, nullable=False)
-    date_joined = db.Column(db.String(20), nullable=False)
+    farm_id = db.Column(db.Integer, db.ForeignKey('farms.id'), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    name = db.Column(db.String(100), nullable=True)
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-with app.app_context():
-    db.create_all()
-
-
-# =========================================================
-# CURRENT WEATHER DATA & HISTORY
-# =========================================================
-
-weather_data = {
-    "location": "Shamba Langu, Dar es Salaam",
-    "temperature": "0.0",
-    "humidity": "0",
-    "rain_amount": "0.0",
-    "rain_availability": "Hakuna Mvua",
-    "wind_speed": "0.0",
-    "wind_direction": "Kaskazini",
-    "wifi_ssid": "Haijulikani"
-}
-
-weather_history = {
-    "timestamps": [],
-    "temperatures": [],
-    "humidities": []
-}
-
-last_update_time = None
-
-
-# =========================================================
-# REAL SMS DISPATCHER FUNCTION (AFRICA'S TALKING)
-# =========================================================
-
-def send_alert_sms_to_farmers(message_text):
-    with app.app_context():
-        subscribers = Subscriber.query.all()
-        if not subscribers or not sms:
-            print("[SMS WARNING] Hakuna wakulima waliosajiliwa au API Key haijawekwa.")
-            return
-
-        recipients = [sub.phone_number for sub in subscribers]
-
-        try:
-            response = sms.send(message_text, recipients)
-            print(f"[SMS IMETUMWA KWA MAFANIKIO]: {response}")
-        except Exception as e:
-            print(f"[SMS ERROR] Imeshindikana kutuma: {str(e)}")
-
-
-# =========================================================
-# AUTOMATED SCHEDULED NOTIFICATIONS (Morning & Evening SMS)
-# =========================================================
-
-def send_scheduled_weather_update():
-    print("[SCHEDULER] Inatuma taarifa za hali ya hewa za asubuhi/jioni...")
-    temp = weather_data.get('temperature', '0.0')
-    humidity = weather_data.get('humidity', '0')
-    rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
-    rain = weather_data.get('rain_amount', '0.0')
-
-    message = (
-        f"MUHTASARI WA SHAMBA:\n"
-        f"Joto: {temp}C | Unyevu: {humidity}%\n"
-        f"Mvua: {rain_stat} ({rain}mm)\n"
-        f"Smart Farm Weather Station"
-    )
-    send_alert_sms_to_farmers(message)
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(func=send_scheduled_weather_update, trigger="cron", hour=7, minute=0)
-scheduler.add_job(func=send_scheduled_weather_update, trigger="cron", hour=18, minute=0)
-scheduler.start()
-
-
-# =========================================================
-# TRANSLATION FUNCTIONS
-# =========================================================
-
-def get_language():
-    lang = request.args.get("lang", "sw")
-    if lang not in ["sw", "en"]:
-        lang = "sw"
-    return lang
-
-
-def translate_rain_status(value, lang):
-    if value is None:
-        return "--"
-    value = str(value).strip()
-    translations = {
-        "Hakuna Mvua": {"sw": "Hakuna Mvua", "en": "No Rain"},
-        "Mvua": {"sw": "Mvua", "en": "Rain"},
-        "Mvua Ndogo": {"sw": "Mvua Ndogo", "en": "Light Rain"},
-        "Mvua Kubwa": {"sw": "Mvua Kubwa", "en": "Heavy Rain"},
-        "No Rain": {"sw": "Hakuna Mvua", "en": "No Rain"},
-        "Rain": {"sw": "Mvua", "en": "Rain"},
-        "Light Rain": {"sw": "Mvua Ndogo", "en": "Light Rain"},
-        "Heavy Rain": {"sw": "Mvua Kubwa", "en": "Heavy Rain"}
-    }
-    return translations.get(value, {"sw": value, "en": value})[lang]
-
-
-def translate_wind_direction(value, lang):
-    if value is None:
-        return "--"
-    value = str(value).strip()
-    translations = {
-        "Kaskazini": {"sw": "Kaskazini", "en": "North"},
-        "Kusini": {"sw": "Kusini", "en": "South"},
-        "Mashariki": {"sw": "Mashariki", "en": "East"},
-        "Magharibi": {"sw": "Magharibi", "en": "West"},
-        "Kaskazini-Mashariki": {"sw": "Kaskazini-Mashariki", "en": "Northeast"},
-        "Kaskazini-Magharibi": {"sw": "Kaskazini-Magharibi", "en": "Northwest"},
-        "Kusini-Mashariki": {"sw": "Kusini-Mashariki", "en": "Southeast"},
-        "Kusini-Magharibi": {"sw": "Kusini-Magharibi", "en": "Southwest"},
-        "North": {"sw": "Kaskazini", "en": "North"},
-        "South": {"sw": "Kusini", "en": "South"},
-        "East": {"sw": "Mashariki", "en": "East"},
-        "West": {"sw": "Magharibi", "en": "West"},
-        "Northeast": {"sw": "Kaskazini-Mashariki", "en": "Northeast"},
-        "Northwest": {"sw": "Kaskazini-Magharibi", "en": "Northwest"},
-        "Southeast": {"sw": "Kusini-Mashariki", "en": "Southeast"},
-        "Southwest": {"sw": "Kusini-Magharibi", "en": "Southwest"}
-    }
-    return translations.get(value, {"sw": value, "en": value})[lang]
-
-
-def translate_wifi_status(is_online, lang):
-    if is_online:
-        return "Imeunganishwa (Online)" if lang == "sw" else "Connected (Online)"
-    return "Haijaunganishwa (Offline)" if lang == "sw" else "Disconnected (Offline)"
-
-
-def translate_no_device(lang):
-    return "Hakuna Kifaa" if lang == "sw" else "No Device"
-
-
-# =========================================================
-# HOME & ADMIN ROUTES
-# =========================================================
+# ==================== ROUTING ZA MFUMO ====================
 
 @app.route('/')
-def home():
-    return render_template('index.html', data=weather_data)
+def index():
+    return render_template('index.html')
 
+# --- AUTHENTICATION ENDPOINTS ---
 
-@app.route('/admin', methods=['GET', 'POST'])
-def admin_panel():
-    auth = request.authorization
-    if not auth or auth.password != ADMIN_PASSWORD or auth.username != "admin":
-        res = make_response("Ufikiaji Umezuiwa. Tafadhali ingiza jina la mtumiaji (admin) na nenosiri sahihi.", 401)
-        res.headers['WWW-Authenticate'] = 'Basic realm="Admin Login Required"'
-        return res
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.get_json() or {}
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
 
-    message = request.args.get('msg', '')
-    if request.method == 'POST':
-        action = request.form.get('action')
-        if action == 'add':
-            name = request.form.get('name', '').strip()
-            phone = request.form.get('phone_number', '').strip()
-            if name and phone:
-                existing = Subscriber.query.filter_by(phone_number=phone).first()
-                if not existing:
-                    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-                    new_sub = Subscriber(name=name, phone_number=phone, date_joined=current_date)
-                    db.session.add(new_sub)
-                    db.session.commit()
-                    message = f"Mkulima {name} amesajiliwa kikamilifu!"
-                else:
-                    message = "Hitilafu: Namba hii ya simu ipo tayari kwenye mfumo."
-            else:
-                message = "Tafadhali jaza jina na namba zote."
-        elif action == 'delete':
-            phone = request.form.get('phone_number', '').strip()
-            sub = Subscriber.query.filter_by(phone_number=phone).first()
-            if sub:
-                db.session.delete(sub)
-                db.session.commit()
-                message = "Namba imeondolewa kikamilifu kwenye mfumo."
-            else:
-                message = "Hitilafu: Namba haikupatikana."
+    if not username or not email or not password:
+        return jsonify({'status': 'error', 'message': 'Jaza taarifa zote zinazotakiwa'}), 400
 
-    subscribers = Subscriber.query.all()
+    if User.query.filter_by(username=username).first():
+        return jsonify({'status': 'error', 'message': 'Jina hili la mtumiaji tayari linatumika'}), 400
 
-    admin_html = """
-    <!DOCTYPE html>
-    <html lang="sw">
-    <head>
-        <meta charset="UTF-8">
-        <title>Smart Farm - Admin Panel</title>
-        <style>
-            body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-            h2 { color: #1b4332; }
-            .msg { background: #d8f3dc; color: #081c15; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
-            form { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-            input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
-            button { background: #2d6a4f; color: white; border: none; font-weight: bold; cursor: pointer; }
-            button:hover { background: #1b4332; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background: #2d6a4f; color: white; }
-            .del-btn { background: #d90429; width: auto; padding: 5px 10px; }
-            .del-btn:hover { background: #8d0801; }
-            .test-btn { background: #1d3557; margin-bottom: 20px; }
-            .test-btn:hover { background: #457b9d; }
-            .back-link { display: inline-block; margin-top: 20px; color: #2d6a4f; text-decoration: none; font-weight: bold; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h2>Panel ya Utawala (Admin SMS Subscribers)</h2>
-            <p>Hapa unaweza kusajili namba za wakulima au kujaribu kutuma SMS ya mfano.</p>
-            
-            {% if message %}
-                <div class="msg">{{ message }}</div>
-            {% endif %}
+    if User.query.filter_by(email=email).first():
+        return jsonify({'status': 'error', 'message': 'Barua pepe hii tayari imesajiliwa'}), 400
 
-            <h3>Jaribio la Mfumo wa SMS</h3>
-            <form action="/test-sms" method="GET" style="background:#e9ecef;">
-                <button type="submit" class="test-btn">📲 Bonyeza Kutuma SMS ya Jaribio Sasa</button>
-            </form>
+    new_user = User(username=username, email=email)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
 
-            <h3>Sajili Mkulima Mpya</h3>
-            <form method="POST">
-                <input type="hidden" name="action" value="add">
-                <input type="text" name="name" placeholder="Jina la Mkulima (Mf: Juma Ally)" required>
-                <input type="text" name="phone_number" placeholder="Namba ya Simu (Mf: +255712345678)" required>
-                <button type="submit">Ongeza Mkulima</button>
-            </form>
+    # Tengeneza Shamba la Kwanza la Mfano
+    default_farm = Farm(name="Shamba la Kwanza", location="Kuu", user_id=new_user.id)
+    db.session.add(default_farm)
+    db.session.commit()
 
-            <h3>Wakulima Waliosajiliwa Sasa ({{ subscribers|length }})</h3>
-            <table>
-                <tr>
-                    <th>Jina</th>
-                    <th>Namba ya Simu</th>
-                    <th>Tarehe Iliyosajiliwa</th>
-                    <th>Kitendo</th>
-                </tr>
-                {% for sub in subscribers %}
-                <tr>
-                    <td>{{ sub.name }}</td>
-                    <td>{{ sub.phone_number }}</td>
-                    <td>{{ sub.date_joined }}</td>
-                    <td>
-                        <form method="POST" style="margin:0; background:none; padding:0;">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="phone_number" value="{{ sub.phone_number }}">
-                            <button type="submit" class="del-btn">Futa</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" style="text-align: center;">Hakuna wakulima waliosajiliwa bado.</td>
-                </tr>
-                {% endfor %}
-            </table>
+    # Tengeneza Kituo cha Sensor cha Mfano kwa ajili ya ESP32
+    default_station = Station(
+        station_code=f"STATION_{default_farm.id:03d}",
+        api_key=secrets.token_hex(16),
+        farm_id=default_farm.id
+    )
+    db.session.add(default_station)
+    db.session.commit()
 
-            <a href="/" class="back-link">&larr; Rudi kwenye Dashboard Kuu</a>
-        </div>
-    </body>
-    </html>
-    """
-    return render_template_string(admin_html, message=message, subscribers=subscribers)
+    login_user(new_user)
+    return jsonify({
+        'status': 'success',
+        'message': 'Usajili umefanikiwa!',
+        'user': {'username': new_user.username, 'email': new_user.email}
+    })
 
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
 
-@app.route('/test-sms', methods=['GET'])
-def test_sms():
-    test_msg = "JARIBIO: Hali ya hewa shambani ni shwari. Smart Farm Weather Station inafanya kazi kikamilifu!"
-    send_alert_sms_to_farmers(test_msg)
-    return redirect(url_for('admin_panel', msg="SMS ya jaribio imetumwa kwenda kwa wakulima wote! Angalia simu yako."))
+    user = User.query.filter_by(username=username).first()
+    if user and user.check_password(password):
+        login_user(user)
+        return jsonify({
+            'status': 'success',
+            'message': 'Umeingia kikamilifu',
+            'user': {'username': user.username, 'email': user.email}
+        })
 
+    return jsonify({'status': 'error', 'message': 'Jina la mtumiaji au nenosiri si sahihi'}), 401
 
-# =========================================================
-# WEBHOOK & UPDATE ENDPOINTS
-# =========================================================
+@app.route('/api/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({'status': 'success', 'message': 'Umetoka kwenye mfumo'})
 
-@app.route('/sms-incoming', methods=['POST', 'GET'])
-def sms_incoming():
-    sender = request.form.get('from') or (request.json.get('from') if request.is_json else '')
-    text = request.form.get('text') or (request.json.get('text') if request.is_json else '')
+@app.route('/api/user-status', methods=['GET'])
+def user_status():
+    if current_user.is_authenticated:
+        return jsonify({
+            'logged_in': True,
+            'username': current_user.username,
+            'email': current_user.email
+        })
+    return jsonify({'logged_in': False})
 
-    sender = sender.strip()
-    text = text.strip().lower()
+# --- FARM MANAGEMENT ENDPOINTS ---
 
-    temp = weather_data.get('temperature', '0.0')
-    humidity = weather_data.get('humidity', '0')
-    rain = weather_data.get('rain_amount', '0.0')
-    rain_stat = weather_data.get('rain_availability', 'Hakuna Mvua')
+@app.route('/api/farms', methods=['GET'])
+@login_required
+def get_farms():
+    farms = Farm.query.filter_by(user_id=current_user.id).all()
+    result = []
+    for f in farms:
+        st = Station.query.filter_by(farm_id=f.id).first()
+        result.append({
+            'id': f.id,
+            'name': f.name,
+            'location': f.location or 'Haina Eneo',
+            'api_key': st.api_key if st else ''
+        })
+    return jsonify({'status': 'success', 'farms': result})
 
-    if not text or "hali" in text or "status" in text or "weather" in text or "mvua" in text or "joto" in text:
-        response_message = (
-            f"Hali ya Hewa Shambani:\n"
-            f"Joto: {temp}C\n"
-            f"Unyevu: {humidity}%\n"
-            f"Mvua: {rain_stat} ({rain}mm)\n"
-            f"Smart Farm Weather Station"
-        )
-    else:
-        response_message = "Karibu Smart Farm! Tuma neno 'HALI' kupata taarifa za hivi punde."
+@app.route('/api/farms/add', methods=['POST'])
+@login_required
+def add_farm():
+    data = request.get_json() or {}
+    name = data.get('name')
+    location = data.get('location', '')
 
-    if sms and sender:
-        try:
-            sms.send(response_message, [sender])
-        except Exception as e:
-            print(f"[SMS ERROR]: {str(e)}")
+    if not name:
+        return jsonify({'status': 'error', 'message': 'Tafadhali ingiza jina la shamba'}), 400
 
-    return jsonify({"status": "success", "message": "Processed"}), 200
+    new_farm = Farm(name=name, location=location, user_id=current_user.id)
+    db.session.add(new_farm)
+    db.session.commit()
 
+    # Auto-generate Station & API Key kwa ajili ya shamba hili
+    new_station = Station(
+        station_code=f"STATION_{new_farm.id:03d}",
+        api_key=secrets.token_hex(16),
+        farm_id=new_farm.id
+    )
+    db.session.add(new_station)
+    db.session.commit()
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Shamba limeongezwa kikamilifu!',
+        'farm': {'id': new_farm.id, 'name': new_farm.name, 'location': new_farm.location, 'api_key': new_station.api_key}
+    })
+
+# --- WEATHER DATA ENDPOINTS ---
+
+@app.route('/api/get-data', methods=['GET'])
+@login_required
+def get_data():
+    farm_id = request.args.get('farm_id', type=int)
+    if not farm_id:
+        first_farm = Farm.query.filter_by(user_id=current_user.id).first()
+        if not first_farm:
+            return jsonify({'status': 'error', 'message': 'Hakuna shamba lililopatikana'}), 404
+        farm_id = first_farm.id
+
+    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
+    if not farm:
+        return jsonify({'status': 'error', 'message': 'Ruhusa imekataliwa'}), 403
+
+    station = Station.query.filter_by(farm_id=farm.id).first()
+    if not station:
+        return jsonify({
+            'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0, 'wind_speed': 0,
+            'is_online': False, 'last_updated': 'Hakuna Kituo', 'api_key': ''
+        })
+
+    latest_log = WeatherLog.query.filter_by(station_id=station.id).order_by(WeatherLog.timestamp.desc()).first()
+
+    # Angalia kama station ipo online (ilipokea data ndani ya dk 5 zilizopita)
+    is_online = False
+    if station.last_seen and (datetime.utcnow() - station.last_seen) < timedelta(minutes=5):
+        is_online = True
+
+    if not latest_log:
+        return jsonify({
+            'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0, 'wind_speed': 0,
+            'is_online': is_online, 'last_updated': 'Hajawahi Kutuma', 'api_key': station.api_key
+        })
+
+    return jsonify({
+        'status': 'success',
+        'temperature': round(latest_log.temperature, 1),
+        'humidity': round(latest_log.humidity, 1),
+        'rain': round(latest_log.rain, 1),
+        'wind_speed': round(latest_log.wind_speed, 1),
+        'is_online': is_online,
+        'last_updated': latest_log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'api_key': station.api_key
+    })
+
+@app.route('/api/get-logs', methods=['GET'])
+@login_required
+def get_logs():
+    farm_id = request.args.get('farm_id', type=int)
+    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
+    if not farm:
+        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
+
+    station = Station.query.filter_by(farm_id=farm.id).first()
+    if not station:
+        return jsonify({'status': 'success', 'logs': []})
+
+    logs = WeatherLog.query.filter_by(station_id=station.id).order_by(WeatherLog.timestamp.desc()).limit(50).all()
+    logs_data = [{
+        'id': l.id,
+        'temperature': l.temperature,
+        'humidity': l.humidity,
+        'rain': l.rain,
+        'wind_speed': l.wind_speed,
+        'timestamp': l.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    } for l in logs]
+
+    return jsonify({'status': 'success', 'logs': logs_data})
+
+@app.route('/api/get-stats', methods=['GET'])
+@login_required
+def get_stats():
+    farm_id = request.args.get('farm_id', type=int)
+    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
+    if not farm:
+        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
+
+    station = Station.query.filter_by(farm_id=farm.id).first()
+    if not station:
+        return jsonify({'status': 'success', 'stats': {}})
+
+    logs = WeatherLog.query.filter_by(station_id=station.id).all()
+    if not logs:
+        return jsonify({'status': 'success', 'stats': {'avg_temp': 0, 'max_temp': 0, 'min_temp': 0, 'avg_hum': 0}})
+
+    temps = [l.temperature for l in logs]
+    hums = [l.humidity for l in logs]
+
+    return jsonify({
+        'status': 'success',
+        'stats': {
+            'avg_temp': round(sum(temps) / len(temps), 1),
+            'max_temp': max(temps),
+            'min_temp': min(temps),
+            'avg_hum': round(sum(hums) / len(hums), 1)
+        }
+    })
+
+# --- ESP32 HARDWARE UPDATE ENDPOINT ---
 
 @app.route('/update', methods=['POST'])
 def update_weather():
-    global weather_data, weather_history, last_update_time
-    data = request.get_json(silent=True) or request.form
+    data = request.get_json() or {}
+    api_key = data.get('api_key')
 
-    if data:
-        temp = float(data.get('temperature', weather_data['temperature']))
-        humidity = float(data.get('humidity', weather_data['humidity']))
-        rain_val = data.get('rain', 0)
-        wind_adc = data.get('wind', 0)
+    station = Station.query.filter_by(api_key=api_key).first()
+    if not station:
+        return jsonify({'status': 'error', 'message': 'API Key ya Sensor si sahihi'}), 401
 
-        weather_data['temperature'] = str(temp)
-        weather_data['humidity'] = str(humidity)
+    temp = data.get('temperature')
+    hum = data.get('humidity')
+    rain = data.get('rain', 0.0)
+    wind = data.get('wind_speed', 0.0)
 
-        if str(rain_val) in ['1', 'true', 'True']:
-            weather_data['rain_amount'] = "5.0"
-            weather_data['rain_availability'] = "Mvua"
-        else:
-            weather_data['rain_amount'] = "0.0"
-            weather_data['rain_availability'] = "Hakuna Mvua"
+    if temp is None or hum is None:
+        return jsonify({'status': 'error', 'message': 'Data haijakamilika'}), 400
 
-        wind_speed_val = round(float(wind_adc) * (3.3 / 4095.0), 2)
-        weather_data['wind_speed'] = str(wind_speed_val)
-        weather_data['wind_direction'] = "Kaskazini"
+    log = WeatherLog(station_id=station.id, temperature=temp, humidity=hum, rain=rain, wind_speed=wind)
+    station.is_online = True
+    station.last_seen = datetime.utcnow()
 
-        received_ssid = data.get('ssid', 'Haijulikani')
-        weather_data['wifi_ssid'] = received_ssid
+    db.session.add(log)
+    db.session.commit()
 
-        last_update_time = datetime.datetime.now()
-        current_time = last_update_time.strftime("%H:%M:%S")
-        current_date = last_update_time.strftime("%Y-%m-%d")
+    return jsonify({'status': 'success', 'message': 'Data imepokewa kikamilifu'})
 
-        weather_history["timestamps"].append(current_time)
-        weather_history["temperatures"].append(temp)
-        weather_history["humidities"].append(humidity)
+# --- SMS & SUBSCRIBERS MANAGEMENT ---
 
-        if len(weather_history["timestamps"]) > 30:
-            weather_history["timestamps"].pop(0)
-            weather_history["temperatures"].pop(0)
-            weather_history["humidities"].pop(0)
+@app.route('/api/subscribers', methods=['GET', 'POST'])
+@login_required
+def manage_subscribers():
+    farm_id = request.args.get('farm_id', type=int) or request.json.get('farm_id')
+    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
+    if not farm:
+        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
 
-        new_log = WeatherLog(
-            temperature=temp,
-            humidity=humidity,
-            rain_amount=float(weather_data['rain_amount']),
-            rain_availability=weather_data['rain_availability'],
-            wind_speed=float(weather_data['wind_speed']),
-            wind_direction=weather_data['wind_direction'],
-            wifi_ssid=received_ssid,
-            timestamp=current_time,
-            date_recorded=current_date
-        )
-        db.session.add(new_log)
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        phone = data.get('phone_number')
+        name = data.get('name', 'Mkulima')
+        if not phone:
+            return jsonify({'status': 'error', 'message': 'Namba ya simu inatakiwa'}), 400
+
+        sub = Subscriber(farm_id=farm.id, phone_number=phone, name=name)
+        db.session.add(sub)
         db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Mkulima ameongezwa kikamilifu'})
 
-        # SMS trigger
-        try:
-            if float(weather_data['rain_amount']) > 5.0:
-                alert_msg = f"TAHADHARI YA SHAMBA: Mvua imegunduliwa ({weather_data['rain_amount']}mm)."
-                send_alert_sms_to_farmers(alert_msg)
-            elif temp > 34.0:
-                alert_msg = f"TAHADHARI YA JOTO: Joto shambani limefika {temp}C."
-                send_alert_sms_to_farmers(alert_msg)
-        except Exception as err:
-            print("[SMS TRIGGER ERROR]:", str(err))
-
-        return jsonify({"status": "success", "message": "Data imepokelewa!"}), 200
-
-    return jsonify({"status": "error", "message": "Haikusomeka!"}), 400
-
-
-# =========================================================
-# API ENDPOINTS
-# =========================================================
-
-@app.route('/get-data', methods=['GET'])
-def get_data():
-    global last_update_time
-    lang = get_language()
-    
-    response_data = weather_data.copy()
-    response_data["history"] = weather_history
-
-    is_online = False
-    if last_update_time:
-        if (datetime.datetime.now() - last_update_time).total_seconds() < 60:
-            is_online = True
-
-    response_data["is_online"] = is_online
-    response_data["wifi_status"] = translate_wifi_status(is_online, lang)
-    response_data["wifi_ssid"] = weather_data.get("wifi_ssid", translate_no_device(lang)) if is_online else translate_no_device(lang)
-    response_data["rain_availability"] = translate_rain_status(weather_data.get("rain_availability"), lang)
-    response_data["wind_direction"] = translate_wind_direction(weather_data.get("wind_direction"), lang)
-
-    return jsonify(response_data)
-
-
-@app.route('/get-logs', methods=['GET'])
-def get_logs():
-    lang = get_language()
-    logs = WeatherLog.query.order_by(WeatherLog.id.desc()).limit(30).all()
-    
-    formatted_logs = []
-    for log in logs:
-        formatted_logs.append({
-            "id": log.id, 
-            "temperature": log.temperature, 
-            "humidity": log.humidity,
-            "rain_amount": log.rain_amount, 
-            "rain_availability": translate_rain_status(log.rain_availability, lang),
-            "wind_speed": log.wind_speed, 
-            "wind_direction": translate_wind_direction(log.wind_direction, lang),
-            "wifi_ssid": log.wifi_ssid, 
-            "timestamp": log.timestamp, 
-            "date": log.date_recorded
-        })
-    
-    formatted_logs.reverse()
-    return jsonify(formatted_logs)
-
-
-@app.route('/get-stats', methods=['GET'])
-def get_stats():
-    logs = WeatherLog.query.all()
-    if not logs:
-        return jsonify({
-            "avg_temp": 0.0, "avg_temperature": 0.0,
-            "max_temp": 0.0, "min_temp": 0.0,
-            "avg_humidity": 0.0,
-            "total_rain": 0.0, "total_rainfall": 0.0,
-            "avg_wind_speed": 0.0,
-            "total_records": 0,
-            "insight": "Hakuna bado."
-        })
-    
-    temps = [l.temperature for l in logs]
-    humidities = [l.humidity for l in logs]
-    winds = [l.wind_speed for l in logs]
-    rains = [l.rain_amount for l in logs]
-
-    avg_t = round(sum(temps)/len(temps), 1)
-    avg_h = round(sum(humidities)/len(humidities), 1)
-    avg_w = round(sum(winds)/len(winds), 1) if winds else 0.0
-    tot_r = round(sum(rains), 2)
-
+    subs = Subscriber.query.filter_by(farm_id=farm.id).all()
     return jsonify({
-        "avg_temp": avg_t,
-        "avg_temperature": avg_t,
-        "max_temp": round(max(temps), 1),
-        "min_temp": round(min(temps), 1),
-        "avg_humidity": avg_h,
-        "total_rain": tot_r,
-        "total_rainfall": tot_r,
-        "avg_wind_speed": avg_w,
-        "total_records": len(logs),
-        "insight": "Hali ya shamba ni shwari."
+        'status': 'success',
+        'subscribers': [{'id': s.id, 'name': s.name, 'phone': s.phone_number} for s in subs]
     })
 
+# --- AUTOMATED SMS SCHEDULER ---
+def send_daily_weather_sms():
+    with app.app_context():
+        farms = Farm.query.all()
+        for farm in farms:
+            station = Station.query.filter_by(farm_id=farm.id).first()
+            if not station:
+                continue
+            latest = WeatherLog.query.filter_by(station_id=station.id).order_by(WeatherLog.timestamp.desc()).first()
+            if not latest:
+                continue
 
-# =========================================================
-# RUN SERVER
-# =========================================================
+            subs = Subscriber.query.filter_by(farm_id=farm.id).all()
+            if not subs:
+                continue
 
+            recipients = [s.phone_number for s in subs]
+            msg = f"SmartFarm [{farm.name}]: Joto: {latest.temperature}°C, Unyevu: {latest.humidity}%, Mvua: {latest.rain}mm, Upepo: {latest.wind_speed}km/h."
+            
+            try:
+                sms.send(msg, recipients)
+            except Exception as e:
+                print(f"Error sending SMS: {e}")
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(send_daily_weather_sms, 'cron', hour=7, minute=0)
+scheduler.add_job(send_daily_weather_sms, 'cron', hour=18, minute=0)
+scheduler.start()
+
+# --- INITIALIZATION ---
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    with app.app_context():
+        db.create_all()
+    app.run(host='0.0.0.0', port=5000, debug=True)
