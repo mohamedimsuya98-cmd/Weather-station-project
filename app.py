@@ -10,7 +10,13 @@ import africastalking
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'smart_farm_secret_key_2026_x89z')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smart_farm.db'
+
+# --- DATABASE CONFIGURATION (PostgreSQL / SQLite) ---
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or 'sqlite:///smart_farm.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -90,9 +96,40 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # --- AUTO-CREATE DATABASE TABLES ---
-# Hii inahakikisha meza zinatengenezwa hata server inapowashwa na Gunicorn (Render)
 with app.app_context():
     db.create_all()
+
+# ==================== AGRI-ADVISORY LOGIC ====================
+
+def generate_agri_advisory(temp, hum, rain, wind):
+    advisories = []
+
+    # 1. Tishio la Ukungu / Kuvu
+    if hum >= 80 and 20 <= temp <= 32:
+        advisories.append("⚠ Tishio la Ukungu/Kuvu: Unyevu mwingi unaongeza hatari ya magonjwa ya majani. Epuka kumwagilia maji juu ya majani.")
+
+    # 2. Joto Kali na Uwagiliaji
+    if temp >= 32 and hum <= 40:
+        advisories.append("☀️ Joto Kali & Ukavu: Mazao yapo kwenye hatari ya kukauka. Hakikisha unamwagilia asubuhi au jioni mapema.")
+    elif rain == 0 and hum < 50:
+        advisories.append("💧 Ushauri wa Maji: Hakuna mvua iliyorekodiwa na hewa ni kavu. Inashauriwa kumwagilia shamba.")
+
+    # 3. Ushauri wa Kupuliza Dawa / Mbolea
+    if wind >= 15:
+        advisories.append("💨 Upepo Mkali: Usipulizie dawa ya wadudu au mbolea kwa sasa kwani itapeperushwa na upepo.")
+    elif rain > 5:
+        advisories.append("🌧️ Mvua Inanyesha: Usipulizie dawa kwani itaoshwa na mvua na kupotea.")
+    else:
+        advisories.append("✅ Hali ya Hewa: Ni nzuri kwa upuliziaji wa dawa au mbolea ya maji kama inahitajika.")
+
+    # 4. Mvua Kubwa
+    if rain >= 20:
+        advisories.append("🌊 Mvua Kubwa: Hakikisha mifereji ya kutoa maji shambani ni wazi ili kuzuia maji kutuama kwenye mizizi.")
+
+    if not advisories:
+        advisories.append("🌱 Hali ya hewa ipo katika kiwango salama kwa ukuaji wa mazao.")
+
+    return advisories
 
 # ==================== ROUTING ZA MFUMO ====================
 
@@ -208,7 +245,6 @@ def add_farm():
     db.session.add(new_farm)
     db.session.commit()
 
-    # Auto-generate Station & API Key kwa ajili ya shamba hili
     new_station = Station(
         station_code=f"STATION_{new_farm.id:03d}",
         api_key=secrets.token_hex(16),
@@ -243,12 +279,12 @@ def get_data():
     if not station:
         return jsonify({
             'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0, 'wind_speed': 0,
-            'is_online': False, 'last_updated': 'Hakuna Kituo', 'api_key': ''
+            'is_online': False, 'last_updated': 'Hakuna Kituo', 'api_key': '',
+            'advisories': ["Akaunti haina kituo cha sensor."]
         })
 
     latest_log = WeatherLog.query.filter_by(station_id=station.id).order_by(WeatherLog.timestamp.desc()).first()
 
-    # Angalia kama station ipo online (ilipokea data ndani ya dk 5 zilizopita)
     is_online = False
     if station.last_seen and (datetime.utcnow() - station.last_seen) < timedelta(minutes=5):
         is_online = True
@@ -256,8 +292,17 @@ def get_data():
     if not latest_log:
         return jsonify({
             'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0, 'wind_speed': 0,
-            'is_online': is_online, 'last_updated': 'Hajawahi Kutuma', 'api_key': station.api_key
+            'is_online': is_online, 'last_updated': 'Hajawahi Kutuma', 'api_key': station.api_key,
+            'advisories': ["Inasubiri data kutoka kwenye sensor ya ESP32..."]
         })
+
+    # Kutoa ushauri kulingana na vipimo vya hivi karibuni
+    advisories = generate_agri_advisory(
+        latest_log.temperature,
+        latest_log.humidity,
+        latest_log.rain,
+        latest_log.wind_speed
+    )
 
     return jsonify({
         'status': 'success',
@@ -267,7 +312,8 @@ def get_data():
         'wind_speed': round(latest_log.wind_speed, 1),
         'is_online': is_online,
         'last_updated': latest_log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-        'api_key': station.api_key
+        'api_key': station.api_key,
+        'advisories': advisories
     })
 
 @app.route('/api/get-logs', methods=['GET'])
@@ -356,7 +402,7 @@ def update_weather():
 @app.route('/api/subscribers', methods=['GET', 'POST'])
 @login_required
 def manage_subscribers():
-    farm_id = request.args.get('farm_id', type=int) or request.json.get('farm_id')
+    farm_id = request.args.get('farm_id', type=int) or (request.json and request.json.get('farm_id'))
     farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
     if not farm:
         return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
@@ -380,6 +426,7 @@ def manage_subscribers():
     })
 
 # --- AUTOMATED SMS SCHEDULER ---
+
 def send_daily_weather_sms():
     with app.app_context():
         farms = Farm.query.all()
@@ -395,8 +442,15 @@ def send_daily_weather_sms():
             if not subs:
                 continue
 
+            adv_list = generate_agri_advisory(latest.temperature, latest.humidity, latest.rain, latest.wind_speed)
+            main_advisory = adv_list[0] if adv_list else "Hali ya hewa ni shwari."
+
             recipients = [s.phone_number for s in subs]
-            msg = f"SmartFarm [{farm.name}]: Joto: {latest.temperature}°C, Unyevu: {latest.humidity}%, Mvua: {latest.rain}mm, Upepo: {latest.wind_speed}km/h."
+            msg = (
+                f"SmartFarm [{farm.name}]:\n"
+                f"Joto: {latest.temperature}°C, Unyevu: {latest.humidity}%, Mvua: {latest.rain}mm, Upepo: {latest.wind_speed}km/h.\n"
+                f"USHAURI: {main_advisory}"
+            )
             
             try:
                 sms.send(msg, recipients)
