@@ -43,7 +43,7 @@ if AT_API_KEY:
 
 TRANSLATIONS = {
     'sw': {
-        'no_forecast': "ℹ️️ Hakuna utabiri wa kimataifa uliopatikana kwa eneo hili.",
+        'no_forecast': "ℹ Hakuna utabiri wa kimataifa uliopatikana kwa eneo hili.",
         'heavy_rain_warning': "🌧️ TAHADHARI YA MVUA KUBWA: Mvua ya takriban {rain}mm inatarajiwa masaa 24 yajayo. Safisha mifereji ya shamba na sitisha upuliziaji dawa.",
         'strong_wind_warning': "💨 TAHADHARI YA UPEPO MKALI: Upepo wa hadi {wind} km/h unatarajiwa. Usipulizie dawa au mbolea ya maji.",
         'high_temp_warning': "☀️ TAHADHARI YA JOTO KALI: Joto litafika {temp}°C. Hakikisha mfumo wa kumwagilia maji uko tayari kuzuia mazao kunyauka.",
@@ -85,7 +85,6 @@ TRANSLATIONS = {
 }
 
 def t(key, lang='sw', **kwargs):
-    """Helper function to retrieve translated text."""
     language = lang if lang in TRANSLATIONS else 'sw'
     text = TRANSLATIONS[language].get(key, TRANSLATIONS['sw'].get(key, key))
     if kwargs:
@@ -102,7 +101,6 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='farmer')
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
     farms = db.relationship('Farm', backref='owner', lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
@@ -119,7 +117,6 @@ class Farm(db.Model):
     location = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-
     stations = db.relationship('Station', backref='farm', lazy=True, cascade="all, delete-orphan")
     subscribers = db.relationship('Subscriber', backref='farm', lazy=True, cascade="all, delete-orphan")
 
@@ -132,7 +129,6 @@ class Station(db.Model):
     farm_id = db.Column(db.Integer, db.ForeignKey('farms.id'), nullable=False)
     is_online = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, nullable=True)
-
     logs = db.relationship('WeatherLog', backref='station', lazy=True, cascade="all, delete-orphan")
 
 
@@ -161,7 +157,7 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# ==================== FORECAST & EARLY WARNING LOGIC ====================
+# ==================== FORECAST LOGIC ====================
 
 def fetch_weather_forecast(location_name, lang='sw'):
     if not location_name or not OPENWEATHER_API_KEY:
@@ -173,7 +169,7 @@ def fetch_weather_forecast(location_name, lang='sw'):
         if res.status_code == 200:
             data = res.json()
             forecast_list = []
-            for item in data.get('list', [])[:8]: # Next 24 hours
+            for item in data.get('list', [])[:8]:
                 forecast_list.append({
                     'time': item.get('dt_txt'),
                     'temp': round(item['main']['temp'], 1),
@@ -181,7 +177,7 @@ def fetch_weather_forecast(location_name, lang='sw'):
                     'desc': item['weather'][0]['description'].capitalize(),
                     'icon': item['weather'][0]['icon'],
                     'rain': item.get('rain', {}).get('3h', 0.0),
-                    'wind': round(item['wind']['speed'] * 3.6, 1) # m/s to km/h
+                    'wind': round(item['wind']['speed'] * 3.6, 1)
                 })
             return forecast_list
     except Exception as e:
@@ -213,7 +209,6 @@ def generate_early_warnings(forecast_list, lang='sw'):
 
 def generate_agri_advisory(temp, hum, rain, wind, lang='sw'):
     advisories = []
-    
     if rain > 5.0:
         advisories.append(t('rain_advise_heavy', lang, rain=round(rain, 1)))
     elif rain > 0.0:
@@ -234,7 +229,7 @@ def generate_agri_advisory(temp, hum, rain, wind, lang='sw'):
 
     return advisories
 
-# ==================== AUTHENTICATION & API ROUTES ====================
+# ==================== AUTH & API ROUTES ====================
 
 @app.route('/')
 def index():
@@ -253,55 +248,33 @@ def user_status():
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.get_json(silent=True) or request.form.to_dict() or {}
-    username_or_email = data.get('username')
-    password = data.get('password')
-
-    if not username_or_email or not password:
-        return jsonify({'status': 'error', 'message': 'Weka username na nenosiri'}), 400
-
-    user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
-
-    if user and user.check_password(password):
+    user = User.query.filter((User.username == data.get('username')) | (User.email == data.get('username'))).first()
+    if user and user.check_password(data.get('password')):
         login_user(user)
         return jsonify({'status': 'success', 'message': 'Umefanikiwa kuingia', 'username': user.username})
-    
     return jsonify({'status': 'error', 'message': 'Username au nenosiri si sahihi'}), 401
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
     data = request.get_json(silent=True) or request.form.to_dict() or {}
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-
-    if not username or not email or not password:
-        return jsonify({'status': 'error', 'message': 'Tafadhali jaza taarifa zote'}), 400
-
-    if User.query.filter_by(username=username).first():
+    if User.query.filter_by(username=data.get('username')).first():
         return jsonify({'status': 'error', 'message': 'Username hii tayari inatumika'}), 400
     
-    if User.query.filter_by(email=email).first():
-        return jsonify({'status': 'error', 'message': 'Email hii tayari imesajiliwa'}), 400
-
-    new_user = User(username=username, email=email)
-    new_user.set_password(password)
+    new_user = User(username=data.get('username'), email=data.get('email'))
+    new_user.set_password(data.get('password'))
     db.session.add(new_user)
     db.session.commit()
 
-    # Tengeneza shamba la kwanza la majaribio moja kwa moja
     default_farm = Farm(name="Shamba Langu", location="Tanga", user_id=new_user.id)
     db.session.add(default_farm)
     db.session.commit()
 
-    # Tengeneza stesheni na API key ya kiotomatiki
-    import uuid
-    api_key = secrets.token_hex(16)
-    default_station = Station(station_code=f"STN-{new_user.id}", api_key=api_key, farm_id=default_farm.id)
-    db.session.add(default_station)
+    station = Station(station_code=f"STN-{new_user.id}", api_key=secrets.token_hex(16), farm_id=default_farm.id)
+    db.session.add(station)
     db.session.commit()
 
     login_user(new_user)
-    return jsonify({'status': 'success', 'message': 'Akaunti imetengenezwa kikamilifu', 'username': username})
+    return jsonify({'status': 'success', 'message': 'Akaunti imetengenezwa kikamilifu', 'username': new_user.username})
 
 @app.route('/api/logout', methods=['POST'])
 @login_required
@@ -309,75 +282,29 @@ def api_logout():
     logout_user()
     return jsonify({'status': 'success', 'message': 'Umetoka kwenye mfumo'})
 
-# ==================== FARM & WEATHER API ROUTES ====================
-
 @app.route('/api/farms', methods=['GET'])
 @login_required
 def get_farms():
     farms = Farm.query.filter_by(user_id=current_user.id).all()
-    farms_list = [{'id': f.id, 'name': f.name, 'location': f.location} for f in farms]
-    return jsonify({'farms': farms_list})
+    return jsonify({'farms': [{'id': f.id, 'name': f.name, 'location': f.location} for f in farms]})
 
 @app.route('/api/farms/add', methods=['POST'])
 @login_required
 def add_farm():
     data = request.get_json(silent=True) or {}
-    name = data.get('name')
-    location = data.get('location', 'Tanga')
-
-    if not name:
-        return jsonify({'status': 'error', 'message': 'Jina la shamba linahitajika'}), 400
-
-    farm = Farm(name=name, location=location, user_id=current_user.id)
+    farm = Farm(name=data.get('name'), location=data.get('location', 'Tanga'), user_id=current_user.id)
     db.session.add(farm)
     db.session.commit()
-
-    # Tengeneza kituo chake cha sensor moja kwa moja
-    api_key = secrets.token_hex(16)
-    station = Station(station_code=f"STN-{farm.id}-{secrets.token_hex(2)}", api_key=api_key, farm_id=farm.id)
+    station = Station(station_code=f"STN-{farm.id}", api_key=secrets.token_hex(16), farm_id=farm.id)
     db.session.add(station)
     db.session.commit()
-
     return jsonify({'status': 'success', 'message': 'Shamba limeongezwa'})
-
-@app.route('/api/farms/edit', methods=['POST'])
-@login_required
-def edit_farm():
-    data = request.get_json(silent=True) or {}
-    farm_id = data.get('farm_id')
-    name = data.get('name')
-    location = data.get('location')
-
-    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
-    if not farm:
-        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
-
-    if name: farm.name = name
-    if location: farm.location = location
-    db.session.commit()
-
-    return jsonify({'status': 'success', 'message': 'Mabadiliko yamehifadhiwa'})
-
-@app.route('/api/farms/delete', methods=['POST'])
-@login_required
-def delete_farm():
-    data = request.get_json(silent=True) or {}
-    farm_id = data.get('farm_id')
-
-    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
-    if not farm:
-        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
-
-    db.session.delete(farm)
-    db.session.commit()
-
-    return jsonify({'status': 'success', 'message': 'Shamba limefutwa'})
 
 @app.route('/api/get-data', methods=['GET'])
 @login_required
 def get_data():
     farm_id = request.args.get('farm_id', type=int)
-    lang = request.args.get('lang', 'sw')
+    lang = request.args.get('lang', 'sw') # Inapokea lugha moja kwa moja kutoka frontend
     
     farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
     if not farm:
@@ -385,34 +312,22 @@ def get_data():
 
     station = Station.query.filter_by(farm_id=farm.id).first()
     if not station:
-        return jsonify({
-            'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0,
-            'rain_status': t('rain_none', lang), 'wind_speed': 0, 'is_online': False, 'advisories': []
-        })
+        return jsonify({'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0, 'is_online': False, 'advisories': []})
 
     latest_log = WeatherLog.query.filter_by(station_id=station.id).order_by(WeatherLog.timestamp.desc()).first()
-    now_utc = datetime.now(timezone.utc)
-    
     is_online = False
     if station.last_seen:
         last_seen_aware = station.last_seen if station.last_seen.tzinfo else station.last_seen.replace(tzinfo=timezone.utc)
-        is_online = (now_utc - last_seen_aware) < timedelta(minutes=5)
+        is_online = (datetime.now(timezone.utc) - last_seen_aware) < timedelta(minutes=5)
 
     if not latest_log:
         return jsonify({
             'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0,
-            'rain_status': t('rain_none', lang), 'wind_speed': 0,
-            'is_online': is_online, 'last_updated': t('never_updated', lang), 'api_key': station.api_key,
-            'advisories': [t('no_data', lang)]
+            'rain_status': t('rain_none', lang), 'wind_speed': 0, 'is_online': is_online,
+            'last_updated': t('never_updated', lang), 'advisories': [t('no_data', lang)]
         })
 
-    if latest_log.rain > 5.0:
-        rain_status = t('rain_heavy', lang)
-    elif latest_log.rain > 0.0:
-        rain_status = t('rain_light', lang)
-    else:
-        rain_status = t('rain_none', lang)
-
+    rain_status = t('rain_heavy', lang) if latest_log.rain > 5.0 else (t('rain_light', lang) if latest_log.rain > 0.0 else t('rain_none', lang))
     advisories = generate_agri_advisory(latest_log.temperature, latest_log.humidity, latest_log.rain, latest_log.wind_speed, lang=lang)
 
     return jsonify({
@@ -432,7 +347,7 @@ def get_data():
 @login_required
 def get_forecast():
     farm_id = request.args.get('farm_id', type=int)
-    lang = request.args.get('lang', 'sw')
+    lang = request.args.get('lang', 'sw') # Inapokea lugha (sw au en) kutoka JavaScript
     
     farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
     if not farm:
@@ -451,31 +366,18 @@ def get_forecast():
 @app.route('/update', methods=['POST'])
 def update_weather():
     data = request.get_json(silent=True) or request.form.to_dict() or {}
-    api_key = data.get('api_key')
-
-    if not api_key:
-        return jsonify({'status': 'error', 'message': 'API Key is required'}), 400
-
-    station = Station.query.filter_by(api_key=api_key).first()
+    station = Station.query.filter_by(api_key=data.get('api_key')).first()
     if not station:
         return jsonify({'status': 'error', 'message': 'Invalid API Key'}), 401
 
-    try:
-        temp = float(data.get('temperature'))
-        hum = float(data.get('humidity'))
-        rain = float(data.get('rain', 0.0))
-        wind = float(data.get('wind_speed', 0.0))
-    except (ValueError, TypeError):
-        return jsonify({'status': 'error', 'message': 'Invalid sensor data format'}), 400
-
-    log = WeatherLog(station_id=station.id, temperature=temp, humidity=hum, rain=rain, wind_speed=wind)
+    log = WeatherLog(station_id=station.id, temperature=float(data.get('temperature', 0)),
+                     humidity=float(data.get('humidity', 0)), rain=float(data.get('rain', 0)),
+                     wind_speed=float(data.get('wind_speed', 0)))
     station.is_online = True
     station.last_seen = datetime.now(timezone.utc)
-
     db.session.add(log)
     db.session.commit()
-
-    return jsonify({'status': 'success', 'message': 'Data received successfully'})
+    return jsonify({'status': 'success', 'message': 'Data received'})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
