@@ -1,713 +1,93 @@
 <!DOCTYPE html>
-<html lang="sw">
+<html lang="sw" class="scroll-smooth">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#047857">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<title>Smart Farm Weather Station</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#166534"><title>Smart Farm | Weather Intelligence</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-:root{--bg:#f3f6f4;--card:#fff;--bd:#e5ebe7;--tx:#0f172a;--mu:#64748b;--in:#f8fafc}
-@media(prefers-color-scheme:dark){:root{--bg:#0b1310;--card:#131d18;--bd:#22312a;--tx:#e8f0ec;--mu:#94a3b8;--in:#0f1814}}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{overscroll-behavior-y:contain}
-body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tx);font-variant-numeric:tabular-nums;min-height:100vh}
-button{touch-action:manipulation;min-height:44px;transition:transform .12s}
-button:active{transform:scale(.97)}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:1.5rem}
-.mu{color:var(--mu)}
-.inp{width:100%;padding:.8rem 1rem;border:1px solid var(--bd);border-radius:.85rem;background:var(--in);color:var(--tx);margin-bottom:1rem;outline:none;font-size:16px}
-.inp:focus{box-shadow:0 0 0 2px #10b981}
-.lbl{display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem}
-.btn{padding:.6rem 1rem;border-radius:.85rem;font-weight:700;font-size:.9rem}
-.btn-g{background:var(--in);color:var(--tx);border:1px solid var(--bd)}
-.cap{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu)}
-.sk{color:transparent!important;background:linear-gradient(90deg,var(--bd),transparent,var(--bd));background-size:200% 100%;animation:sk 1.2s infinite;border-radius:.5rem}
-@keyframes sk{to{background-position:-200% 0}}
-.fu{animation:fu .45s both}
-@keyframes fu{from{opacity:0;transform:translateY(10px)}}
-.hero-sun{background:linear-gradient(135deg,#059669,#0d9488)}
-.hero-hot{background:linear-gradient(135deg,#d97706,#dc2626)}
-.hero-rain{background:linear-gradient(135deg,#475569,#2563eb)}
-.hero-night{background:linear-gradient(135deg,#1e1b4b,#4338ca)}
-.bar{height:6px;border-radius:9px;background:var(--bd);overflow:hidden;margin-top:.6rem}
-.bar i{display:block;height:100%;width:0;border-radius:9px;transition:width .8s}
-.nav-b{color:var(--mu);font-size:.7rem;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1}
-.nav-b.on{color:#059669}
-.seg button{min-height:38px;padding:0 .9rem;border-radius:.7rem;font-size:.8rem;font-weight:700;color:var(--mu)}
-.seg button.on{background:#059669;color:#fff}
-.modal-backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(6px)}
-.scroll-x{scrollbar-width:none}.scroll-x::-webkit-scrollbar{display:none}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-</style>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{farm:{50:'#f0fdf4',100:'#dcfce7',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d'}}}}}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>*{font-family:Inter,system-ui,sans-serif}.glass{background:rgba(255,255,255,.86);backdrop-filter:blur(14px)}.dark .glass{background:rgba(15,23,42,.86)}.nav-active{background:#f0fdf4;color:#166534}.dark .nav-active{background:#16653433;color:#86efac}.loader{border:3px solid #e2e8f0;border-top-color:#16a34a;border-radius:50%;width:22px;height:22px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.hide-scroll::-webkit-scrollbar{display:none}.hide-scroll{scrollbar-width:none}</style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen">
 
-<div id="offline-bar" class="hidden fixed top-0 inset-x-0 z-[70] bg-amber-500 text-white text-center text-xs font-bold py-1.5" style="padding-top:calc(env(safe-area-inset-top) + 6px)" data-i18n="offline_msg">Huna mtandao</div>
+<!-- AUTH -->
+<section id="auth-section" class="min-h-screen grid lg:grid-cols-2">
+ <div class="hidden lg:flex bg-gradient-to-br from-farm-900 via-farm-800 to-emerald-600 p-12 text-white items-center">
+  <div class="max-w-xl mx-auto"><div class="flex items-center gap-3 mb-12"><div class="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl">🌱</div><div><b class="text-xl">SMART FARM</b><div class="text-xs text-emerald-100">Weather • Insights • Decisions</div></div></div>
+  <h1 class="text-5xl font-extrabold leading-tight">Geuza data ya hali ya hewa kuwa <span class="text-emerald-200">maamuzi ya kilimo.</span></h1><p class="mt-6 text-lg leading-8 text-emerald-50">Fuatilia mazingira ya shamba, tambua hatari mapema na pata ushauri unaoeleweka.</p></div>
+ </div>
+ <div class="flex items-center justify-center p-5 sm:p-10"><div class="w-full max-w-md"><div class="lg:hidden flex items-center gap-3 mb-8"><div class="w-11 h-11 rounded-xl bg-farm-700 text-white flex items-center justify-center">🌱</div><b>SMART FARM</b></div>
+  <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl">
+   <div class="flex border-b border-slate-200 dark:border-slate-800 mb-7"><button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 pb-3 font-bold text-farm-700 border-b-2 border-farm-600">Ingia</button><button id="tab-register" onclick="switchAuthTab('register')" class="w-1/2 pb-3 font-bold text-slate-400">Jisajili</button></div>
+   <form id="login-form" onsubmit="handleLogin(event)"><h2 class="text-2xl font-extrabold mb-2">Karibu tena 👋</h2><p class="text-sm text-slate-500 mb-6">Ingia kwenye Smart Farm.</p><label class="text-sm font-semibold">Username au Email</label><input id="login-username" required class="mt-2 mb-4 w-full px-4 py-3 rounded-xl border bg-transparent"><label class="text-sm font-semibold">Nenosiri</label><input id="login-password" type="password" required class="mt-2 mb-6 w-full px-4 py-3 rounded-xl border bg-transparent"><button id="btn-login" class="w-full py-3.5 rounded-xl bg-farm-700 hover:bg-farm-800 text-white font-bold">Ingia Kwenye Mfumo</button></form>
+   <form id="register-form" onsubmit="handleRegister(event)" class="hidden"><h2 class="text-2xl font-extrabold mb-2">Anza kutumia 🌱</h2><p class="text-sm text-slate-500 mb-6">Tengeneza akaunti yako.</p><label class="text-sm font-semibold">Username</label><input id="register-username" required class="mt-2 mb-4 w-full px-4 py-3 rounded-xl border bg-transparent"><label class="text-sm font-semibold">Email</label><input id="register-email" type="email" required class="mt-2 mb-4 w-full px-4 py-3 rounded-xl border bg-transparent"><label class="text-sm font-semibold">Nenosiri</label><input id="register-password" type="password" required class="mt-2 mb-6 w-full px-4 py-3 rounded-xl border bg-transparent"><button class="w-full py-3.5 rounded-xl bg-farm-700 text-white font-bold">Jisajili</button></form>
+  </div></div></div>
+</section>
 
-<!-- NAVBAR -->
-<nav class="bg-emerald-800 text-white shadow-lg sticky top-0 z-40" style="padding-top:env(safe-area-inset-top)">
-  <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
-    <div class="flex items-center gap-3 min-w-0">
-      <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"><i data-ico="sprout" class="w-6 h-6"></i></div>
-      <div class="min-w-0"><div class="font-extrabold truncate leading-tight">Smart Farm</div><div class="text-[10px] uppercase tracking-[.2em] text-emerald-200">Weather Station</div></div>
-    </div>
-    <div class="flex items-center gap-2">
-      <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-emerald-900/80 border border-emerald-600 text-xs font-bold px-2 h-10 rounded-xl outline-none">
-        <option value="sw">🇹🇿 SW</option><option value="en">🇬🇧 EN</option>
-      </select>
-      <span id="user-display" class="hidden sm:inline-flex text-sm font-semibold bg-emerald-900/60 px-3 py-2 rounded-xl"></span>
-      <button id="logout-btn" onclick="logout()" class="hidden btn bg-rose-500" data-i18n="logout_btn">Toka</button>
-    </div>
+<!-- APP -->
+<div id="dashboard-section" class="hidden min-h-screen">
+ <aside class="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 flex-col z-40"><div class="h-20 px-6 flex items-center gap-3 border-b dark:border-slate-800"><div class="w-10 h-10 rounded-xl bg-farm-700 text-white flex items-center justify-center">🌱</div><div><b>SMART FARM</b><div class="text-[10px] text-slate-400">WEATHER INTELLIGENCE</div></div></div>
+  <nav class="p-4 space-y-1 flex-1"><button onclick="go('overview')" class="nav-active w-full text-left px-4 py-3 rounded-xl text-sm font-semibold">⌂ Muhtasari</button><button onclick="go('sensors')" class="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50">◈ Sensors</button><button onclick="go('forecast')" class="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50">◷ Utabiri</button><button onclick="go('analytics')" class="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50">▥ Analytics</button><button onclick="go('advisory')" class="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50">✦ Ushauri</button><button onclick="go('activities')" class="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50">✓ Shughuli</button></nav>
+  <div class="p-4 border-t dark:border-slate-800"><button onclick="toggleTheme()" class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-500">☾ Dark Mode</button><button onclick="logout()" class="w-full text-left px-4 py-3 text-sm font-semibold text-rose-600">↪ Toka</button></div>
+ </aside>
+ <main class="lg:ml-64 pb-20 lg:pb-8"><header class="sticky top-0 z-30 glass border-b dark:border-slate-800"><div class="max-w-[1500px] mx-auto px-4 h-16 flex items-center justify-between gap-3"><div><div class="text-xs text-slate-400">Smart Agriculture</div><b>Farm Dashboard</b></div><div class="flex items-center gap-2"><select id="lang-select" onchange="changeLanguage(this.value)" class="text-xs font-semibold bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2"><option value="sw">🇹🇿 Kiswahili</option><option value="en">🇬🇧 English</option></select><button onclick="toggleTheme()" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800">☾</button><span id="user-display" class="hidden sm:block text-xs font-bold px-3 py-2 rounded-xl bg-farm-50 text-farm-800"></span><button onclick="logout()" class="hidden sm:block text-xs font-bold text-rose-600">Toka</button></div></div></header>
+  <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+   <div id="alert-box" class="hidden p-4 rounded-2xl text-sm font-semibold border"></div>
+   <section id="overview"><div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4 mb-5"><div><div class="text-xs text-slate-400 mb-2">Home › Farm Overview</div><h1 class="text-2xl sm:text-3xl font-extrabold">Habari, <span id="hello-user">Mkulima</span> 👋</h1><p class="text-sm text-slate-500 mt-1">Hii ndiyo hali ya shamba lako kwa sasa.</p></div><div class="flex gap-2"><select id="farm-select" onchange="loadDashboardData()" class="min-w-[190px] bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold"><option>Inapakia...</option></select><button onclick="openFarm()" class="px-4 py-3 rounded-xl bg-farm-700 text-white text-sm font-bold">+ Shamba</button></div></div>
+    <div class="grid xl:grid-cols-3 gap-5"><div class="xl:col-span-2 bg-gradient-to-br from-farm-800 to-emerald-600 text-white rounded-3xl p-6 shadow-xl"><div class="text-xs text-emerald-100 uppercase tracking-wider">Farm Status</div><div id="farm-status-title" class="text-2xl font-extrabold mt-2">Inapima mazingira...</div><div id="farm-status-text" class="text-sm text-emerald-50 mt-2">Taarifa itaonekana baada ya data kupokelewa.</div><div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6"><div class="bg-white/10 rounded-2xl p-3"><small>Temperature</small><b id="mini-temp" class="block text-lg">--°C</b></div><div class="bg-white/10 rounded-2xl p-3"><small>Humidity</small><b id="mini-humidity" class="block text-lg">--%</b></div><div class="bg-white/10 rounded-2xl p-3"><small>Rain</small><b id="mini-rain" class="block text-lg">-- mm</b></div><div class="bg-white/10 rounded-2xl p-3"><small>Wind</small><b id="mini-wind" class="block text-lg">-- km/h</b></div></div></div>
+     <div class="bg-white dark:bg-slate-900 rounded-3xl border dark:border-slate-800 p-6 shadow-sm"><div class="flex justify-between"><div><small class="text-slate-400 uppercase font-bold">Station Health</small><div id="station-status" class="text-xl font-extrabold mt-2">Checking...</div></div><span id="station-dot" class="w-3 h-3 rounded-full bg-slate-300"></span></div><div class="mt-6 space-y-4 text-sm"><div class="flex justify-between"><span class="text-slate-500">Last transmission</span><b id="last-updated-time">--</b></div><div class="flex justify-between"><span class="text-slate-500">Station</span><b id="station-name">--</b></div><div class="flex justify-between"><span class="text-slate-500">Data</span><b id="data-status">--</b></div><p class="pt-4 border-t text-xs text-slate-400">Online hapa inamaanisha sensor imewasiliana na server hivi karibuni.</p></div></div></div>
+   </section>
+
+   <section><div class="flex justify-between mb-3"><h2 class="font-extrabold">Quick Actions</h2><span class="text-xs text-slate-400">Maamuzi ya haraka</span></div><div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><button onclick="go('advisory')" class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-4 text-left"><b>💧 Irrigation</b><p class="text-xs text-slate-400 mt-1">Kagua hitaji la maji</p></button><button onclick="openActivity()" class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-4 text-left"><b>＋ Activity</b><p class="text-xs text-slate-400 mt-1">Ongeza shughuli</p></button><button onclick="go('analytics')" class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-4 text-left"><b>▥ Analytics</b><p class="text-xs text-slate-400 mt-1">Tazama mwenendo</p></button><button onclick="go('alerts')" class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-4 text-left"><b>! Alerts</b><p class="text-xs text-slate-400 mt-1">Tahadhari</p></button></div></section>
+
+   <section id="sensors"><div class="flex justify-between items-end mb-4"><div><h2 class="text-xl font-extrabold">Live Farm Conditions</h2><p class="text-sm text-slate-500">Vipimo vya kituo.</p></div><span class="text-xs text-slate-400">Auto refresh: 15s</span></div><div class="grid grid-cols-2 xl:grid-cols-5 gap-3"><div class="card">🌡️<b id="val-temp" class="metric">--</b><small>°C Temperature</small><span id="temp-state">No data</span></div><div class="card">💧<b id="val-humidity" class="metric">--</b><small>% Humidity</small><span id="humidity-state">No data</span></div><div class="card">🌧️<b id="val-rain" class="metric">--</b><small>mm Rainfall</small><span id="rain-state">No data</span></div><div class="card">💨<b id="val-wind" class="metric">--</b><small>km/h Wind</small><span id="wind-direction">Direction: --</span></div><div class="card col-span-2 xl:col-span-1">🌱<b id="val-soil" class="metric">--</b><small>% Soil moisture</small><span id="soil-state">Sensor optional</span></div></div></section>
+
+   <section id="alerts"><h2 class="text-xl font-extrabold mb-4">Early Warnings</h2><div id="warnings-container" class="grid md:grid-cols-2 xl:grid-cols-3 gap-3"></div></section>
+
+   <section id="forecast"><div class="flex justify-between items-end mb-4"><div><h2 class="text-xl font-extrabold">24-Hour Weather Outlook</h2><p class="text-sm text-slate-500">Utabiri wa saa zijazo.</p></div><b id="forecast-location" class="text-xs text-farm-700"></b></div><div id="forecast-container" class="flex gap-3 overflow-x-auto hide-scroll pb-2"></div></section>
+
+   <section id="analytics"><div class="flex justify-between mb-4"><div><h2 class="text-xl font-extrabold">Farm Analytics</h2><p class="text-sm text-slate-500">Mwenendo wa data.</p></div></div><div class="grid lg:grid-cols-3 gap-4"><div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl border dark:border-slate-800 p-6"><b>Weather Trend</b><div class="h-56 mt-4 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-center text-sm text-slate-400">📈<br>Historical chart itaunganishwa na endpoint ya WeatherLog.</div></div><div class="bg-white dark:bg-slate-900 rounded-3xl border dark:border-slate-800 p-6"><b>Farm Insight</b><p id="analytics-summary" class="text-sm text-slate-500 mt-3 leading-6">Hakuna data bado.</p><div class="mt-5 space-y-3 text-xs"><div class="flex justify-between"><span>Temperature</span><b id="analytics-temp">--</b></div><div class="flex justify-between"><span>Humidity</span><b id="analytics-hum">--</b></div><div class="flex justify-between"><span>Rain</span><b id="analytics-rain">--</b></div><div class="flex justify-between"><span>Wind</span><b id="analytics-wind">--</b></div></div></div></div></section>
+
+   <section id="advisory" class="bg-gradient-to-br from-farm-50 to-emerald-50 dark:from-farm-900/20 dark:to-emerald-900/10 rounded-3xl border border-farm-100 p-6"><div class="mb-5"><small class="font-bold text-farm-700 uppercase">Decision Support</small><h2 class="text-xl font-extrabold mt-1">Ushauri wa Kilimo kwa Sasa</h2><p class="text-sm text-slate-500 mt-1">Ushauri unatokana na data iliyopo.</p></div><div id="advisories-list" class="grid md:grid-cols-2 gap-3"></div></section>
+
+   <section id="activities"><div class="flex justify-between mb-4"><div><h2 class="text-xl font-extrabold">Farm Activities</h2><p class="text-sm text-slate-500">Rekodi shughuli za shamba.</p></div><button onclick="openActivity()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">+ Activity</button></div><div class="bg-white dark:bg-slate-900 rounded-3xl border dark:border-slate-800 p-5"><div id="activity-list" class="text-sm text-slate-400 text-center py-6">Bado hakuna shughuli.</div></div></section>
+   <footer class="text-xs text-slate-400 py-4 flex justify-between"><span>© 2026 Smart Farm</span><span>Sensor API key inalindwa server-side.</span></footer>
   </div>
-</nav>
-
-<main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 pb-28 md:pb-8">
-
-  <div id="alert-box" class="hidden"></div>
-
-  <!-- AUTH -->
-  <section id="auth-section" class="max-w-md mx-auto mt-4">
-    <div class="card shadow-xl p-6 fu">
-      <div class="mb-6 text-center">
-        <div class="w-16 h-16 mx-auto rounded-2xl hero-sun text-white flex items-center justify-center mb-3"><i data-ico="sun" class="w-9 h-9"></i></div>
-        <h1 class="text-2xl font-extrabold" data-i18n="welcome_title">Smart Farm Weather Station</h1>
-        <p class="text-sm mu mt-1" data-i18n="welcome_text"></p>
-      </div>
-      <div class="flex border-b mb-6" style="border-color:var(--bd)">
-        <button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 font-bold text-emerald-600 border-b-2 border-emerald-600" data-i18n="tab_login">Ingia</button>
-        <button id="tab-register" onclick="switchAuthTab('register')" class="w-1/2 font-bold mu border-b-2 border-transparent" data-i18n="tab_register">Jisajili</button>
-      </div>
-      <form id="login-form" onsubmit="handleLogin(event)">
-        <label class="lbl" data-i18n="lbl_username_email"></label>
-        <input id="login-username" type="text" autocomplete="username" required class="inp">
-        <label class="lbl" data-i18n="lbl_password"></label>
-        <div class="relative"><input id="login-password" type="password" autocomplete="current-password" required class="inp pr-20">
-          <button type="button" onclick="togglePw('login-password',this)" class="absolute right-2 top-1 text-xs font-bold text-emerald-600 px-2" data-i18n="show_key">Onyesha</button></div>
-        <button id="btn-login" type="submit" class="w-full btn bg-emerald-600 text-white py-3 shadow-md disabled:opacity-60" data-i18n="btn_login"></button>
-      </form>
-      <form id="register-form" onsubmit="handleRegister(event)" class="hidden">
-        <label class="lbl" data-i18n="lbl_username"></label>
-        <input id="register-username" type="text" minlength="3" autocomplete="username" required class="inp">
-        <label class="lbl" data-i18n="lbl_email"></label>
-        <input id="register-email" type="email" inputmode="email" autocomplete="email" required class="inp">
-        <label class="lbl" data-i18n="lbl_password"></label>
-        <div class="relative"><input id="register-password" type="password" minlength="6" autocomplete="new-password" required class="inp pr-20">
-          <button type="button" onclick="togglePw('register-password',this)" class="absolute right-2 top-1 text-xs font-bold text-emerald-600 px-2" data-i18n="show_key">Onyesha</button></div>
-        <button id="btn-register" type="submit" class="w-full btn bg-emerald-600 text-white py-3 shadow-md disabled:opacity-60" data-i18n="btn_register"></button>
-      </form>
-    </div>
-  </section>
-
-  <!-- DASHBOARD -->
-  <section id="dashboard-section" class="hidden space-y-4">
-
-    <!-- FARM HEADER -->
-    <div class="card p-4 flex items-center justify-between gap-3">
-      <div class="min-w-0 flex-1">
-        <select id="farm-select" onchange="loadedFarm=null;loadDashboardData()" class="w-full max-w-sm font-extrabold text-lg bg-transparent outline-none truncate" style="color:var(--tx)"></select>
-        <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
-          <span id="farm-location" class="mu"></span>
-          <span id="crop-badge" class="hidden bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-lg font-bold"></span>
-          <span id="station-status" class="font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">...</span>
-        </div>
-      </div>
-      <div class="relative">
-        <button onclick="toggleMenu(event)" class="w-11 rounded-xl btn-g border flex items-center justify-center" aria-label="Menu"><i data-ico="more" class="w-5 h-5"></i></button>
-        <div id="farm-menu" class="hidden absolute right-0 mt-2 w-48 card shadow-xl p-1 z-30 text-sm font-semibold">
-          <button onclick="openEditFarmModal()" class="w-full text-left px-3 rounded-lg" data-i18n="btn_edit">Badili</button>
-          <button onclick="openAddFarmModal()" class="w-full text-left px-3 rounded-lg" data-i18n="btn_add">Ongeza</button>
-          <button onclick="openStationModal()" class="w-full text-left px-3 rounded-lg" data-i18n="station_setup_btn">Kituo</button>
-          <button onclick="handleDeleteFarm()" class="w-full text-left px-3 rounded-lg text-rose-600" data-i18n="btn_delete">Futa</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: HOME -->
-    <div class="tab-panel space-y-4 md:!block" data-tab="home">
-      <div id="hero" class="hero-sun text-white rounded-3xl shadow-lg p-6 fu">
-        <div class="flex justify-between items-start">
-          <div><p class="text-xs font-bold uppercase tracking-wider opacity-80" data-i18n="card_temp">Joto</p>
-            <div class="flex items-start mt-1"><span id="val-temp" class="val text-7xl font-extrabold leading-none">--</span><span class="text-2xl font-bold mt-1">°C</span></div></div>
-          <div class="flex items-center gap-2">
-            <span id="hero-icon" class="opacity-90"></span>
-            <button onclick="loadDashboardData()" class="w-10 h-10 rounded-full bg-white/15 text-lg" aria-label="Refresh">↻</button>
-          </div>
-        </div>
-        <p class="mt-4 text-sm opacity-90"><span data-i18n="last_data">Data ya mwisho</span>: <b id="hero-upd">--</b></p>
-      </div>
-
-      <div id="empty-state" class="hidden card p-6 text-center">
-        <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3"><i data-ico="cpu" class="w-7 h-7"></i></div>
-        <h3 class="font-extrabold" data-i18n="empty_title">Unganisha kituo chako</h3>
-        <p class="text-sm mu mt-1" data-i18n="empty_text"></p>
-        <button onclick="openStationModal()" class="btn bg-emerald-600 text-white mt-4" data-i18n="open_station">Fungua Setup</button>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 bg-gradient-to-br from-emerald-700 to-teal-700 text-white rounded-3xl shadow-lg p-6 fu">
-          <p class="text-emerald-100 text-xs font-bold uppercase tracking-wider" data-i18n="decision_title">Uamuzi wa Kilimo</p>
-          <h2 id="decision-headline" class="text-xl font-extrabold mt-2">...</h2>
-          <div id="advisories-list" class="mt-4 space-y-2 text-sm"></div>
-          <p class="mt-4 text-xs text-emerald-100 border-t border-white/15 pt-3" data-i18n="decision_note"></p>
-        </div>
-        <div class="card p-6 fu">
-          <div class="flex items-center justify-between">
-            <div><p class="cap" data-i18n="station_health">Afya ya Kituo</p><p id="station-code" class="font-extrabold mt-1">----</p></div>
-            <div id="health-icon" class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center"><i data-ico="cpu" class="w-6 h-6"></i></div>
-          </div>
-          <div class="mt-4 space-y-3 text-sm">
-            <div class="flex justify-between gap-4"><span class="mu" data-i18n="last_seen">Mwisho kuonekana</span><span id="last-seen" class="font-semibold text-right">--</span></div>
-            <div class="flex justify-between gap-4"><span class="mu" data-i18n="last_data">Data ya mwisho</span><span id="last-updated-time" class="font-semibold text-right">--</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="early-warnings-card" class="hidden bg-amber-50 border border-amber-200 rounded-3xl p-5 text-amber-900">
-        <h2 class="font-extrabold" data-i18n="early_warnings_title">Tahadhari za Mapema</h2>
-        <ul id="early-warnings-list" class="mt-2 space-y-2 text-sm"></ul>
-      </div>
-
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="card p-4 fu" style="animation-delay:.05s">
-          <div class="flex items-center gap-2 text-blue-500"><i data-ico="drop" class="w-5 h-5"></i><p class="cap" data-i18n="card_hum">Unyevu wa Hewa</p></div>
-          <div class="mt-2"><span id="val-hum" class="val text-3xl font-extrabold">--</span><span class="mu font-semibold"> %</span></div>
-          <div class="bar"><i id="bar-hum" style="background:#3b82f6"></i></div>
-        </div>
-        <div class="card p-4 fu" style="animation-delay:.1s">
-          <div class="flex items-center gap-2 text-indigo-500"><i data-ico="rain" class="w-5 h-5"></i><p class="cap" data-i18n="card_rain">Mvua</p></div>
-          <div class="mt-2"><span id="val-rain" class="val text-3xl font-extrabold">--</span><span class="mu font-semibold"> mm</span></div>
-          <p id="rain-status" class="text-xs mu mt-2">--</p>
-        </div>
-        <div class="card p-4 fu" style="animation-delay:.15s">
-          <div class="flex items-center gap-2 text-teal-500"><i data-ico="wind" class="w-5 h-5"></i><p class="cap" data-i18n="card_wind">Upepo</p></div>
-          <div class="mt-2"><span id="val-wind" class="val text-3xl font-extrabold">--</span><span class="mu font-semibold"> km/h</span>
-            <span id="wind-arrow" class="inline-block ml-1 text-teal-500 font-extrabold transition-transform duration-700">↑</span></div>
-          <p id="wind-direction" class="text-xs mu mt-2">--</p>
-        </div>
-        <div class="card p-4 fu" style="animation-delay:.2s">
-          <div class="flex items-center gap-2 text-emerald-500"><i data-ico="sprout" class="w-5 h-5"></i><p class="cap" data-i18n="card_soil">Unyevu wa Udongo</p></div>
-          <div class="mt-2"><span id="val-soil" class="val text-3xl font-extrabold">--</span><span class="mu font-semibold"> %</span></div>
-          <div class="bar"><i id="bar-soil" style="background:#10b981"></i></div>
-          <p id="soil-status" class="text-xs font-bold mt-2 mu">--</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: FORECAST -->
-    <div class="tab-panel hidden space-y-4 md:!block" data-tab="forecast">
-      <div class="card p-5">
-        <h2 class="text-lg font-extrabold" data-i18n="forecast_title">Utabiri wa Masaa 24 Yajayo</h2>
-        <p class="text-xs mu mt-1"><span data-i18n="forecast_for">Kwa eneo:</span> <span id="forecast-location" class="font-semibold text-emerald-600">--</span></p>
-        <div id="forecast-container" class="mt-4 flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-5 px-5 pb-2 scroll-x"></div>
-        <div class="mt-4 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-emerald-900">
-          <p class="text-xs font-bold uppercase tracking-wider text-emerald-700" data-i18n="forecast_actions"></p>
-          <ul id="farming-actions" class="mt-2 space-y-1 text-sm"></ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: HISTORY -->
-    <div class="tab-panel hidden space-y-4 md:!block" data-tab="history">
-      <div class="card p-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div><h2 class="text-lg font-extrabold" data-i18n="history_title">Historia na Mwelekeo</h2>
-            <p class="text-xs mu mt-1" data-i18n="history_subtitle"></p></div>
-          <select id="history-days" onchange="loadHistory()" class="inp !mb-0 !w-auto !py-2 text-sm font-semibold">
-            <option value="7">7</option><option value="14">14</option><option value="30">30</option>
-          </select>
-        </div>
-        <div class="seg flex gap-1 mb-4 p-1 rounded-2xl w-fit" style="background:var(--in)">
-          <button data-m="temp" class="on" onclick="setMetric('temp')" data-i18n="m_temp">Joto</button>
-          <button data-m="rain" onclick="setMetric('rain')" data-i18n="m_rain">Mvua</button>
-          <button data-m="hum" onclick="setMetric('hum')" data-i18n="m_hum">Unyevu</button>
-        </div>
-        <div class="relative" style="height:280px"><canvas id="history-chart"></canvas></div>
-      </div>
-    </div>
-
-    <!-- TAB: STATION -->
-    <div class="tab-panel hidden space-y-4 md:!block" data-tab="station">
-      <div class="bg-slate-900 text-white rounded-3xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div><p class="text-xs uppercase tracking-wider text-slate-400 font-bold" data-i18n="sensor_setup_note"></p>
-          <p class="font-semibold mt-1" data-i18n="sensor_setup_text"></p></div>
-        <button onclick="openStationModal()" class="btn bg-white text-slate-900" data-i18n="open_station">Fungua Setup</button>
-      </div>
-    </div>
-  </section>
-</main>
-
-<!-- BOTTOM NAV (mobile) -->
-<nav id="bottom-nav" class="hidden fixed bottom-0 inset-x-0 z-40 card !rounded-b-none flex md:!hidden" style="padding-bottom:env(safe-area-inset-bottom);height:calc(64px + env(safe-area-inset-bottom))">
-  <button class="nav-b on" data-t="home" onclick="showTab('home')"><i data-ico="home" class="w-6 h-6"></i><span data-i18n="nav_home">Nyumbani</span></button>
-  <button class="nav-b" data-t="forecast" onclick="showTab('forecast')"><i data-ico="cal" class="w-6 h-6"></i><span data-i18n="nav_forecast">Utabiri</span></button>
-  <button class="nav-b" data-t="history" onclick="showTab('history')"><i data-ico="chart" class="w-6 h-6"></i><span data-i18n="nav_history">Historia</span></button>
-  <button class="nav-b" data-t="station" onclick="showTab('station')"><i data-ico="cpu" class="w-6 h-6"></i><span data-i18n="nav_station">Kituo</span></button>
-</nav>
-
-<!-- MODALS (bottom-sheet kwenye simu) -->
-<div id="add-farm-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-end sm:items-center justify-center sm:p-4">
-  <div class="card !rounded-b-none sm:!rounded-3xl max-w-lg w-full p-6 shadow-2xl" style="padding-bottom:calc(1.5rem + env(safe-area-inset-bottom))">
-    <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-extrabold" data-i18n="modal_add_title"></h3><button onclick="closeAddFarmModal()" class="text-3xl mu w-11">×</button></div>
-    <form onsubmit="handleAddFarm(event)">
-      <label class="lbl" data-i18n="lbl_farm_name"></label><input id="new-farm-name" required class="inp">
-      <label class="lbl" data-i18n="lbl_farm_loc"></label><input id="new-farm-location" placeholder="Tanga, Morogoro..." required class="inp">
-      <label class="lbl" data-i18n="lbl_crop"></label><input id="new-farm-crop" placeholder="Mahindi, mpunga, nyanya..." class="inp">
-      <div class="flex justify-end gap-2"><button type="button" onclick="closeAddFarmModal()" class="btn btn-g" data-i18n="btn_cancel"></button><button type="submit" class="btn bg-emerald-600 text-white" data-i18n="btn_save"></button></div>
-    </form>
-  </div>
+ </main>
 </div>
 
-<div id="edit-farm-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-end sm:items-center justify-center sm:p-4">
-  <div class="card !rounded-b-none sm:!rounded-3xl max-w-lg w-full p-6 shadow-2xl" style="padding-bottom:calc(1.5rem + env(safe-area-inset-bottom))">
-    <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-extrabold" data-i18n="modal_edit_title"></h3><button onclick="closeEditFarmModal()" class="text-3xl mu w-11">×</button></div>
-    <form onsubmit="handleEditFarm(event)">
-      <input type="hidden" id="edit-farm-id">
-      <label class="lbl" data-i18n="lbl_farm_name"></label><input id="edit-farm-name" required class="inp">
-      <label class="lbl" data-i18n="lbl_farm_loc"></label><input id="edit-farm-location" required class="inp">
-      <label class="lbl" data-i18n="lbl_crop"></label><input id="edit-farm-crop" class="inp">
-      <div class="flex justify-end gap-2"><button type="button" onclick="closeEditFarmModal()" class="btn btn-g" data-i18n="btn_cancel"></button><button type="submit" class="btn bg-amber-500 text-white" data-i18n="btn_save_changes"></button></div>
-    </form>
-  </div>
-</div>
+<!-- MOBILE NAV --> <nav id="mobile-nav" class="hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t dark:border-slate-800 lg:hidden"><div class="grid grid-cols-5 h-16 text-[10px] font-bold"><button onclick="go('overview')">⌂<br>Home</button><button onclick="go('sensors')">◈<br>Data</button><button onclick="go('forecast')">◷<br>Weather</button><button onclick="go('analytics')">▥<br>Stats</button><button onclick="go('advisory')">✦<br>Advice</button></div></nav>
 
-<div id="station-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-end sm:items-center justify-center sm:p-4">
-  <div class="card !rounded-b-none sm:!rounded-3xl max-w-lg w-full p-6 shadow-2xl" style="padding-bottom:calc(1.5rem + env(safe-area-inset-bottom))">
-    <div class="flex justify-between items-start mb-4">
-      <div><h3 class="text-xl font-extrabold" data-i18n="station_setup_title"></h3><p class="text-xs mu mt-1" data-i18n="station_setup_subtitle"></p></div>
-      <button onclick="closeStationModal()" class="text-3xl mu w-11">×</button>
-    </div>
-    <div class="rounded-2xl p-4 space-y-4" style="background:var(--in)">
-      <div><p class="cap">Station Code</p><code id="station-code-modal" class="block mt-1 font-bold">----</code></div>
-      <div><p class="cap">API Key</p>
-        <div class="flex gap-2 mt-1"><input id="station-key-input" type="password" readonly class="inp !mb-0 flex-1 font-mono !text-xs !py-2">
-          <button onclick="toggleStationKey()" class="btn btn-g text-xs" data-i18n="show_key">Onyesha</button></div></div>
-    </div>
-    <div class="mt-4 text-xs bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl" data-i18n="key_warning"></div>
-    <div class="flex justify-end gap-2 mt-4">
-      <button onclick="regenerateStationKey()" class="btn bg-rose-600 text-white" data-i18n="regenerate_key"></button>
-      <button onclick="closeStationModal()" class="btn btn-g" data-i18n="btn_close"></button>
-    </div>
-  </div>
-</div>
-
-<!-- CONFIRM SHEET -->
-<div id="confirm-modal" class="hidden fixed inset-0 modal-backdrop z-[65] flex items-end sm:items-center justify-center sm:p-4">
-  <div class="card !rounded-b-none sm:!rounded-3xl max-w-sm w-full p-6 shadow-2xl" style="padding-bottom:calc(1.5rem + env(safe-area-inset-bottom))">
-    <p id="confirm-msg" class="font-semibold"></p>
-    <div class="flex gap-2 mt-5"><button id="confirm-no" class="btn btn-g flex-1" data-i18n="btn_cancel"></button><button id="confirm-yes" class="btn bg-rose-600 text-white flex-1" data-i18n="confirm_yes"></button></div>
-  </div>
-</div>
+<!-- FARM MODAL --> <div id="farm-modal" class="hidden fixed inset-0 z-50 bg-black/60 p-4 items-center justify-center"><div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6"><div class="flex justify-between mb-5"><h3 class="font-extrabold text-xl">Ongeza Shamba</h3><button onclick="closeFarm()">✕</button></div><form onsubmit="addFarm(event)"><label class="text-sm font-semibold">Jina</label><input id="farm-name" required class="mt-2 mb-4 w-full p-3 rounded-xl border bg-transparent"><label class="text-sm font-semibold">Location</label><input id="farm-location" required class="mt-2 mb-6 w-full p-3 rounded-xl border bg-transparent"><button class="w-full p-3 rounded-xl bg-farm-700 text-white font-bold">Hifadhi</button></form></div></div>
+<!-- ACTIVITY MODAL --> <div id="activity-modal" class="hidden fixed inset-0 z-50 bg-black/60 p-4 items-center justify-center"><div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6"><div class="flex justify-between mb-5"><h3 class="font-extrabold text-xl">Ongeza Shughuli</h3><button onclick="closeActivity()">✕</button></div><form onsubmit="saveActivity(event)"><select id="activity-type" class="w-full p-3 rounded-xl border bg-transparent mb-4"><option>Umwagiliaji</option><option>Kupanda</option><option>Kuweka mbolea</option><option>Kunyunyiza dawa</option><option>Kupalilia</option><option>Kuvuna</option></select><textarea id="activity-note" rows="3" class="w-full p-3 rounded-xl border bg-transparent mb-5" placeholder="Maelezo..."></textarea><button class="w-full p-3 rounded-xl bg-slate-900 text-white font-bold">Hifadhi</button></form></div></div>
 
 <script>
-const $ = id => document.getElementById(id);
-let currentFarms = [], currentLang = localStorage.getItem('app_lang') || 'sw';
-let historyChart = null, refreshTimer = null, loadedFarm = null, histRows = [], histMetric = 'temp';
-
-/* ---------- ICONS ---------- */
-const ICONS = {
-  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
-  rain:'<path d="M4 14a4 4 0 0 1 1-7.9 5.5 5.5 0 0 1 10.6 1.4A3.5 3.5 0 0 1 16 14"/><path d="M8 19v2M12 18v3M16 19v2"/>',
-  drop:'<path d="M12 22a7 7 0 0 0 7-7c0-4-7-13-7-13S5 11 5 15a7 7 0 0 0 7 7Z"/>',
-  wind:'<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/>',
-  sprout:'<path d="M12 22V10M12 10c0-4 3-6 7-6 0 4-3 6-7 6ZM12 13c0-3-2-5-6-5 0 3 2 5 6 5Z"/>',
-  home:'<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V11Z"/>',
-  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
-  chart:'<path d="M3 3v18h18M7 15l4-5 3 3 5-7"/>',
-  cpu:'<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
-  more:'<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>'
-};
-const ic = (n, cls = 'w-5 h-5') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n] || ''}</svg>`;
-document.querySelectorAll('[data-ico]').forEach(el => el.outerHTML = ic(el.dataset.ico, el.className));
-
-/* ---------- TRANSLATIONS ---------- */
-const translations = {
-sw:{logout_btn:"Toka",tab_login:"Ingia",tab_register:"Jisajili",lbl_username_email:"Username au Email",lbl_username:"Username",lbl_email:"Email",lbl_password:"Nenosiri",btn_login:"Ingia Kwenye Mfumo",btn_register:"Tengeneza Akaunti",welcome_title:"Smart Farm Weather Station",welcome_text:"Tumia taarifa za hali ya hewa kusaidia kufanya maamuzi ya kilimo.",btn_edit:"Badili",btn_add:"Ongeza shamba",btn_delete:"Futa shamba",station_setup_btn:"Kituo (Setup)",early_warnings_title:"Tahadhari za Mapema",card_temp:"Joto",card_hum:"Unyevu wa Hewa",card_rain:"Mvua",card_wind:"Upepo",card_soil:"Unyevu wa Udongo",forecast_title:"Utabiri wa Masaa 24 Yajayo",forecast_for:"Kwa eneo:",forecast_actions:"Maamuzi yanayoweza kusaidiwa na forecast",decision_title:"Uamuzi wa Kilimo",decision_note:"Mfumo unatoa decision-support ya jumla; mkulima bado anapaswa kuangalia hali halisi ya shamba.",station_health:"Afya ya Kituo",last_seen:"Mwisho kuonekana",last_data:"Data ya mwisho",history_title:"Historia na Mwelekeo",history_subtitle:"Tumia historia kuona mwelekeo wa hali ya shamba, si tukio la dakika moja tu.",sensor_setup_note:"Sensor setup",sensor_setup_text:"API key haionyeshwi moja kwa moja kwenye dashboard. Tumia Kituo kuiona wakati wa ku-configure ESP32.",open_station:"Fungua Setup",modal_add_title:"Ongeza Shamba Jipya",modal_edit_title:"Badilisha Taarifa",lbl_farm_name:"Jina la Shamba",lbl_farm_loc:"Eneo / Mji",lbl_crop:"Aina ya Zao",btn_cancel:"Ghairi",btn_save:"Hifadhi",btn_save_changes:"Hifadhi Mabadiliko",station_setup_title:"Station Setup",station_setup_subtitle:"Tumia taarifa hizi kuunganisha ESP32 na server.",show_key:"Onyesha",hide_key:"Ficha",key_warning:"Usishirikishe API key hadharani. Ukiibadilisha hapa, utahitaji kuweka key mpya kwenye ESP32.",regenerate_key:"Tengeneza Key Mpya",btn_close:"Funga",no_farms:"Hakuna shamba",no_data:"Hakuna data ya sensor bado.",loading:"Inapakia...",network_error:"Tatizo la mtandao.",delete_confirm:"Una uhakika unataka kufuta shamba hili?",key_confirm:"Key ya zamani itaacha kufanya kazi. Endelea?",confirm_yes:"Ndiyo, endelea",api_error:"Ombi limeshindikana.",online:"● Online",offline:"● Offline",no_soil:"Sensor haijaunganishwa",soil_low:"Chini",soil_good:"Kawaida",soil_high:"Juu",rain_detected:"Mvua imeonekana",no_rain:"Hakuna mvua iliyogunduliwa",direction:"Mwelekeo",nav_home:"Nyumbani",nav_forecast:"Utabiri",nav_history:"Historia",nav_station:"Kituo",offline_msg:"Huna mtandao — unaona data ya mwisho iliyohifadhiwa",empty_title:"Unganisha kituo chako",empty_text:"Bado hakuna data kutoka kwa sensor. Fungua Setup, kisha weka Station Code na API Key kwenye ESP32.",m_temp:"Joto °C",m_rain:"Mvua mm",m_hum:"Unyevu %",h_rain:"Mvua imeonekana — punguza/ahirisha umwagiliaji na fuatilia drainage.",h_dry:"Udongo unaonekana mkavu — kagua shamba na zingatia umwagiliaji.",h_wind:"Upepo ni mkubwa — si muda mzuri wa kunyunyizia.",h_hot:"Joto ni kubwa — fuatilia stress ya maji na mimea.",h_ok:"Hali iko tulivu kwa sasa; endelea kufuatilia mabadiliko."},
-en:{logout_btn:"Logout",tab_login:"Login",tab_register:"Register",lbl_username_email:"Username or Email",lbl_username:"Username",lbl_email:"Email",lbl_password:"Password",btn_login:"Sign In to System",btn_register:"Create Account",welcome_title:"Smart Farm Weather Station",welcome_text:"Use weather information to support practical farming decisions.",btn_edit:"Edit",btn_add:"Add farm",btn_delete:"Delete farm",station_setup_btn:"Station setup",early_warnings_title:"Early Warnings",card_temp:"Temperature",card_hum:"Air Humidity",card_rain:"Rainfall",card_wind:"Wind",card_soil:"Soil Moisture",forecast_title:"Next 24 Hours Forecast",forecast_for:"Location:",forecast_actions:"Decisions supported by the forecast",decision_title:"Farming Decision",decision_note:"This system provides general decision support; the farmer should still inspect actual field conditions.",station_health:"Station Health",last_seen:"Last seen",last_data:"Last data",history_title:"History & Trends",history_subtitle:"Use historical data to understand trends rather than relying on one instant reading.",sensor_setup_note:"Sensor setup",sensor_setup_text:"The API key is not shown directly on the dashboard. Open Station Setup when configuring the ESP32.",open_station:"Open Setup",modal_add_title:"Add New Farm",modal_edit_title:"Edit Farm Details",lbl_farm_name:"Farm Name",lbl_farm_loc:"Location / City",lbl_crop:"Crop Type",btn_cancel:"Cancel",btn_save:"Save",btn_save_changes:"Save Changes",station_setup_title:"Station Setup",station_setup_subtitle:"Use these details to connect the ESP32 to the server.",show_key:"Show",hide_key:"Hide",key_warning:"Do not expose the API key publicly. If you regenerate it, update the ESP32 with the new key.",regenerate_key:"Regenerate Key",btn_close:"Close",no_farms:"No farm found",no_data:"No sensor data available yet.",loading:"Loading...",network_error:"Network error.",delete_confirm:"Are you sure you want to delete this farm?",key_confirm:"The old key will stop working. Continue?",confirm_yes:"Yes, continue",api_error:"Request failed.",online:"● Online",offline:"● Offline",no_soil:"Sensor not connected",soil_low:"Low",soil_good:"Normal",soil_high:"High",rain_detected:"Rain detected",no_rain:"No rain detected",direction:"Direction",nav_home:"Home",nav_forecast:"Forecast",nav_history:"History",nav_station:"Station",offline_msg:"You are offline — showing last saved data",empty_title:"Connect your station",empty_text:"No sensor data yet. Open Setup, then put the Station Code and API Key on the ESP32.",m_temp:"Temp °C",m_rain:"Rain mm",m_hum:"Humidity %",h_rain:"Rain detected — reduce/delay irrigation and monitor drainage.",h_dry:"Soil moisture is low — inspect the field and consider irrigation.",h_wind:"Wind is strong — conditions are not ideal for spraying.",h_hot:"Temperature is high — monitor water stress and crops.",h_ok:"Conditions are currently stable; keep monitoring changes."}
-};
-const tr = k => translations[currentLang][k] || k;
-
-function apiUrl(path, params = {}) {
-  const url = new URL(path, window.location.origin);
-  url.searchParams.set('lang', currentLang);
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v); });
-  return url.toString();
-}
-
-function applyTranslations() {
-  document.documentElement.lang = currentLang;
-  document.querySelectorAll('[data-i18n]').forEach(el => { const t = translations[currentLang][el.dataset.i18n]; if (t) el.textContent = t; });
-  $('lang-select').value = currentLang;
-}
-
-function changeLanguage(lang) {
-  currentLang = lang === 'en' ? 'en' : 'sw';
-  localStorage.setItem('app_lang', currentLang);
-  applyTranslations();
-  if (!$('dashboard-section').classList.contains('hidden')) { loadDashboardData(); }
-}
-
-/* ---------- UI HELPERS ---------- */
-function showAlert(message, type = 'error') {
-  const b = $('alert-box');
-  b.className = 'fixed left-4 right-4 bottom-24 md:bottom-6 md:left-auto md:right-6 md:w-96 z-[60] p-4 rounded-2xl text-sm font-semibold border shadow-xl fu ' +
-    (type === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200');
-  b.textContent = message;
-  clearTimeout(showAlert.t);
-  showAlert.t = setTimeout(() => b.classList.add('hidden'), 4500);
-}
-
-function askConfirm(msg) {
-  return new Promise(res => {
-    $('confirm-msg').textContent = msg;
-    const m = $('confirm-modal'); m.classList.remove('hidden');
-    const done = v => { m.classList.add('hidden'); res(v); };
-    $('confirm-yes').onclick = () => done(true);
-    $('confirm-no').onclick = () => done(false);
-  });
-}
-
-function showTab(t) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.tab !== t));
-  document.querySelectorAll('.nav-b').forEach(b => b.classList.toggle('on', b.dataset.t === t));
-  if (t === 'history') setTimeout(() => renderHistoryChart(), 50);
-  window.scrollTo(0, 0);
-}
-
-function toggleMenu(e) { e.stopPropagation(); $('farm-menu').classList.toggle('hidden'); }
-document.addEventListener('click', () => $('farm-menu').classList.add('hidden'));
-
-function togglePw(id, btn) {
-  const i = $(id), show = i.type === 'password';
-  i.type = show ? 'text' : 'password';
-  btn.textContent = tr(show ? 'hide_key' : 'show_key');
-}
-
-function setNum(id, v) {
-  const el = $(id); el.classList.remove('sk');
-  if (v === null || v === undefined || v === '') { el.textContent = '--'; el.dataset.v = ''; return; }
-  if (el.dataset.v === String(v)) return;
-  el.dataset.v = v;
-  const n = Number(v);
-  if (isNaN(n) || matchMedia('(prefers-reduced-motion:reduce)').matches) { el.textContent = v; return; }
-  const dec = String(v).includes('.') ? 1 : 0, s = performance.now();
-  (function f(t) { const p = Math.min((t - s) / 600, 1); el.textContent = p < 1 ? (n * p).toFixed(dec) : v; if (p < 1) requestAnimationFrame(f); })(s);
-}
-
-window.addEventListener('offline', () => $('offline-bar').classList.remove('hidden'));
-window.addEventListener('online', () => { $('offline-bar').classList.add('hidden'); if (!$('dashboard-section').classList.contains('hidden')) loadDashboardData(); });
-if (!navigator.onLine) $('offline-bar').classList.remove('hidden');
-
-/* ---------- AUTH ---------- */
-function switchAuthTab(tab) {
-  const login = tab === 'login';
-  $('login-form').classList.toggle('hidden', !login);
-  $('register-form').classList.toggle('hidden', login);
-  const on = 'w-1/2 font-bold text-emerald-600 border-b-2 border-emerald-600', off = 'w-1/2 font-bold mu border-b-2 border-transparent';
-  $('tab-login').className = login ? on : off;
-  $('tab-register').className = login ? off : on;
-}
-
-async function readJson(response) {
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || tr('api_error'));
-  return data;
-}
-
-async function handleLogin(e) {
-  e.preventDefault();
-  const b = $('btn-login'); b.disabled = true;
-  try {
-    const r = await fetch(apiUrl('/api/login'), {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username: $('login-username').value.trim(), password: $('login-password').value})});
-    await readJson(r); await checkUserStatus();
-  } catch (err) { showAlert(err.message || tr('network_error')); } finally { b.disabled = false; }
-}
-
-async function handleRegister(e) {
-  e.preventDefault();
-  const b = $('btn-register'); b.disabled = true;
-  try {
-    const r = await fetch(apiUrl('/api/register'), {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username: $('register-username').value.trim(), email: $('register-email').value.trim(), password: $('register-password').value})});
-    const d = await readJson(r);
-    showAlert(d.message || tr('btn_register'), 'success'); await checkUserStatus();
-  } catch (err) { showAlert(err.message || tr('network_error')); } finally { b.disabled = false; }
-}
-
-async function logout() {
-  try { await fetch(apiUrl('/api/logout'), {method:'POST'}); } finally { stopRefresh(); loadedFarm = null; await checkUserStatus(); }
-}
-
-async function checkUserStatus() {
-  try {
-    const d = await readJson(await fetch(apiUrl('/api/user-status')));
-    const inn = !!d.logged_in;
-    $('auth-section').classList.toggle('hidden', inn);
-    $('dashboard-section').classList.toggle('hidden', !inn);
-    $('logout-btn').classList.toggle('hidden', !inn);
-    $('user-display').classList.toggle('hidden', !inn);
-    $('bottom-nav').classList.toggle('hidden', !inn);
-    if (inn) {
-      $('user-display').textContent = `👤 ${d.username}`;
-      showTab('home');
-      await loadFarms(); startRefresh();
-    } else stopRefresh();
-  } catch (err) { console.error(err); }
-}
-
-/* ---------- FARMS ---------- */
-async function loadFarms() {
-  try {
-    const d = await readJson(await fetch(apiUrl('/api/farms')));
-    currentFarms = d.farms || [];
-    const sel = $('farm-select'), prev = sel.value;
-    sel.innerHTML = '';
-    if (!currentFarms.length) { sel.innerHTML = `<option value="">${tr('no_farms')}</option>`; return; }
-    currentFarms.forEach(f => { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; sel.appendChild(o); });
-    if (currentFarms.some(f => String(f.id) === String(prev))) sel.value = prev;
-    await loadDashboardData();
-  } catch (err) { showAlert(err.message || tr('network_error')); }
-}
-
-function setStationStatus(on) {
-  const el = $('station-status');
-  el.textContent = on ? tr('online') : tr('offline');
-  el.className = 'font-bold px-2 py-0.5 rounded-full ' + (on ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700');
-}
-
-function setDecisionHeadline(d) {
-  const h = $('decision-headline');
-  if (!d.has_data) { h.textContent = tr('no_data'); return; }
-  const soil = d.soil_moisture, wind = Number(d.wind_speed || 0), rain = Number(d.rain || 0), temp = Number(d.temperature || 0);
-  h.textContent = tr(rain > 5 || d.rain_detected ? 'h_rain' : (soil !== null && soil !== undefined && soil < 30) ? 'h_dry' : wind >= 15 ? 'h_wind' : temp >= 34 ? 'h_hot' : 'h_ok');
-}
-
-function renderAdvisories(list) {
-  const box = $('advisories-list'); box.innerHTML = '';
-  (list || []).forEach(t => {
-    const it = document.createElement('div');
-    it.className = 'flex items-start gap-2 bg-white/10 rounded-xl p-3';
-    it.innerHTML = `<span class="mt-0.5">•</span><span>${escapeHtml(t)}</span>`;
-    box.appendChild(it);
-  });
-}
-
-function soilLabel(v) {
-  if (v === null || v === undefined) return tr('no_soil');
-  return tr(v < 30 ? 'soil_low' : v > 80 ? 'soil_high' : 'soil_good');
-}
-
-function setHero(d) {
-  const h = new Date().getHours(), night = h < 6 || h >= 19;
-  const rainy = d.has_data && (Number(d.rain || 0) > 0 || d.rain_detected);
-  const hot = d.has_data && Number(d.temperature || 0) >= 34;
-  const cls = rainy ? 'hero-rain' : hot ? 'hero-hot' : night ? 'hero-night' : 'hero-sun';
-  $('hero').className = cls + ' text-white rounded-3xl shadow-lg p-6';
-  $('hero-icon').innerHTML = ic(rainy ? 'rain' : night ? 'moon' : 'sun', 'w-12 h-12');
-}
-
-function renderDashboardData(d) {
-  $('farm-location').textContent = d.farm?.location || '';
-  const crop = d.farm?.crop_type || '';
-  $('crop-badge').textContent = crop; $('crop-badge').classList.toggle('hidden', !crop);
-  setStationStatus(Boolean(d.station?.is_online));
-  $('station-code').textContent = d.station?.station_code || '----';
-  $('last-seen').textContent = d.station?.last_seen || '--';
-  $('last-updated-time').textContent = d.last_updated || '--';
-  $('hero-upd').textContent = d.last_updated || '--';
-  $('empty-state').classList.toggle('hidden', !!d.has_data);
-  setHero(d); setDecisionHeadline(d); renderAdvisories(d.advisories || []);
-
-  if (!d.has_data) {
-    ['val-temp','val-hum','val-rain','val-wind','val-soil'].forEach(id => setNum(id, null));
-    $('wind-direction').textContent = '--'; $('rain-status').textContent = '--';
-    $('soil-status').textContent = tr('no_soil');
-    $('bar-hum').style.width = $('bar-soil').style.width = '0';
-    return;
-  }
-  setNum('val-temp', d.temperature); setNum('val-hum', d.humidity);
-  setNum('val-rain', d.rain ?? 0); setNum('val-wind', d.wind_speed ?? 0); setNum('val-soil', d.soil_moisture);
-  $('bar-hum').style.width = Math.min(100, Number(d.humidity) || 0) + '%';
-  $('bar-soil').style.width = Math.min(100, Number(d.soil_moisture) || 0) + '%';
-  $('wind-arrow').style.transform = `rotate(${Number(d.wind_direction) || 0}deg)`;
-  $('wind-direction').textContent = d.wind_direction_label ? `${tr('direction')}: ${d.wind_direction_label} (${d.wind_direction}°)` : '--';
-  $('rain-status').textContent = d.rain_detected ? tr('rain_detected') : tr('no_rain');
-  const s = d.soil_moisture, st = $('soil-status');
-  st.textContent = soilLabel(s);
-  st.className = 'text-xs font-bold mt-2 ' + (s === null || s === undefined ? 'mu' : s < 30 ? 'text-amber-500' : s > 80 ? 'text-blue-500' : 'text-emerald-500');
-}
-
-async function loadDashboardData() {
-  const farmId = $('farm-select').value;
-  if (!farmId) return;
-  if (loadedFarm !== farmId) { document.querySelectorAll('.val').forEach(e => { e.classList.add('sk'); e.dataset.v = ''; }); loadedFarm = farmId; }
-  try {
-    const d = await readJson(await fetch(apiUrl('/api/get-data', {farm_id: farmId})));
-    renderDashboardData(d);
-    await loadForecast(farmId); await loadHistory();
-  } catch (err) { console.error(err); document.querySelectorAll('.val').forEach(e => e.classList.remove('sk')); }
-}
-
-/* ---------- FORECAST ---------- */
-async function loadForecast(farmId) {
-  try {
-    const r = await fetch(apiUrl('/api/forecast', {farm_id: farmId})), d = await r.json();
-    if (!r.ok) { renderWarnings([d.message || tr('api_error')]); return; }
-    $('forecast-location').textContent = d.location || '--';
-    renderWarnings(d.early_warnings || []); renderForecast(d.forecast || []); renderFarmingActions(d.farming_actions || []);
-  } catch (err) { console.error(err); }
-}
-
-function renderWarnings(w) {
-  const ul = $('early-warnings-list'); ul.innerHTML = '';
-  (w || []).forEach(x => { const li = document.createElement('li'); li.className = 'flex items-start gap-2'; li.innerHTML = `<span>•</span><span>${escapeHtml(x)}</span>`; ul.appendChild(li); });
-  $('early-warnings-card').classList.toggle('hidden', !(w && w.length));
-}
-
-function renderForecast(items) {
-  const c = $('forecast-container'); c.innerHTML = '';
-  if (!items.length) { c.innerHTML = `<div class="text-sm mu">${tr('no_data')}</div>`; return; }
-  items.forEach(it => {
-    const time = it.time ? it.time.split(' ')[1]?.substring(0, 5) : '--:--';
-    const card = document.createElement('div');
-    card.className = 'snap-start shrink-0 w-[4.5rem] p-3 rounded-2xl text-center border';
-    card.style.cssText = 'background:var(--in);border-color:var(--bd)';
-    card.innerHTML = `<div class="font-extrabold text-xs mu">${escapeHtml(time)}</div>
-      <img src="https://openweathermap.org/img/wn/${encodeURIComponent(it.icon || '01d')}.png" alt="" loading="lazy" class="w-10 h-10 mx-auto my-1">
-      <div class="font-extrabold text-sm">${it.temp ?? '--'}°</div>
-      <div class="text-xs text-blue-500 font-bold mt-1">${it.rain ?? 0} mm</div>
-      <div class="text-[10px] mu mt-1">${it.wind_speed ?? 0} km/h</div>`;
-    c.appendChild(card);
-  });
-}
-
-function renderFarmingActions(a) {
-  const ul = $('farming-actions'); ul.innerHTML = '';
-  (a || []).forEach(x => { const li = document.createElement('li'); li.textContent = `• ${x}`; ul.appendChild(li); });
-}
-
-/* ---------- HISTORY CHART ---------- */
-const METRICS = {temp:{k:'temperature_avg', c:'#f59e0b', type:'line', l:'m_temp'}, rain:{k:'rain_total', c:'#3b82f6', type:'bar', l:'m_rain'}, hum:{k:'humidity_avg', c:'#14b8a6', type:'line', l:'m_hum'}};
-
-function setMetric(m) {
-  histMetric = m;
-  document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-  renderHistoryChart();
-}
-
-async function loadHistory() {
-  const farmId = $('farm-select').value;
-  if (!farmId) return;
-  try {
-    const d = await readJson(await fetch(apiUrl('/api/history', {farm_id: farmId, days: $('history-days').value})));
-    histRows = d.days || []; renderHistoryChart();
-  } catch (err) { console.error(err); }
-}
-
-function renderHistoryChart() {
-  const cv = $('history-chart');
-  if (!cv.offsetParent) return;
-  const ctx = cv.getContext('2d'), M = METRICS[histMetric];
-  if (historyChart) historyChart.destroy();
-  const g = ctx.createLinearGradient(0, 0, 0, 280);
-  g.addColorStop(0, M.c + '66'); g.addColorStop(1, M.c + '00');
-  const mu = getComputedStyle(document.documentElement).getPropertyValue('--mu').trim();
-  historyChart = new Chart(ctx, {
-    type: M.type,
-    data: {labels: histRows.map(r => r.date), datasets: [{label: tr(M.l), data: histRows.map(r => r[M.k]), borderColor: M.c,
-      backgroundColor: M.type === 'bar' ? M.c : g, borderWidth: 2.5, borderRadius: 6, fill: true, tension: .4, spanGaps: true, pointRadius: 0, pointHoverRadius: 5}]},
-    options: {responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
-      plugins: {legend: {display: false}},
-      scales: {x: {ticks: {color: mu, maxTicksLimit: 7}, grid: {display: false}}, y: {beginAtZero: M.type === 'bar', ticks: {color: mu}, grid: {color: 'rgba(148,163,184,.15)'}}}}
-  });
-}
-
-/* ---------- MODALS / FARM ACTIONS ---------- */
-const openM = id => $(id).classList.remove('hidden'), closeM = id => $(id).classList.add('hidden');
-function openAddFarmModal() { ['new-farm-name','new-farm-location','new-farm-crop'].forEach(i => $(i).value = ''); openM('add-farm-modal'); }
-const closeAddFarmModal = () => closeM('add-farm-modal');
-function openEditFarmModal() {
-  const f = currentFarms.find(x => String(x.id) === String($('farm-select').value));
-  if (!f) return;
-  $('edit-farm-id').value = f.id; $('edit-farm-name').value = f.name; $('edit-farm-location').value = f.location; $('edit-farm-crop').value = f.crop_type || '';
-  openM('edit-farm-modal');
-}
-const closeEditFarmModal = () => closeM('edit-farm-modal');
-
-async function postJson(path, body) {
-  return readJson(await fetch(apiUrl(path), {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}));
-}
-
-async function handleAddFarm(e) {
-  e.preventDefault();
-  try {
-    const d = await postJson('/api/farms/add', {name: $('new-farm-name').value.trim(), location: $('new-farm-location').value.trim(), crop_type: $('new-farm-crop').value.trim()});
-    closeAddFarmModal(); showAlert(d.message, 'success'); await loadFarms();
-  } catch (err) { showAlert(err.message); }
-}
-
-async function handleEditFarm(e) {
-  e.preventDefault();
-  try {
-    const d = await postJson('/api/farms/edit', {farm_id: $('edit-farm-id').value, name: $('edit-farm-name').value.trim(), location: $('edit-farm-location').value.trim(), crop_type: $('edit-farm-crop').value.trim()});
-    closeEditFarmModal(); showAlert(d.message, 'success'); loadedFarm = null; await loadFarms();
-  } catch (err) { showAlert(err.message); }
-}
-
-async function handleDeleteFarm() {
-  const id = $('farm-select').value;
-  if (!id || !(await askConfirm(tr('delete_confirm')))) return;
-  try { const d = await postJson('/api/farms/delete', {farm_id: id}); showAlert(d.message, 'success'); loadedFarm = null; await loadFarms(); }
-  catch (err) { showAlert(err.message); }
-}
-
-async function openStationModal() {
-  const id = $('farm-select').value;
-  if (!id) return;
-  try {
-    const d = await readJson(await fetch(apiUrl('/api/station', {farm_id: id})));
-    $('station-code-modal').textContent = d.station.station_code;
-    const i = $('station-key-input'); i.value = d.station.api_key; i.type = 'password';
-    openM('station-modal');
-  } catch (err) { showAlert(err.message); }
-}
-const closeStationModal = () => closeM('station-modal');
-
-function toggleStationKey() {
-  const i = $('station-key-input'), btn = document.querySelector('#station-modal [data-i18n="show_key"]');
-  const show = i.type === 'password';
-  i.type = show ? 'text' : 'password';
-  if (btn) btn.textContent = tr(show ? 'hide_key' : 'show_key');
-}
-
-async function regenerateStationKey() {
-  if (!(await askConfirm(tr('key_confirm')))) return;
-  try {
-    const d = await postJson('/api/station/regenerate-key', {farm_id: $('farm-select').value});
-    const i = $('station-key-input'); i.value = d.api_key; i.type = 'text'; showAlert(d.message, 'success');
-  } catch (err) { showAlert(err.message); }
-}
-
-/* ---------- REFRESH / UTILS ---------- */
-function startRefresh() { stopRefresh(); refreshTimer = setInterval(() => { if (!document.hidden && navigator.onLine) loadDashboardData(); }, 30000); }
-function stopRefresh() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
-
-function escapeHtml(v) {
-  return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-}
-
-/* ---------- INIT ---------- */
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-applyTranslations();
-checkUserStatus();
+const $=id=>document.getElementById(id);let lang=localStorage.getItem('smartfarm_lang')||'sw';
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function n(v){return Number.isFinite(Number(v))?Number(v):'--'}
+function alertMsg(m,ok=false){let x=$('alert-box');x.className='p-4 rounded-2xl text-sm font-semibold border '+(ok?'bg-emerald-50 text-emerald-800 border-emerald-200':'bg-rose-50 text-rose-800 border-rose-200');x.textContent=m;x.classList.remove('hidden');setTimeout(()=>x.classList.add('hidden'),3500)}
+function toggleTheme(){document.documentElement.classList.toggle('dark');localStorage.setItem('smartfarm_theme',document.documentElement.classList.contains('dark')?'dark':'light')}
+function changeLanguage(v){lang=v;localStorage.setItem('smartfarm_lang',v);if($('lang-select'))$('lang-select').value=v}
+function switchAuthTab(t){let l=t==='login';$('login-form').classList.toggle('hidden',!l);$('register-form').classList.toggle('hidden',l);$('tab-login').className='w-1/2 pb-3 font-bold '+(l?'text-farm-700 border-b-2 border-farm-600':'text-slate-400');$('tab-register').className='w-1/2 pb-3 font-bold '+(!l?'text-farm-700 border-b-2 border-farm-600':'text-slate-400')}
+async function handleLogin(e){e.preventDefault();try{let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('login-username').value,password:$('login-password').value})});let d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.message||'Login failed');checkStatus()}catch(e){alertMsg(e.message)}}
+async function handleRegister(e){e.preventDefault();try{let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('register-username').value,email:$('register-email').value,password:$('register-password').value})});let d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.message||'Registration failed');checkStatus()}catch(e){alertMsg(e.message)}}
+async function logout(){await fetch('/api/logout',{method:'POST'});location.reload()}
+async function checkStatus(){try{let r=await fetch('/api/user-status'),d=await r.json();if(d.logged_in){$('auth-section').classList.add('hidden');$('dashboard-section').classList.remove('hidden');$('mobile-nav').classList.remove('hidden');$('user-display').textContent='👤 '+d.username;$('user-display').classList.remove('hidden');$('hello-user').textContent=d.username;loadFarms()}else $('auth-section').classList.remove('hidden')}catch(e){console.error(e)}}
+async function loadFarms(){try{let r=await fetch('/api/farms'),d=await r.json(),fs=d.farms||[],s=$('farm-select');s.innerHTML='';fs.forEach(f=>{let o=document.createElement('option');o.value=f.id;o.textContent=f.name+' • '+f.location;s.appendChild(o)});if(fs.length)loadDashboardData();else{$('farm-status-title').textContent='Ongeza shamba kwanza'}}catch(e){alertMsg('Imeshindikana kupakia mashamba')}}
+function openFarm(){$('farm-modal').classList.remove('hidden');$('farm-modal').classList.add('flex')}function closeFarm(){$('farm-modal').classList.add('hidden');$('farm-modal').classList.remove('flex')}
+async function addFarm(e){e.preventDefault();let r=await fetch('/api/farms/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('farm-name').value,location:$('farm-location').value})});if(r.ok){closeFarm();loadFarms();alertMsg('Shamba limeongezwa.',true)}else alertMsg('Imeshindikana kuongeza shamba')}
+async function loadDashboardData(){let id=$('farm-select').value;if(!id)return;try{let [a,b]=await Promise.all([fetch('/api/get-data?farm_id='+encodeURIComponent(id)+'&lang='+lang),fetch('/api/forecast?farm_id='+encodeURIComponent(id)+'&lang='+lang)]);let d=await a.json(),f=await b.json();render(d);forecast(f)}catch(e){console.error(e)}}
+function render(raw){let d=raw.current||raw.data||raw.latest||raw,t=n(d.temperature??d.temp),h=n(d.humidity),rain=n(d.rain_amount??d.rain??d.rainfall),w=n(d.wind_speed??d.wind),dir=d.wind_direction??d.windDirection??'--',soil=d.soil_moisture??d.soilMoisture;['val-temp','val-humidity','val-rain','val-wind'].forEach((id,i)=>$(id).textContent=[t,h,rain,w][i]);$('val-soil').textContent=soil==null?'--':n(soil);$('mini-temp').textContent=t+'°C';$('mini-humidity').textContent=h+'%';$('mini-rain').textContent=rain+' mm';$('mini-wind').textContent=w+' km/h';$('wind-direction').textContent='Direction: '+dir;$('temp-state').textContent=t==='--'?'No data':t>=34?'High temperature':t<=18?'Cool':'Moderate';$('humidity-state').textContent=h==='--'?'No data':h>=80?'High humidity':h<50?'Dry air':'Moderate';$('rain-state').textContent=rain==='--'?'No data':rain>0?'Rain recorded':'No rain';$('soil-state').textContent=soil==null?'Sensor optional':soil<30?'Low moisture':soil>80?'High moisture':'Adequate moisture';let st=(t>=34||w>=20||(h>=85&&t>=20&&t<=32)||(soil!=null&&soil<30)||(rain>=15));$('farm-status-title').textContent=st?'Kuna Jambo la Kufuatilia':'Hali Iko Shwari';$('farm-status-text').textContent=st?'Angalia tahadhari na ushauri hapa chini.':'Vipimo vilivyopo havionyeshi hatari kubwa kwa sasa.';$('station-status').textContent=raw.online===false?'Offline':'Online / Receiving';$('station-dot').className='w-3 h-3 rounded-full '+(raw.online===false?'bg-rose-500':'bg-emerald-500');$('data-status').textContent=raw.online===false?'Delayed':'Live';$('station-name').textContent=(raw.station||d.station||{}).name||d.station_id||'Weather Station';$('last-updated-time').textContent=formatTime(d.timestamp||raw.timestamp||raw.last_updated);warnings(t,h,rain,w);advice(t,h,rain,w,soil);$('analytics-temp').textContent=t==='--'?'--':t>=34?'High':'Moderate';$('analytics-hum').textContent=h==='--'?'--':h>=80?'High':h<50?'Low':'Moderate';$('analytics-rain').textContent=rain==='--'?'--':rain>0?'Recorded':'None';$('analytics-wind').textContent=w==='--'?'--':w>=20?'Strong':w>=15?'Moderate':'Calm';$('analytics-summary').textContent=`Joto ${t}°C, unyevu ${h}%, mvua ${rain} mm, upepo ${w} km/h.`}
+function warnings(t,h,r,w){let a=[];if(r!=='--'&&r>=15)a.push(['🌧️','Mvua kubwa','Kagua mifereji na shughuli zinazoathiriwa na mvua.','rose']);if(w!=='--'&&w>=20)a.push(['💨','Upepo mkali','Panga shughuli nyeti wakati hali ni salama.','rose']);if(t!=='--'&&t>=34)a.push(['🌡️','Joto la juu','Fuatilia maji na msongo wa joto kwa mazao.','amber']);if(h!=='--'&&h>=85&&t>=20&&t<=32)a.push(['💧','Unyevu mkubwa','Kagua mimea kwa dalili za magonjwa.','amber']);if(!a.length)a.push(['✓','Hakuna tahadhari kubwa','Hakuna kigezo kikubwa cha tahadhari kwa sasa.','emerald']);$('warnings-container').innerHTML=a.map(x=>`<div class="rounded-2xl border border-${x[3]}-200 bg-${x[3]}-50 text-${x[3]}-900 p-5"><b>${x[0]} ${esc(x[1])}</b><p class="text-xs mt-2">${esc(x[2])}</p></div>`).join('')}
+function advice(t,h,r,w,s){let a=[];if(s!=null&&s<30)a.push(['💧','Kagua umwagiliaji','Unyevu wa udongo ni mdogo; kagua udongo na mahitaji ya zao.']);else if(h!=='--'&&h<50&&r===0)a.push(['💧','Kagua maji','Hewa ni kavu na hakuna mvua; kagua unyevu wa udongo.']);if(r!=='--'&&r>5)a.push(['🌧️','Mvua imeonekana','Kagua mifereji na panga shughuli kulingana na mvua.']);if(w!=='--'&&w>=15)a.push(['💨','Upepo','Shughuli nyeti zipangwe wakati upepo umetulia zaidi.']);if(h>=80&&t>=20&&t<=32)a.push(['🌿','Kagua afya ya mimea','Unyevu mkubwa unaweza kuunda mazingira yanayofaa kwa baadhi ya magonjwa.']);if(!a.length)a.push(['🌱','Endelea kufuatilia','Hakuna hatua kubwa ya haraka iliyotambuliwa.']);$('advisories-list').innerHTML=a.map(x=>`<div class="bg-white/80 dark:bg-slate-900/60 rounded-2xl border p-4"><b>${x[0]} ${esc(x[1])}</b><p class="text-xs text-slate-500 mt-2 leading-5">${esc(x[2])}</p></div>`).join('')}
+function forecast(raw){let a=raw.forecast||raw.data||raw.list||[];$('forecast-location').textContent=raw.location||raw.city||'';if(!a.length){$('forecast-container').innerHTML='<div class="p-8 text-sm text-slate-400">Forecast haijapatikana.</div>';return}$('forecast-container').innerHTML=a.slice(0,8).map(x=>`<div class="min-w-[145px] bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-4"><small class="text-slate-400">${esc(formatTime(x.time||x.datetime||x.dt_txt))}</small><div class="text-3xl mt-3">🌤️</div><b class="text-xl">${n(x.temperature??x.temp??x.main?.temp)}°</b><p class="text-xs text-slate-500 mt-1">${esc(x.description??x.weather?.[0]?.description??'—')}</p></div>`).join('')}
+function formatTime(v){if(!v)return'--';let d=new Date(v);return isNaN(d)?String(v):d.toLocaleString(lang==='sw'?'sw-TZ':'en-GB',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'})}
+function go(id){$(id)?.scrollIntoView({behavior:'smooth'});}
+function openActivity(){$('activity-modal').classList.remove('hidden');$('activity-modal').classList.add('flex')}function closeActivity(){$('activity-modal').classList.add('hidden');$('activity-modal').classList.remove('flex')}
+function saveActivity(e){e.preventDefault();let a=JSON.parse(localStorage.getItem('smartfarm_activities')||'[]');a.unshift({type:$('activity-type').value,note:$('activity-note').value,date:new Date().toISOString()});localStorage.setItem('smartfarm_activities',JSON.stringify(a.slice(0,20)));renderActivities();closeActivity();$('activity-note').value='';alertMsg('Shughuli imehifadhiwa kwenye browser.',true)}
+function renderActivities(){let a=JSON.parse(localStorage.getItem('smartfarm_activities')||'[]');$('activity-list').innerHTML=a.length?a.slice(0,6).map(x=>`<div class="flex gap-3 py-3 border-b last:border-0"><span>✓</span><div><b>${esc(x.type)}</b><div class="text-xs text-slate-400">${esc(x.note||'Hakuna maelezo')} • ${formatTime(x.date)}</div></div></div>`).join(''):'Bado hakuna shughuli.'}
+if(localStorage.getItem('smartfarm_theme')==='dark')document.documentElement.classList.add('dark');changeLanguage(lang);renderActivities();checkStatus();setInterval(()=>{if(!$('dashboard-section').classList.contains('hidden'))loadDashboardData()},15000);
 </script>
-</body>
-</html>
+<style>.card{background:white;padding:1.25rem;border-radius:1rem;border:1px solid #e2e8f0;box-shadow:0 2px 12px rgba(15,23,42,.05);display:flex;flex-direction:column;gap:.55rem}.dark .card{background:#0f172a;border-color:#1e293b}.card .metric{font-size:1.9rem;margin-top:1rem}.card small{color:#94a3b8}.card span{font-size:.72rem;color:#64748b;font-weight:600}</style>
+</body></html>
