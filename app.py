@@ -43,7 +43,7 @@ if AT_API_KEY:
 
 TRANSLATIONS = {
     'sw': {
-        'no_forecast': "ℹ️ Hakuna utabiri wa kimataifa uliopatikana kwa eneo hili.",
+        'no_forecast': "ℹ️️ Hakuna utabiri wa kimataifa uliopatikana kwa eneo hili.",
         'heavy_rain_warning': "🌧️ TAHADHARI YA MVUA KUBWA: Mvua ya takriban {rain}mm inatarajiwa masaa 24 yajayo. Safisha mifereji ya shamba na sitisha upuliziaji dawa.",
         'strong_wind_warning': "💨 TAHADHARI YA UPEPO MKALI: Upepo wa hadi {wind} km/h unatarajiwa. Usipulizie dawa au mbolea ya maji.",
         'high_temp_warning': "☀️ TAHADHARI YA JOTO KALI: Joto litafika {temp}°C. Hakikisha mfumo wa kumwagilia maji uko tayari kuzuia mazao kunyauka.",
@@ -214,7 +214,6 @@ def generate_early_warnings(forecast_list, lang='sw'):
 def generate_agri_advisory(temp, hum, rain, wind, lang='sw'):
     advisories = []
     
-    # Check Rain Sensor reading
     if rain > 5.0:
         advisories.append(t('rain_advise_heavy', lang, rain=round(rain, 1)))
     elif rain > 0.0:
@@ -222,13 +221,11 @@ def generate_agri_advisory(temp, hum, rain, wind, lang='sw'):
     elif rain == 0.0 and hum < 50:
         advisories.append(t('irrigation_advise', lang))
 
-    # Check humidity & temperature risks
     if hum >= 80 and 20 <= temp <= 32:
         advisories.append(t('fungus_risk', lang))
     if temp >= 32 and hum <= 40:
         advisories.append(t('heat_dry_risk', lang))
 
-    # Check wind speed
     if wind >= 15:
         advisories.append(t('wind_advise', lang))
 
@@ -237,17 +234,150 @@ def generate_agri_advisory(temp, hum, rain, wind, lang='sw'):
 
     return advisories
 
-# ==================== ROUTING ====================
+# ==================== AUTHENTICATION & API ROUTES ====================
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/api/user-status', methods=['GET'])
+def user_status():
+    if current_user.is_authenticated:
+        return jsonify({
+            'logged_in': True,
+            'username': current_user.username,
+            'email': current_user.email
+        })
+    return jsonify({'logged_in': False})
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    username_or_email = data.get('username')
+    password = data.get('password')
+
+    if not username_or_email or not password:
+        return jsonify({'status': 'error', 'message': 'Weka username na nenosiri'}), 400
+
+    user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
+
+    if user and user.check_password(password):
+        login_user(user)
+        return jsonify({'status': 'success', 'message': 'Umefanikiwa kuingia', 'username': user.username})
+    
+    return jsonify({'status': 'error', 'message': 'Username au nenosiri si sahihi'}), 401
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not username or not email or not password:
+        return jsonify({'status': 'error', 'message': 'Tafadhali jaza taarifa zote'}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({'status': 'error', 'message': 'Username hii tayari inatumika'}), 400
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({'status': 'error', 'message': 'Email hii tayari imesajiliwa'}), 400
+
+    new_user = User(username=username, email=email)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+
+    # Tengeneza shamba la kwanza la majaribio moja kwa moja
+    default_farm = Farm(name="Shamba Langu", location="Tanga", user_id=new_user.id)
+    db.session.add(default_farm)
+    db.session.commit()
+
+    # Tengeneza stesheni na API key ya kiotomatiki
+    import uuid
+    api_key = secrets.token_hex(16)
+    default_station = Station(station_code=f"STN-{new_user.id}", api_key=api_key, farm_id=default_farm.id)
+    db.session.add(default_station)
+    db.session.commit()
+
+    login_user(new_user)
+    return jsonify({'status': 'success', 'message': 'Akaunti imetengenezwa kikamilifu', 'username': username})
+
+@app.route('/api/logout', methods=['POST'])
+@login_required
+def api_logout():
+    logout_user()
+    return jsonify({'status': 'success', 'message': 'Umetoka kwenye mfumo'})
+
+# ==================== FARM & WEATHER API ROUTES ====================
+
+@app.route('/api/farms', methods=['GET'])
+@login_required
+def get_farms():
+    farms = Farm.query.filter_by(user_id=current_user.id).all()
+    farms_list = [{'id': f.id, 'name': f.name, 'location': f.location} for f in farms]
+    return jsonify({'farms': farms_list})
+
+@app.route('/api/farms/add', methods=['POST'])
+@login_required
+def add_farm():
+    data = request.get_json(silent=True) or {}
+    name = data.get('name')
+    location = data.get('location', 'Tanga')
+
+    if not name:
+        return jsonify({'status': 'error', 'message': 'Jina la shamba linahitajika'}), 400
+
+    farm = Farm(name=name, location=location, user_id=current_user.id)
+    db.session.add(farm)
+    db.session.commit()
+
+    # Tengeneza kituo chake cha sensor moja kwa moja
+    api_key = secrets.token_hex(16)
+    station = Station(station_code=f"STN-{farm.id}-{secrets.token_hex(2)}", api_key=api_key, farm_id=farm.id)
+    db.session.add(station)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Shamba limeongezwa'})
+
+@app.route('/api/farms/edit', methods=['POST'])
+@login_required
+def edit_farm():
+    data = request.get_json(silent=True) or {}
+    farm_id = data.get('farm_id')
+    name = data.get('name')
+    location = data.get('location')
+
+    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
+    if not farm:
+        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
+
+    if name: farm.name = name
+    if location: farm.location = location
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Mabadiliko yamehifadhiwa'})
+
+@app.route('/api/farms/delete', methods=['POST'])
+@login_required
+def delete_farm():
+    data = request.get_json(silent=True) or {}
+    farm_id = data.get('farm_id')
+
+    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
+    if not farm:
+        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
+
+    db.session.delete(farm)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Shamba limefutwa'})
+
 @app.route('/api/get-data', methods=['GET'])
 @login_required
 def get_data():
     farm_id = request.args.get('farm_id', type=int)
-    lang = request.args.get('lang', 'sw')  # 'sw' or 'en'
+    lang = request.args.get('lang', 'sw')
     
     farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
     if not farm:
@@ -276,7 +406,6 @@ def get_data():
             'advisories': [t('no_data', lang)]
         })
 
-    # Rain sensor classification
     if latest_log.rain > 5.0:
         rain_status = t('rain_heavy', lang)
     elif latest_log.rain > 0.0:
@@ -303,7 +432,7 @@ def get_data():
 @login_required
 def get_forecast():
     farm_id = request.args.get('farm_id', type=int)
-    lang = request.args.get('lang', 'sw')  # 'sw' or 'en'
+    lang = request.args.get('lang', 'sw')
     
     farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
     if not farm:
@@ -334,7 +463,7 @@ def update_weather():
     try:
         temp = float(data.get('temperature'))
         hum = float(data.get('humidity'))
-        rain = float(data.get('rain', 0.0)) # Receives rain sensor data
+        rain = float(data.get('rain', 0.0))
         wind = float(data.get('wind_speed', 0.0))
     except (ValueError, TypeError):
         return jsonify({'status': 'error', 'message': 'Invalid sensor data format'}), 400
