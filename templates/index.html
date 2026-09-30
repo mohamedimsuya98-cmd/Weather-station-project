@@ -1,4002 +1,493 @@
 <!DOCTYPE html>
-<html lang="sw" id="htmlRoot">
+<html lang="sw" id="htmlRoot" class="light">
 <head>
-    <!-- PWA Manifest & Theme -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Farm Weather Station</title>
+  
+  <!-- PWA Manifest -->
   <link rel="manifest" href="/static/manifest.json">
-  <meta name="theme-color" content="#12372A">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="/static/icon-192.png">
-
+  <meta name="theme-color" content="#059669">
+  
+  <!-- Tailwind CSS & Chart.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => { console.log('Service Worker registered!', reg); })
-          .catch((err) => { console.log('Service Worker registration failed: ', err); });
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            emerald: { 50: '#ecfdf5', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-200">
+
+  <!-- HEADER / NAVIGATION -->
+  <header class="bg-emerald-700 dark:bg-slate-800 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      
+      <!-- LOGO / BRANDING -->
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌱</span>
+        <h1 class="font-bold text-lg md:text-xl tracking-tight">SmartFarm</h1>
+      </div>
+
+      <!-- MIDDLE: FARM SELECTOR & ADD BUTTON (Appears when logged in) -->
+      <div id="farmSelectorContainer" class="hidden flex items-center gap-2">
+        <select id="farmSelect" onchange="onFarmChange()" class="bg-emerald-800 dark:bg-slate-700 text-white text-xs md:text-sm rounded-lg px-2 py-1.5 outline-none border border-emerald-600 dark:border-slate-600 font-medium cursor-pointer">
+          <!-- Options populated via JS -->
+        </select>
+        
+        <button onclick="toggleModal('addFarmModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1 transition-all" title="Ongeza Shamba">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <span class="hidden sm:inline" data-sw="Ongeza" data-en="Add">Ongeza</span>
+        </button>
+      </div>
+
+      <!-- RIGHT: CONTROLS & AUTH -->
+      <div class="flex items-center gap-2">
+        <!-- Language Switcher -->
+        <button onclick="toggleLanguage()" class="px-2 py-1 rounded bg-emerald-800 dark:bg-slate-700 text-xs font-bold hover:bg-emerald-600 transition-all">
+          <span id="langBtnText">EN</span>
+        </button>
+
+        <!-- Dark Mode Switcher -->
+        <button onclick="toggleDarkMode()" class="p-1.5 rounded-lg bg-emerald-800 dark:bg-slate-700 hover:bg-emerald-600 transition-all text-xs">
+          🌙
+        </button>
+
+        <!-- Auth Button -->
+        <button id="authBtn" onclick="toggleModal('authModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all">
+          Login
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- NOT LOGGED IN BANNER -->
+    <div id="loggedOutBanner" class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-6 rounded-2xl text-center mb-6">
+      <h2 class="text-xl font-bold text-amber-800 dark:text-amber-200 mb-2" data-sw="Karibu Kwenye Mfumo wa Smart Farm" data-en="Welcome to Smart Farm System">Karibu Kwenye Mfumo wa Smart Farm</h2>
+      <p class="text-sm text-amber-700 dark:text-amber-300 mb-4" data-sw="Tafadhali ingia au jisajili ili kuangalia na kusimamia mashamba yako." data-en="Please login or register to view and manage your farms.">Tafadhali ingia au jisajili ili kuangalia na kusimamia mashamba yako.</p>
+      <button onclick="toggleModal('authModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded-xl transition-all shadow-md" data-sw="Ingia / Jisajili" data-en="Login / Register">Ingia / Jisajili</button>
+    </div>
+
+    <!-- DASHBOARD CONTENT (Visible when logged in) -->
+    <div id="dashboardContent" class="hidden space-y-6">
+
+      <!-- STATUS BAR -->
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400" data-sw="Hali ya Sensor" data-en="Sensor Status">Hali ya Sensor</span>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span id="statusIndicator" class="w-3 h-3 rounded-full bg-gray-400"></span>
+            <span id="statusText" class="font-bold text-sm">Checking...</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400" data-sw="Mara ya Mwisho" data-en="Last Updated">Mara ya Mwisho</span>
+          <p id="lastUpdatedText" class="text-sm font-semibold text-slate-600 dark:text-slate-300">--</p>
+        </div>
+
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400" data-sw="API Key ya Station" data-en="Station API Key">API Key ya Station</span>
+          <p id="apiKeyDisplay" class="text-xs font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">--</p>
+        </div>
+      </div>
+
+      <!-- METRIC CARDS GRID -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Temperature Card -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Joto" data-en="Temperature">Joto</span>
+            <span class="text-xl">🌡️</span>
+          </div>
+          <p id="tempVal" class="text-2xl md:text-3xl font-extrabold text-amber-500">--°C</p>
+        </div>
+
+        <!-- Humidity Card -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Unyevu" data-en="Humidity">Unyevu</span>
+            <span class="text-xl">💧</span>
+          </div>
+          <p id="humidityVal" class="text-2xl md:text-3xl font-extrabold text-blue-500">--%</p>
+        </div>
+
+        <!-- Rain Card -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Mvua" data-en="Rainfall">Mvua</span>
+            <span class="text-xl">🌧️️</span>
+          </div>
+          <p id="rainVal" class="text-2xl md:text-3xl font-extrabold text-indigo-500">-- mm</p>
+        </div>
+
+        <!-- Wind Speed Card -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Upepo" data-en="Wind Speed">Upepo</span>
+            <span class="text-xl">💨</span>
+          </div>
+          <p id="windVal" class="text-2xl md:text-3xl font-extrabold text-teal-500">-- km/h</p>
+        </div>
+      </div>
+
+      <!-- GRAPH & STATS SECTION -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart Canvas (2 Cols) -->
+        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h3 class="font-bold text-lg mb-4" data-sw="Mwenendo wa Hali ya Hewa" data-en="Weather Trends">Mwenendo wa Hali ya Hewa</h3>
+          <div class="relative h-64 md:h-80">
+            <canvas id="weatherChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Stats Summary (1 Col) -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+          <h3 class="font-bold text-lg border-b dark:border-slate-700 pb-2" data-sw="Takwimu za Jumla" data-en="Summary Statistics">Takwimu za Jumla</h3>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-slate-500" data-sw="Wastani wa Joto:" data-en="Avg Temperature:">Wastani wa Joto:</span>
+            <span id="statAvgTemp" class="font-bold">--°C</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-slate-500" data-sw="Joto la Juu Zaidi:" data-en="Max Temperature:">Joto la Juu Zaidi:</span>
+            <span id="statMaxTemp" class="font-bold text-red-500">--°C</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-slate-500" data-sw="Joto la Chini Zaidi:" data-en="Min Temperature:">Joto la Chini Zaidi:</span>
+            <span id="statMinTemp" class="font-bold text-blue-500">--°C</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-slate-500" data-sw="Wastani wa Unyevu:" data-en="Avg Humidity:">Wastani wa Unyevu:</span>
+            <span id="statAvgHum" class="font-bold">--%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. AUTHENTICATION MODAL -->
+  <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-md relative border border-slate-200 dark:border-slate-700">
+      <button onclick="toggleModal('authModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl">&times;</button>
+      
+      <!-- Tab Buttons -->
+      <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+        <button id="loginTab" onclick="switchAuthTab('login')" class="w-1/2 py-2 font-bold text-emerald-600 border-b-2 border-emerald-600" data-sw="Ingia" data-en="Login">Ingia</button>
+        <button id="registerTab" onclick="switchAuthTab('register')" class="w-1/2 py-2 font-bold text-gray-400" data-sw="Jisajili" data-en="Register">Jisajili</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Jina la Mtumiaji" data-en="Username">Jina la Mtumiaji</label>
+          <input type="text" id="loginUsername" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Nenosiri" data-en="Password">Nenosiri</label>
+          <input type="password" id="loginPassword" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md" data-sw="Ingia Mfomoni" data-en="Sign In">Ingia Mfomoni</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+        <div>
+          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Jina la Mtumiaji" data-en="Username">Jina la Mtumiaji</label>
+          <input type="text" id="regUsername" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Barua Pepe" data-en="Email Address">Barua Pepe</label>
+          <input type="email" id="regEmail" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Nenosiri" data-en="Password">Nenosiri</label>
+          <input type="password" id="regPassword" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md" data-sw="Tengeneza Akaunti" data-en="Create Account">Tengeneza Akaunti</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. ADD FARM MODAL -->
+  <div id="addFarmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-md relative border border-slate-200 dark:border-slate-700">
+      <button onclick="toggleModal('addFarmModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl">&times;</button>
+      
+      <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+        🌱 <span data-sw="Ongeza Shamba Jipya" data-en="Add New Farm">Ongeza Shamba Jipya</span>
+      </h3>
+
+      <form id="addFarmForm" onsubmit="handleAddFarm(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Jina la Shamba *" data-en="Farm Name *">Jina la Shamba *</label>
+          <input type="text" id="farmName" placeholder="Mfano: Shamba la Mahindi" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Eneo / Mahali" data-en="Location">Eneo / Mahali</label>
+          <input type="text" id="farmLocation" placeholder="Mfano: Kilosa, Morogoro" class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
+        </div>
+        
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal('addFarmModal')" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700" data-sw="Ghairi" data-en="Cancel">Ghairi</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-md" data-sw="Hifadhi Shamba" data-en="Save Farm">Hifadhi Shamba</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let currentFarmId = null;
+    let weatherChart = null;
+    let currentLang = 'sw';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkUserStatus();
+      initChart();
+    });
+
+    // --- AUTHENTICATION LOGIC ---
+    async function checkUserStatus() {
+      try {
+        const res = await fetch('/api/user-status');
+        const data = await res.json();
+        
+        const authBtn = document.getElementById('authBtn');
+        const farmContainer = document.getElementById('farmSelectorContainer');
+        const loggedOutBanner = document.getElementById('loggedOutBanner');
+        const dashboardContent = document.getElementById('dashboardContent');
+
+        if (data.logged_in) {
+          authBtn.innerText = `Logout (${data.username})`;
+          authBtn.onclick = handleLogout;
+          farmContainer.classList.remove('hidden');
+          loggedOutBanner.classList.add('hidden');
+          dashboardContent.classList.remove('hidden');
+          await loadFarms();
+        } else {
+          authBtn.innerText = 'Login';
+          authBtn.onclick = () => toggleModal('authModal');
+          farmContainer.classList.add('hidden');
+          loggedOutBanner.classList.remove('hidden');
+          dashboardContent.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error("Status check failed:", err);
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          username: document.getElementById('loginUsername').value,
+          password: document.getElementById('loginPassword').value
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        toggleModal('authModal');
+        checkUserStatus();
+      } else {
+        alert(data.message);
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          username: document.getElementById('regUsername').value,
+          email: document.getElementById('regEmail').value,
+          password: document.getElementById('regPassword').value
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        alert(data.message);
+        toggleModal('authModal');
+        checkUserStatus();
+      } else {
+        alert(data.message);
+      }
+    }
+
+    async function handleLogout() {
+      await fetch('/api/logout', {method: 'POST'});
+      checkUserStatus();
+    }
+
+    // --- FARM MANAGEMENT LOGIC ---
+    async function loadFarms(selectedFarmId = null) {
+      try {
+        const res = await fetch('/api/farms');
+        const data = await res.json();
+        
+        if (data.status === 'success' && data.farms.length > 0) {
+          const select = document.getElementById('farmSelect');
+          select.innerHTML = data.farms.map(f => `<option value="${f.id}">${f.name} (${f.location})</option>`).join('');
+          
+          if (selectedFarmId) {
+            select.value = selectedFarmId;
+          }
+          currentFarmId = select.value;
+          fetchDashboardData();
+        }
+      } catch (err) {
+        console.error("Failed to load farms:", err);
+      }
+    }
+
+    function onFarmChange() {
+      currentFarmId = document.getElementById('farmSelect').value;
+      fetchDashboardData();
+    }
+
+    async function handleAddFarm(e) {
+      e.preventDefault();
+      const name = document.getElementById('farmName').value;
+      const location = document.getElementById('farmLocation').value;
+
+      const res = await fetch('/api/farms/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: name, location: location })
+      });
+
+      const data = await res.json();
+      if (data.status === 'success') {
+        alert(data.message);
+        toggleModal('addFarmModal');
+        await loadFarms(data.farm.id);
+      } else {
+        alert(data.message);
+      }
+    }
+
+    // --- DASHBOARD DATA FETCHING ---
+    async function fetchDashboardData() {
+      if (!currentFarmId) return;
+
+      // 1. Fetch Latest Data
+      const resData = await fetch(`/api/get-data?farm_id=${currentFarmId}`);
+      const data = await resData.json();
+
+      if (data.status === 'success') {
+        document.getElementById('tempVal').innerText = `${data.temperature}°C`;
+        document.getElementById('humidityVal').innerText = `${data.humidity}%`;
+        document.getElementById('rainVal').innerText = `${data.rain} mm`;
+        document.getElementById('windVal').innerText = `${data.wind_speed} km/h`;
+        document.getElementById('lastUpdatedText').innerText = data.last_updated;
+        document.getElementById('apiKeyDisplay').innerText = data.api_key || 'N/A';
+
+        const statusDot = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        if (data.is_online) {
+          statusDot.className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
+          statusText.innerText = "Online";
+          statusText.className = "font-bold text-sm text-emerald-600";
+        } else {
+          statusDot.className = "w-3 h-3 rounded-full bg-rose-500";
+          statusText.innerText = "Offline";
+          statusText.className = "font-bold text-sm text-rose-600";
+        }
+      }
+
+      // 2. Fetch Stats
+      const resStats = await fetch(`/api/get-stats?farm_id=${currentFarmId}`);
+      const statsData = await resStats.json();
+      if (statsData.status === 'success' && statsData.stats) {
+        document.getElementById('statAvgTemp').innerText = `${statsData.stats.avg_temp}°C`;
+        document.getElementById('statMaxTemp').innerText = `${statsData.stats.max_temp}°C`;
+        document.getElementById('statMinTemp').innerText = `${statsData.stats.min_temp}°C`;
+        document.getElementById('statAvgHum').innerText = `${statsData.stats.avg_hum}%`;
+      }
+
+      // 3. Fetch Logs for Graph
+      const resLogs = await fetch(`/api/get-logs?farm_id=${currentFarmId}`);
+      const logsData = await resLogs.json();
+      if (logsData.status === 'success' && logsData.logs) {
+        updateChart(logsData.logs);
+      }
+    }
+
+    // --- CHART LOGIC ---
+    function initChart() {
+      const ctx = document.getElementById('weatherChart').getContext('2d');
+      weatherChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Joto (°C)', data: [], borderColor: '#f59e0b', tension: 0.3, fill: false },
+            { label: 'Unyevu (%)', data: [], borderColor: '#3b82f6', tension: 0.3, fill: false }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: false } }
+        }
+      });
+    }
+
+    function updateChart(logs) {
+      const reversedLogs = [...logs].reverse();
+      weatherChart.data.labels = reversedLogs.map(l => l.timestamp.split(' ')[1]);
+      weatherChart.data.datasets[0].data = reversedLogs.map(l => l.temperature);
+      weatherChart.data.datasets[1].data = reversedLogs.map(l => l.humidity);
+      weatherChart.update();
+    }
+
+    // --- UI HELPERS & MODALS ---
+    function toggleModal(id) {
+      document.getElementById(id).classList.toggle('hidden');
+    }
+
+    function switchAuthTab(tab) {
+      if (tab === 'login') {
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('loginTab').className = "w-1/2 py-2 font-bold text-emerald-600 border-b-2 border-emerald-600";
+        document.getElementById('registerTab').className = "w-1/2 py-2 font-bold text-gray-400";
+      } else {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.remove('hidden');
+        document.getElementById('registerTab').className = "w-1/2 py-2 font-bold text-emerald-600 border-b-2 border-emerald-600";
+        document.getElementById('loginTab').className = "w-1/2 py-2 font-bold text-gray-400";
+      }
+    }
+
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+    }
+
+    function toggleLanguage() {
+      currentLang = currentLang === 'sw' ? 'en' : 'sw';
+      document.getElementById('langBtnText').innerText = currentLang === 'sw' ? 'EN' : 'SW';
+      document.querySelectorAll('[data-sw]').forEach(el => {
+        el.innerText = el.getAttribute(`data-${currentLang}`);
       });
     }
   </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Smart Farm Weather Station</title>
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
-
-    <!-- Font Awesome -->
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    >
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        :root {
-            --bg: #f4f8f3;
-            --surface: #ffffff;
-            --surface-soft: #eef6ed;
-
-            --green-900: #123524;
-            --green-800: #174d31;
-            --green-700: #1f6b42;
-            --green-600: #278653;
-            --green-500: #35a866;
-            --green-100: #e4f3e8;
-
-            --sky-600: #1684c4;
-            --sky-500: #2ba7e0;
-            --sky-100: #e6f5fc;
-
-            --earth-600: #9a6a3a;
-            --earth-100: #f5eadf;
-
-            --yellow-600: #d69e18;
-            --yellow-100: #fff6d8;
-
-            --red-600: #d64b4b;
-            --red-100: #fde8e8;
-
-            --text: #17251d;
-            --text-muted: #6c7b71;
-
-            --border: #e1e9e2;
-
-            --shadow-sm: 0 2px 8px rgba(22, 55, 36, 0.06);
-            --shadow: 0 8px 25px rgba(22, 55, 36, 0.08);
-            --shadow-lg: 0 18px 45px rgba(22, 55, 36, 0.12);
-
-            --radius-sm: 10px;
-            --radius: 16px;
-            --radius-lg: 24px;
-
-            --sidebar-width: 250px;
-        }
-
-        /* Dark Theme Variables */
-        [data-theme="dark"] {
-            --bg: #0d1511;
-            --surface: #14221a;
-            --surface-soft: #1b2e23;
-
-            --text: #ecf3ee;
-            --text-muted: #9aa89e;
-
-            --border: #23382c;
-
-            --green-100: #183323;
-            --green-700: #278653;
-            --green-900: #a9e8bd;
-
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 18px 45px rgba(0, 0, 0, 0.5);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: "Inter", sans-serif;
-            background:
-                radial-gradient(
-                    circle at 85% 0%,
-                    rgba(53, 168, 102, 0.07),
-                    transparent 28%
-                ),
-                var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            transition: background 0.3s ease, color 0.3s ease;
-        }
-
-        button,
-        input,
-        select {
-            font-family: inherit;
-        }
-
-        button {
-            cursor: pointer;
-        }
-
-        /* ================================
-           SIDEBAR
-        ================================= */
-
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background:
-                linear-gradient(
-                    180deg,
-                    var(--green-900),
-                    #16452d 65%,
-                    #123b27
-                );
-            color: white;
-            padding: 22px 16px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 6px 8px 22px;
-        }
-
-        .brand-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 13px;
-            background: rgba(255,255,255,0.12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #a9e8bd;
-            font-size: 20px;
-            border: 1px solid rgba(255,255,255,0.08);
-        }
-
-        .brand-text strong {
-            display: block;
-            font-size: 15px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-        }
-
-        .brand-text span {
-            display: block;
-            margin-top: 3px;
-            color: #b5cdbd;
-            font-size: 11px;
-        }
-
-        .nav-links {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 8px;
-        }
-
-        .nav-link {
-            border: 0;
-            background: transparent;
-            color: #c5d6ca;
-            width: 100%;
-            padding: 12px 13px;
-            border-radius: 11px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-align: left;
-            font-size: 13px;
-            font-weight: 600;
-            transition: 0.2s ease;
-        }
-
-        .nav-link i {
-            width: 20px;
-            text-align: center;
-            font-size: 15px;
-        }
-
-        .nav-link:hover {
-            background: rgba(255,255,255,0.08);
-            color: white;
-        }
-
-        .nav-link.active {
-            background: rgba(95, 202, 133, 0.16);
-            color: #d8f7e1;
-            box-shadow: inset 3px 0 0 #69d58c;
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 13px;
-            border-radius: 13px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .sidebar-footer-title {
-            font-size: 11px;
-            color: #a9c0b0;
-            margin-bottom: 6px;
-        }
-
-        .sidebar-footer-value {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            color: white;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        /* ================================
-           MAIN
-        ================================= */
-
-        .main-content {
-            margin-left: var(--sidebar-width);
-            min-height: 100vh;
-            padding: 22px;
-        }
-
-        .page-container {
-            max-width: 1450px;
-            margin: 0 auto;
-        }
-
-        /* ================================
-           HEADER
-        ================================= */
-
-        .top-header {
-            min-height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 18px;
-            margin-bottom: 20px;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 0;
-        }
-
-        .location-icon {
-            width: 42px;
-            height: 42px;
-            flex: 0 0 42px;
-            border-radius: 13px;
-            background: var(--green-100);
-            color: var(--green-700);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .location-info {
-            min-width: 0;
-        }
-
-        .location-label {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: var(--text-muted);
-            font-weight: 700;
-        }
-
-        .location-value {
-            font-size: 14px;
-            font-weight: 800;
-            margin-top: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .connection-pill {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 12px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #9ca3a6;
-            flex-shrink: 0;
-        }
-
-        .status-dot.online {
-            background: #27ae60;
-            box-shadow: 0 0 0 4px rgba(39,174,96,0.10);
-        }
-
-        .status-dot.offline {
-            background: var(--red-600);
-        }
-
-        .status-dot.waiting {
-            background: #9ca3a6;
-        }
-
-        .datetime {
-            padding: 9px 12px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            font-size: 11px;
-            color: var(--text-muted);
-            box-shadow: var(--shadow-sm);
-            white-space: nowrap;
-        }
-
-        .language-switch {
-            display: flex;
-            align-items: center;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 4px;
-            border-radius: 999px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .language-btn {
-            border: 0;
-            background: transparent;
-            color: var(--text-muted);
-            font-size: 10px;
-            font-weight: 800;
-            padding: 7px 10px;
-            border-radius: 999px;
-        }
-
-        .language-btn.active {
-            background: var(--green-700);
-            color: white;
-        }
-
-        /* Theme Toggle Button Style */
-        .theme-toggle-btn {
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text-muted);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            box-shadow: var(--shadow-sm);
-            transition: 0.2s ease;
-        }
-
-        .theme-toggle-btn:hover {
-            color: var(--green-700);
-            border-color: var(--green-700);
-        }
-
-        /* ================================
-           TABS
-        ================================= */
-
-        .tab-content {
-            display: none;
-            animation: fadeUp 0.25s ease;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* ================================
-           HERO
-        ================================= */
-
-        .hero {
-            position: relative;
-            overflow: hidden;
-            min-height: 275px;
-            border-radius: var(--radius-lg);
-            background:
-                linear-gradient(
-                    135deg,
-                    #e9f7eb 0%,
-                    #f7fbf4 55%,
-                    #e7f5fb 100%
-                );
-            border: 1px solid #d9e9dc;
-            box-shadow: var(--shadow);
-            display: grid;
-            grid-template-columns: 1.35fr 0.65fr;
-            margin-bottom: 25px;
-        }
-
-        [data-theme="dark"] .hero {
-            background: linear-gradient(135deg, #13271d 0%, #111e17 55%, #10232c 100%);
-            border-color: #213c2f;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 3;
-            padding: 34px 35px;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 7px 11px;
-            background: rgba(255,255,255,0.82);
-            color: var(--green-700);
-            border: 1px solid #d5e8d9;
-            border-radius: 999px;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        [data-theme="dark"] .hero-badge {
-            background: rgba(20, 34, 26, 0.82);
-            border-color: #264634;
-        }
-
-        .hero-title {
-            font-size: clamp(27px, 3vw, 42px);
-            line-height: 1.08;
-            letter-spacing: -1.5px;
-            margin: 18px 0 12px;
-            max-width: 650px;
-            color: var(--green-900);
-        }
-
-        .hero-description {
-            max-width: 650px;
-            color: #607367;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        [data-theme="dark"] .hero-description {
-            color: #9cb0a3;
-        }
-
-        .hero-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 20px;
-        }
-
-        .hero-meta-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 8px 10px;
-            background: rgba(255,255,255,0.75);
-            border: 1px solid rgba(214,231,217,0.9);
-            border-radius: 10px;
-            color: #4e6255;
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        [data-theme="dark"] .hero-meta-item {
-            background: rgba(20, 34, 26, 0.75);
-            border-color: #233e2f;
-            color: #a4bba9;
-        }
-
-        .hero-meta-item i {
-            color: var(--green-600);
-        }
-
-        .hero-visual {
-            position: relative;
-            min-height: 275px;
-            overflow: hidden;
-        }
-
-        .sun {
-            position: absolute;
-            width: 76px;
-            height: 76px;
-            border-radius: 50%;
-            background: #ffd66b;
-            top: 34px;
-            right: 65px;
-            box-shadow: 0 0 35px rgba(255,214,107,0.45);
-        }
-
-        .cloud {
-            position: absolute;
-            color: white;
-            font-size: 55px;
-            filter: drop-shadow(0 7px 8px rgba(54,85,69,0.08));
-        }
-
-        .cloud-one {
-            top: 50px;
-            right: 160px;
-        }
-
-        .cloud-two {
-            top: 115px;
-            right: 40px;
-            font-size: 43px;
-            opacity: 0.9;
-        }
-
-        .field {
-            position: absolute;
-            left: -5%;
-            bottom: -35px;
-            width: 115%;
-            height: 135px;
-            background:
-                repeating-linear-gradient(
-                    174deg,
-                    #7fb86e 0px,
-                    #7fb86e 9px,
-                    #6da35f 10px,
-                    #6da35f 18px
-                );
-            border-radius: 50% 50% 0 0;
-            transform: rotate(-2deg);
-            box-shadow: 0 -12px 25px rgba(68,111,60,0.12);
-        }
-
-        .field::after {
-            content: "";
-            position: absolute;
-            inset: 25px 0 0;
-            background:
-                repeating-linear-gradient(
-                    175deg,
-                    transparent 0px,
-                    transparent 24px,
-                    rgba(238,221,172,0.45) 25px,
-                    rgba(238,221,172,0.45) 29px
-                );
-        }
-
-        .plant {
-            position: absolute;
-            bottom: 72px;
-            left: 55px;
-            color: #3f8b49;
-            font-size: 53px;
-            z-index: 2;
-        }
-
-        /* ================================
-           SECTION HEADERS
-        ================================= */
-
-        .section-heading {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 15px;
-            margin: 26px 2px 14px;
-        }
-
-        .section-heading h2 {
-            font-size: 17px;
-            font-weight: 800;
-            letter-spacing: -0.4px;
-        }
-
-        .section-heading p {
-            margin-top: 4px;
-            color: var(--text-muted);
-            font-size: 11px;
-        }
-
-        .section-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            color: var(--text-muted);
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        /* ================================
-           SENSOR CARDS
-        ================================= */
-
-        .sensor-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-        }
-
-        .sensor-card {
-            position: relative;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 18px;
-            min-height: 155px;
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            transition:
-                transform 0.2s ease,
-                box-shadow 0.2s ease,
-                border-color 0.2s ease;
-        }
-
-        .sensor-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow);
-            border-color: #d2dfd5;
-        }
-
-        [data-theme="dark"] .sensor-card:hover {
-            border-color: #2c4d3a;
-        }
-
-        .sensor-card::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--accent, var(--green-600));
-        }
-
-        .sensor-top {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .sensor-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            background: var(--icon-bg, var(--green-100));
-            color: var(--accent, var(--green-600));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 17px;
-        }
-
-        .sensor-live {
-            display: none; /* Itaonekana tu kama kifaa kipo Online */
-            align-items: center;
-            gap: 5px;
-            color: #27ae60;
-            font-size: 9px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .sensor-card.connected .sensor-live {
-            display: inline-flex;
-        }
-
-        .sensor-live-dot {
-            width: 5px;
-            height: 5px;
-            background: #2fb765;
-            border-radius: 50%;
-        }
-
-        .sensor-label {
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 700;
-            margin-top: 13px;
-        }
-
-        .sensor-value {
-            font-size: 27px;
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-top: 4px;
-            color: var(--text);
-        }
-
-        .sensor-unit {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 600;
-            margin-left: 2px;
-        }
-
-        .sensor-state {
-            display: inline-flex;
-            margin-top: 9px;
-            padding: 5px 8px;
-            border-radius: 7px;
-            background: var(--surface-soft);
-            color: var(--text-muted);
-            font-size: 9px;
-            font-weight: 800;
-        }
-
-        /* Individual accents */
-
-        .temperature {
-            --accent: #e27b35;
-            --icon-bg: #fff0e5;
-        }
-        [data-theme="dark"] .temperature {
-            --icon-bg: #2d2019;
-        }
-
-        .humidity {
-            --accent: #258dcb;
-            --icon-bg: #e7f5fc;
-        }
-        [data-theme="dark"] .humidity {
-            --icon-bg: #152733;
-        }
-
-        .rainfall {
-            --accent: #478bb9;
-            --icon-bg: #eaf4fa;
-        }
-        [data-theme="dark"] .rainfall {
-            --icon-bg: #1a2a35;
-        }
-
-        .rain-status {
-            --accent: #4d9b57;
-            --icon-bg: #e9f5ea;
-        }
-        [data-theme="dark"] .rain-status {
-            --icon-bg: #192d20;
-        }
-
-        .wind-speed {
-            --accent: #765fb5;
-            --icon-bg: #f0ebfa;
-        }
-        [data-theme="dark"] .wind-speed {
-            --icon-bg: #262038;
-        }
-
-        .wind-direction {
-            --accent: #a87938;
-            --icon-bg: #f8efe3;
-        }
-        [data-theme="dark"] .wind-direction {
-            --icon-bg: #322518;
-        }
-
-        /* ================================
-           STAT CARDS
-        ================================= */
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-        }
-
-        .stat-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .stat-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 11px;
-            background: var(--green-100);
-            color: var(--green-700);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 14px;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 700;
-        }
-
-        .stat-value {
-            margin-top: 5px;
-            font-size: 24px;
-            font-weight: 800;
-        }
-
-        .stat-sub {
-            margin-top: 5px;
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-
-        /* ================================
-           CHART
-        ================================= */
-
-        .chart-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .chart-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .chart-title {
-            font-size: 15px;
-            font-weight: 800;
-        }
-
-        .chart-subtitle {
-            color: var(--text-muted);
-            font-size: 10px;
-            margin-top: 3px;
-        }
-
-        .chart-legend {
-            display: flex;
-            gap: 12px;
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .chart-wrapper {
-            height: 340px;
-            position: relative;
-        }
-
-        /* ================================
-           HISTORY TABLE
-        ================================= */
-
-        .table-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 760px;
-        }
-
-        th {
-            background: var(--surface-soft);
-            color: var(--text-muted);
-            text-align: left;
-            padding: 13px 15px;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 800;
-            border-bottom: 1px solid var(--border);
-        }
-
-        td {
-            padding: 14px 15px;
-            font-size: 11px;
-            border-bottom: 1px solid var(--border);
-            color: var(--text);
-        }
-
-        tbody tr:last-child td {
-            border-bottom: 0;
-        }
-
-        tbody tr:hover {
-            background: var(--surface-soft);
-        }
-
-        .table-status {
-            display: inline-flex;
-            padding: 5px 8px;
-            border-radius: 7px;
-            font-size: 9px;
-            font-weight: 800;
-        }
-
-        .status-rain {
-            color: #2374a3;
-            background: #e8f5fc;
-        }
-        [data-theme="dark"] .status-rain {
-            color: #56b3e9;
-            background: #142834;
-        }
-
-        .status-dry {
-            color: #5c7562;
-            background: #eef4ef;
-        }
-        [data-theme="dark"] .status-dry {
-            color: #9cb8a5;
-            background: #19261d;
-        }
-
-        /* ================================
-           STATION INFO
-        ================================= */
-
-        .station-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 16px;
-        }
-
-        .info-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 22px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .info-card-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .info-card-header-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            background: var(--green-100);
-            color: var(--green-700);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .info-card-header h3 {
-            font-size: 14px;
-            font-weight: 800;
-        }
-
-        .info-card-header p {
-            color: var(--text-muted);
-            font-size: 10px;
-            margin-top: 3px;
-        }
-
-        .info-list {
-            display: grid;
-            gap: 10px;
-        }
-
-        .info-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            padding: 11px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .info-row:last-child {
-            border-bottom: 0;
-        }
-
-        .info-row-label {
-            color: var(--text-muted);
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        .info-row-value {
-            text-align: right;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .device-state {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 9px;
-            border-radius: 8px;
-            font-size: 9px;
-            font-weight: 800;
-        }
-
-        .device-state.waiting {
-            color: var(--text-muted);
-            background: var(--surface-soft);
-        }
-
-        .device-state.online {
-            color: #247c46;
-            background: #e6f6eb;
-        }
-        [data-theme="dark"] .device-state.online {
-            color: #4cd67e;
-            background: #132f1f;
-        }
-
-        .device-state.offline {
-            color: #b23d3d;
-            background: #fdeaea;
-        }
-        [data-theme="dark"] .device-state.offline {
-            color: #ff6b6b;
-            background: #361919;
-        }
-
-        /* ================================
-           EMPTY / WAITING
-        ================================= */
-
-        .empty-state {
-            padding: 35px 20px;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        .empty-state i {
-            font-size: 25px;
-            margin-bottom: 10px;
-            color: var(--text-muted);
-        }
-
-        .empty-state p {
-            font-size: 11px;
-        }
-
-        /* ================================
-           FOOTER
-        ================================= */
-
-        .footer {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 9px;
-            padding: 25px 5px 10px;
-        }
-
-        /* ================================
-           RESPONSIVE
-        ================================= */
-
-        @media (max-width: 1100px) {
-            :root {
-                --sidebar-width: 220px;
-            }
-
-            .sensor-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .hero {
-                grid-template-columns: 1fr;
-            }
-
-            .hero-visual {
-                display: none;
-            }
-
-            .station-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 850px) {
-            .sidebar {
-                position: fixed;
-                width: 100%;
-                height: auto;
-                min-height: auto;
-                bottom: 0;
-                top: auto;
-                left: 0;
-                padding: 7px 8px;
-                border-top: 1px solid rgba(255,255,255,0.08);
-                border-right: 0;
-            }
-
-            .brand,
-            .sidebar-footer {
-                display: none;
-            }
-
-            .nav-links {
-                flex-direction: row;
-                justify-content: space-around;
-                gap: 2px;
-                margin: 0;
-            }
-
-            .nav-link {
-                flex-direction: column;
-                justify-content: center;
-                gap: 3px;
-                padding: 7px 4px;
-                text-align: center;
-                border-radius: 9px;
-                font-size: 8px;
-            }
-
-            .nav-link i {
-                width: auto;
-                font-size: 15px;
-            }
-
-            .nav-link.active {
-                box-shadow: none;
-                background: rgba(95,202,133,0.16);
-            }
-
-            .main-content {
-                margin-left: 0;
-                padding: 15px 13px 80px;
-            }
-
-            .top-header {
-                align-items: flex-start;
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-
-            .header-right {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .connection-pill {
-                flex: 1;
-                justify-content: center;
-            }
-
-            .datetime {
-                display: none;
-            }
-        }
-
-        @media (max-width: 520px) {
-            .hero {
-                min-height: auto;
-            }
-
-            .hero-content {
-                padding: 25px 21px;
-            }
-
-            .hero-title {
-                font-size: 27px;
-            }
-
-            .hero-description {
-                font-size: 11px;
-                line-height: 1.65;
-            }
-
-            .sensor-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 9px;
-            }
-
-            .sensor-card {
-                padding: 14px 12px;
-                min-height: 145px;
-                border-radius: 13px;
-            }
-
-            .sensor-icon {
-                width: 35px;
-                height: 35px;
-                border-radius: 10px;
-                font-size: 14px;
-            }
-
-            .sensor-label {
-                font-size: 9px;
-                margin-top: 10px;
-            }
-
-            .sensor-value {
-                font-size: 20px;
-            }
-
-            .sensor-unit {
-                font-size: 10px;
-            }
-
-            .sensor-live {
-                font-size: 7px;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .section-heading {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 7px;
-            }
-
-            .chart-wrapper {
-                height: 280px;
-            }
-
-            .chart-header {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .chart-legend {
-                align-self: flex-start;
-            }
-
-            .hero-meta {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-<!-- ================================
-     SIDEBAR
-================================= -->
-
-<aside class="sidebar">
-
-    <div class="brand">
-        <div class="brand-icon">
-            <i class="fa-solid fa-seedling"></i>
-        </div>
-
-        <div class="brand-text">
-            <strong>Smart Farm</strong>
-            <span>Weather Station</span>
-        </div>
-    </div>
-
-    <nav class="nav-links">
-
-        <button
-            class="nav-link active"
-            onclick="switchTab('home', this)"
-        >
-            <i class="fa-solid fa-house"></i>
-            <span data-sw="Muhtasari" data-en="Overview">Muhtasari</span>
-        </button>
-
-        <button
-            class="nav-link"
-            onclick="switchTab('statistics', this)"
-        >
-            <i class="fa-solid fa-chart-column"></i>
-            <span data-sw="Takwimu" data-en="Statistics">Takwimu</span>
-        </button>
-
-        <button
-            class="nav-link"
-            onclick="switchTab('history', this)"
-        >
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <span data-sw="Historia" data-en="History">Historia</span>
-        </button>
-
-        <button
-            class="nav-link"
-            onclick="switchTab('graph', this)"
-        >
-            <i class="fa-solid fa-chart-line"></i>
-            <span data-sw="Grafu" data-en="Graph">Grafu</span>
-        </button>
-
-        <button
-            class="nav-link"
-            onclick="switchTab('station', this)"
-        >
-            <i class="fa-solid fa-microchip"></i>
-            <span data-sw="Kituo" data-en="Station">Kituo</span>
-        </button>
-
-    </nav>
-
-    <div class="sidebar-footer">
-        <div class="sidebar-footer-title">
-            <span data-sw="Mfumo" data-en="System">Mfumo</span>
-        </div>
-
-        <div class="sidebar-footer-value">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>Smart Farm IoT</span>
-        </div>
-    </div>
-
-</aside>
-
-
-<!-- ================================
-     MAIN CONTENT
-================================= -->
-
-<main class="main-content">
-
-    <div class="page-container">
-
-        <!-- HEADER -->
-
-        <header class="top-header">
-
-            <div class="header-left">
-
-                <div class="location-icon">
-                    <i class="fa-solid fa-location-dot"></i>
-                </div>
-
-                <div class="location-info">
-
-                    <div
-                        class="location-label"
-                        data-sw="Eneo la Shamba"
-                        data-en="Farm Location"
-                    >
-                        Eneo la Shamba
-                    </div>
-
-                    <div
-                        class="location-value"
-                        id="locationValue"
-                    >
-                        Shamba Langu, Dar es Salaam
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="header-right">
-
-                <!-- Compact Connection Status -->
-                <div
-                    class="connection-pill"
-                    id="connectionPill"
-                >
-                    <span
-                        class="status-dot waiting"
-                        id="connectionDot"
-                    ></span>
-
-                    <span
-                        id="connectionText"
-                        data-sw="Offline"
-                        data-en="Offline"
-                    >
-                        Offline
-                    </span>
-                </div>
-
-                <div
-                    class="datetime"
-                    id="dateTime"
-                >
-                    --
-                </div>
-
-                <!-- Theme Toggle Button -->
-                <button
-                    class="theme-toggle-btn"
-                    id="themeToggleBtn"
-                    onclick="toggleTheme()"
-                    title="Badili Mwangaza"
-                >
-                    <i class="fa-solid fa-moon" id="themeIcon"></i>
-                </button>
-
-                <div class="language-switch">
-
-                    <button
-                        class="language-btn active"
-                        id="swBtn"
-                        onclick="setLanguage('sw')"
-                    >
-                        SW
-                    </button>
-
-                    <button
-                        class="language-btn"
-                        id="enBtn"
-                        onclick="setLanguage('en')"
-                    >
-                        EN
-                    </button>
-
-                </div>
-
-            </div>
-
-        </header>
-
-
-        <!-- ================================
-             HOME
-        ================================= -->
-
-        <section
-            id="home"
-            class="tab-content active"
-        >
-
-            <!-- HERO -->
-
-            <div class="hero">
-
-                <div class="hero-content">
-
-                    <span class="hero-badge">
-                        <i class="fa-solid fa-seedling"></i>
-
-                        <span
-                            data-sw="Smart Agriculture IoT"
-                            data-en="Smart Agriculture IoT"
-                        >
-                            Smart Agriculture IoT
-                        </span>
-                    </span>
-
-                    <h1
-                        class="hero-title"
-                        data-sw="Fuatilia Hali ya Hewa ya Shamba Lako"
-                        data-en="Monitor Your Farm Weather Conditions"
-                    >
-                        Fuatilia Hali ya Hewa ya Shamba Lako
-                    </h1>
-
-                    <p
-                        class="hero-description"
-                        data-sw="Mfumo maalum wa IoT unaokusanya data za joto, unyevu, mvua na upepo moja kwa moja kutoka shambani kuongeza tija ya uzalishaji."
-                        data-en="Specialized IoT system collecting real-time temperature, humidity, rainfall and wind data directly from the farm to boost productivity."
-                    >
-                        Mfumo maalum wa IoT unaokusanya data za joto, unyevu, mvua na upepo moja kwa moja kutoka shambani kuongeza tija ya uzalishaji.
-                    </p>
-
-                    <div class="hero-meta">
-
-                        <div class="hero-meta-item">
-                            <i class="fa-solid fa-location-dot"></i>
-
-                            <span id="heroLocation">
-                                Shamba Langu, Dar es Salaam
-                            </span>
-                        </div>
-
-                        <div class="hero-meta-item">
-
-                            <i class="fa-solid fa-microchip"></i>
-
-                            <span
-                                data-sw="ESP32 Farm Station"
-                                data-en="ESP32 Farm Station"
-                            >
-                                ESP32 Farm Station
-                            </span>
-
-                        </div>
-
-                        <div class="hero-meta-item">
-
-                            <i class="fa-solid fa-cloud-sun"></i>
-
-                            <span
-                                data-sw="Hali Halisi"
-                                data-en="Real-time Data"
-                            >
-                                Hali Halisi
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Agricultural visual -->
-
-                <div class="hero-visual">
-
-                    <div class="sun"></div>
-
-                    <i class="fa-solid fa-cloud cloud cloud-one"></i>
-
-                    <i class="fa-solid fa-cloud cloud cloud-two"></i>
-
-                    <i class="fa-solid fa-seedling plant"></i>
-
-                    <div class="field"></div>
-
-                </div>
-
-            </div>
-
-
-            <!-- SENSOR SECTION -->
-
-            <div class="section-heading">
-
-                <div>
-
-                    <h2
-                        data-sw="Hali ya Hewa ya Shamba"
-                        data-en="Farm Weather Conditions"
-                    >
-                        Hali ya Hewa ya Shamba
-                    </h2>
-
-                    <p
-                        data-sw="Vipimo vya sasa kutoka kwenye vitambuzi vya shambani"
-                        data-en="Current readings from farm sensors"
-                    >
-                        Vipimo vya sasa kutoka kwenye vitambuzi vya shambani
-                    </p>
-
-                </div>
-
-                <div class="section-status">
-
-                    <span
-                        class="status-dot waiting"
-                        id="sensorStatusDot"
-                    ></span>
-
-                    <span
-                        id="sensorStatusText"
-                        data-sw="Data haipokelewi"
-                        data-en="No data received"
-                    >
-                        Data haipokelewi
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="sensor-grid">
-
-                <!-- Temperature -->
-
-                <div class="sensor-card temperature" id="temperatureCard">
-
-                    <div class="sensor-top">
-
-                        <div class="sensor-icon">
-                            <i class="fa-solid fa-temperature-half"></i>
-                        </div>
-
-                        <div class="sensor-live">
-                            <span class="sensor-live-dot"></span>
-                            LIVE
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="sensor-label"
-                        data-sw="Joto"
-                        data-en="Temperature"
-                    >
-                        Joto
-                    </div>
-
-                    <div
-                        class="sensor-value"
-                        id="temperatureValue"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="sensor-state"
-                        id="temperatureState"
-                        data-sw="Inasubiri data"
-                        data-en="Waiting for data"
-                    >
-                        Inasubiri data
-                    </div>
-
-                </div>
-
-
-                <!-- Humidity -->
-
-                <div class="sensor-card humidity" id="humidityCard">
-
-                    <div class="sensor-top">
-
-                        <div class="sensor-icon">
-                            <i class="fa-solid fa-droplet"></i>
-                        </div>
-
-                        <div class="sensor-live">
-                            <span class="sensor-live-dot"></span>
-                            LIVE
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="sensor-label"
-                        data-sw="Unyevu wa Hewa"
-                        data-en="Air Humidity"
-                    >
-                        Unyevu wa Hewa
-                    </div>
-
-                    <div
-                        class="sensor-value"
-                        id="humidityValue"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="sensor-state"
-                        id="humidityState"
-                        data-sw="Inasubiri data"
-                        data-en="Waiting for data"
-                    >
-                        Inasubiri data
-                    </div>
-
-                </div>
-
-
-                <!-- Rainfall -->
-
-                <div class="sensor-card rainfall" id="rainfallCard">
-
-                    <div class="sensor-top">
-
-                        <div class="sensor-icon">
-                            <i class="fa-solid fa-cloud-rain"></i>
-                        </div>
-
-                        <div class="sensor-live">
-                            <span class="sensor-live-dot"></span>
-                            LIVE
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="sensor-label"
-                        data-sw="Kiasi cha Mvua"
-                        data-en="Rainfall"
-                    >
-                        Kiasi cha Mvua
-                    </div>
-
-                    <div
-                        class="sensor-value"
-                        id="rainfallValue"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="sensor-state"
-                        id="rainfallState"
-                        data-sw="Inasubiri data"
-                        data-en="Waiting for data"
-                    >
-                        Inasubiri data
-                    </div>
-
-                </div>
-
-
-                <!-- Rain Status -->
-
-                <div class="sensor-card rain-status" id="rainStatusCard">
-
-                    <div class="sensor-top">
-
-                        <div class="sensor-icon">
-                            <i class="fa-solid fa-umbrella"></i>
-                        </div>
-
-                        <div class="sensor-live">
-                            <span class="sensor-live-dot"></span>
-                            LIVE
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="sensor-label"
-                        data-sw="Hali ya Mvua"
-                        data-en="Rain Status"
-                    >
-                        Hali ya Mvua
-                    </div>
-
-                    <div
-                        class="sensor-value"
-                        id="rainStatusValue"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="sensor-state"
-                        id="rainStatusState"
-                        data-sw="Inasubiri data"
-                        data-en="Waiting for data"
-                    >
-                        Inasubiri data
-                    </div>
-
-                </div>
-
-
-                <!-- Wind Speed -->
-
-                <div class="sensor-card wind-speed" id="windSpeedCard">
-
-                    <div class="sensor-top">
-
-                        <div class="sensor-icon">
-                            <i class="fa-solid fa-wind"></i>
-                        </div>
-
-                        <div class="sensor-live">
-                            <span class="sensor-live-dot"></span>
-                            LIVE
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="sensor-label"
-                        data-sw="Kasi ya Upepo"
-                        data-en="Wind Speed"
-                    >
-                        Kasi ya Upepo
-                    </div>
-
-                    <div
-                        class="sensor-value"
-                        id="windSpeedValue"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="sensor-state"
-                        id="windSpeedState"
-                        data-sw="Inasubiri data"
-                        data-en="Waiting for data"
-                    >
-                        Inasubiri data
-                    </div>
-
-                </div>
-
-
-                <!-- Wind Direction -->
-
-                <div class="sensor-card wind-direction" id="windDirectionCard">
-
-                    <div class="sensor-top">
-
-                        <div class="sensor-icon">
-                            <i class="fa-solid fa-compass"></i>
-                        </div>
-
-                        <div class="sensor-live">
-                            <span class="sensor-live-dot"></span>
-                            LIVE
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="sensor-label"
-                        data-sw="Mwelekeo wa Upepo"
-                        data-en="Wind Direction"
-                    >
-                        Mwelekeo wa Upepo
-                    </div>
-
-                    <div
-                        class="sensor-value"
-                        id="windDirectionValue"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="sensor-state"
-                        id="windDirectionState"
-                        data-sw="Inasubiri data"
-                        data-en="Waiting for data"
-                    >
-                        Inasubiri data
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================
-             STATISTICS
-        ================================= -->
-
-        <section
-            id="statistics"
-            class="tab-content"
-        >
-
-            <div class="section-heading">
-
-                <div>
-
-                    <h2
-                        data-sw="Takwimu za Shamba"
-                        data-en="Farm Statistics"
-                    >
-                        Takwimu za Shamba
-                    </h2>
-
-                    <p
-                        data-sw="Muhtasari wa data zilizokusanywa shambani"
-                        data-en="Summary of collected farm data"
-                    >
-                        Muhtasari wa data zilizokusanywa shambani
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div
-                class="stats-grid"
-                id="statsGrid"
-            >
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-temperature-half"></i>
-                    </div>
-
-                    <div
-                        class="stat-label"
-                        data-sw="Joto Wastani"
-                        data-en="Average Temperature"
-                    >
-                        Joto Wastani
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="avgTemp"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="stat-sub"
-                        data-sw="Hakuna data bado"
-                        data-en="No data yet"
-                    >
-                        Hakuna data bado
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-droplet"></i>
-                    </div>
-
-                    <div
-                        class="stat-label"
-                        data-sw="Unyevu Wastani"
-                        data-en="Average Humidity"
-                    >
-                        Unyevu Wastani
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="avgHumidity"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="stat-sub"
-                        data-sw="Hakuna data bado"
-                        data-en="No data yet"
-                    >
-                        Hakuna data bado
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-cloud-rain"></i>
-                    </div>
-
-                    <div
-                        class="stat-label"
-                        data-sw="Jumla ya Mvua"
-                        data-en="Total Rainfall"
-                    >
-                        Jumla ya Mvua
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="totalRain"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="stat-sub"
-                        data-sw="Hakuna data bado"
-                        data-en="No data yet"
-                    >
-                        Hakuna data bado
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-wind"></i>
-                    </div>
-
-                    <div
-                        class="stat-label"
-                        data-sw="Kasi Wastani ya Upepo"
-                        data-en="Average Wind Speed"
-                    >
-                        Kasi Wastani ya Upepo
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="avgWind"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="stat-sub"
-                        data-sw="Hakuna data bado"
-                        data-en="No data yet"
-                    >
-                        Hakuna data bado
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-chart-line"></i>
-                    </div>
-
-                    <div
-                        class="stat-label"
-                        data-sw="Rekodi Zilizohifadhiwa"
-                        data-en="Stored Records"
-                    >
-                        Rekodi Zilizohifadhiwa
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="totalRecords"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="stat-sub"
-                        data-sw="Kutoka database"
-                        data-en="From database"
-                    >
-                        Kutoka database
-                    </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-server"></i>
-                    </div>
-
-                    <div
-                        class="stat-label"
-                        data-sw="Hali ya Mfumo"
-                        data-en="System Status"
-                    >
-                        Hali ya Mfumo
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="systemStatus"
-                    >
-                        —
-                    </div>
-
-                    <div
-                        class="stat-sub"
-                        id="systemStatusSub"
-                    >
-                        —
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================
-             HISTORY
-        ================================= -->
-
-        <section
-            id="history"
-            class="tab-content"
-        >
-
-            <div class="section-heading">
-
-                <div>
-
-                    <h2
-                        data-sw="Historia ya Vipimo"
-                        data-en="Measurement History"
-                    >
-                        Historia ya Vipimo
-                    </h2>
-
-                    <p
-                        data-sw="Rekodi za vipimo vilivyopokelewa kutoka shambani"
-                        data-en="Records of measurements received from the farm"
-                    >
-                        Rekodi za vipimo vilivyopokelewa kutoka shambani
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="table-card">
-
-                <div class="table-wrapper">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th
-                                    data-sw="Muda"
-                                    data-en="Time"
-                                >
-                                    Muda
-                                </th>
-
-                                <th
-                                    data-sw="Joto"
-                                    data-en="Temperature"
-                                >
-                                    Joto
-                                </th>
-
-                                <th
-                                    data-sw="Unyevu"
-                                    data-en="Humidity"
-                                >
-                                    Unyevu
-                                </th>
-
-                                <th
-                                    data-sw="Mvua"
-                                    data-en="Rainfall"
-                                >
-                                    Mvua
-                                </th>
-
-                                <th
-                                    data-sw="Hali ya Mvua"
-                                    data-en="Rain Status"
-                                >
-                                    Hali ya Mvua
-                                </th>
-
-                                <th
-                                    data-sw="Upepo"
-                                    data-en="Wind"
-                                >
-                                    Upepo
-                                </th>
-
-                                <th
-                                    data-sw="Mwelekeo"
-                                    data-en="Direction"
-                                >
-                                    Mwelekeo
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody id="historyTableBody">
-
-                            <tr>
-                                <td colspan="7">
-                                    <div class="empty-state">
-
-                                        <i class="fa-solid fa-database"></i>
-
-                                        <p
-                                            data-sw="Hakuna data iliyopokelewa bado."
-                                            data-en="No data has been received yet."
-                                        >
-                                            Hakuna data iliyopokelewa bado.
-                                        </p>
-
-                                    </div>
-                                </td>
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================
-             GRAPH
-        ================================= -->
-
-        <section
-            id="graph"
-            class="tab-content"
-        >
-
-            <div class="section-heading">
-
-                <div>
-
-                    <h2
-                        data-sw="Uchambuzi wa Data"
-                        data-en="Data Analysis"
-                    >
-                        Uchambuzi wa Data
-                    </h2>
-
-                    <p
-                        data-sw="Mabadiliko ya joto na unyevu shambani kwa muda"
-                        data-en="Temperature and humidity changes over time on the farm"
-                    >
-                        Mabadiliko ya joto na unyevu shambani kwa muda
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="chart-card">
-
-                <div class="chart-header">
-
-                    <div>
-
-                        <div
-                            class="chart-title"
-                            data-sw="Joto na Unyevu"
-                            data-en="Temperature & Humidity"
-                        >
-                            Joto na Unyevu
-                        </div>
-
-                        <div
-                            class="chart-subtitle"
-                            data-sw="Data kutoka kwenye kituo cha shamba"
-                            data-en="Data from the farm station"
-                        >
-                            Data kutoka kwenye kituo cha shamba
-                        </div>
-
-                    </div>
-
-                    <div class="chart-legend">
-
-                        <div class="legend-item">
-                            <span
-                                class="legend-dot"
-                                style="background:#e27b35"
-                            ></span>
-
-                            <span
-                                data-sw="Joto"
-                                data-en="Temperature"
-                            >
-                                Joto
-                            </span>
-                        </div>
-
-                        <div class="legend-item">
-                            <span
-                                class="legend-dot"
-                                style="background:#258dcb"
-                            ></span>
-
-                            <span
-                                data-sw="Unyevu"
-                                data-en="Humidity"
-                            >
-                                Unyevu
-                            </span>
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div class="chart-wrapper">
-                    <canvas id="weatherChart"></canvas>
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================
-             STATION
-        ================================= -->
-
-        <section
-            id="station"
-            class="tab-content"
-        >
-
-            <div class="section-heading">
-
-                <div>
-
-                    <h2
-                        data-sw="Taarifa za Kituo"
-                        data-en="Station Information"
-                    >
-                        Taarifa za Kituo
-                    </h2>
-
-                    <p
-                        data-sw="Hali ya kifaa cha shambani na mfumo"
-                        data-en="Farm device and system information"
-                    >
-                        Hali ya kifaa cha shambani na mfumo
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <div class="station-grid">
-
-                <div class="info-card">
-
-                    <div class="info-card-header">
-
-                        <div class="info-card-header-icon">
-                            <i class="fa-solid fa-microchip"></i>
-                        </div>
-
-                        <div>
-
-                            <h3
-                                data-sw="ESP32 Farm Station"
-                                data-en="ESP32 Farm Station"
-                            >
-                                ESP32 Farm Station
-                            </h3>
-
-                            <p
-                                data-sw="Hali ya muunganisho wa kifaa"
-                                data-en="Device connection status"
-                            >
-                                Hali ya muunganisho wa kifaa
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="info-list">
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="Hali ya Kifaa"
-                                data-en="Device Status"
-                            >
-                                Hali ya Kifaa
-                            </span>
-
-                            <span
-                                class="device-state waiting"
-                                id="deviceState"
-                            >
-                                <span class="status-dot waiting"></span>
-
-                                <span
-                                    id="deviceStateText"
-                                    data-sw="Offline"
-                                    data-en="Offline"
-                                >
-                                    Offline
-                                </span>
-
-                            </span>
-
-                        </div>
-
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="Eneo"
-                                data-en="Location"
-                            >
-                                Eneo
-                            </span>
-
-                            <span
-                                class="info-row-value"
-                                id="stationLocation"
-                            >
-                                Shamba Langu, Dar es Salaam
-                            </span>
-
-                        </div>
-
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="Wi-Fi"
-                                data-en="Wi-Fi"
-                            >
-                                Wi-Fi
-                            </span>
-
-                            <span
-                                class="info-row-value"
-                                id="wifiStatus"
-                            >
-                                —
-                            </span>
-
-                        </div>
-
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="SSID"
-                                data-en="SSID"
-                            >
-                                SSID
-                            </span>
-
-                            <span
-                                class="info-row-value"
-                                id="wifiSsid"
-                            >
-                                —
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="info-card">
-
-                    <div class="info-card-header">
-
-                        <div class="info-card-header-icon">
-                            <i class="fa-solid fa-server"></i>
-                        </div>
-
-                        <div>
-
-                            <h3
-                                data-sw="Mfumo"
-                                data-en="System"
-                            >
-                                Mfumo
-                            </h3>
-
-                            <p
-                                data-sw="Taarifa za dashboard"
-                                data-en="Dashboard information"
-                            >
-                                Taarifa za dashboard
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="info-list">
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="Backend"
-                                data-en="Backend"
-                            >
-                                Backend
-                            </span>
-
-                            <span class="info-row-value">
-                                Flask
-                            </span>
-
-                        </div>
-
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="Database"
-                                data-en="Database"
-                            >
-                                Database
-                            </span>
-
-                            <span class="info-row-value">
-                                SQLite
-                            </span>
-
-                        </div>
-
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="Controller"
-                                data-en="Controller"
-                            >
-                                Controller
-                            </span>
-
-                            <span class="info-row-value">
-                                ESP32
-                            </span>
-
-                        </div>
-
-
-                        <div class="info-row">
-
-                            <span
-                                class="info-row-label"
-                                data-sw="Version"
-                                data-en="Version"
-                            >
-                                Version
-                            </span>
-
-                            <span class="info-row-value">
-                                1.0
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <footer class="footer">
-
-            <span>
-                Smart Farm Weather Station · Shamba Langu, Dar es Salaam
-            </span>
-
-        </footer>
-
-    </div>
-
-</main>
-
-
-<script>
-    /* =========================================================
-       SMART FARM WEATHER STATION
-       Frontend logic
-       ========================================================= */
-
-    let currentLang = "sw";
-    let currentTheme = "light";
-    let weatherChart = null;
-
-    let deviceState = "waiting";
-
-
-    /* =========================================================
-       TRANSLATION
-       ========================================================= */
-
-    function t(sw, en) {
-        return currentLang === "sw" ? sw : en;
-    }
-
-
-    function updateStaticTranslations() {
-
-        document.querySelectorAll("[data-sw][data-en]").forEach(el => {
-
-            el.textContent =
-                currentLang === "sw"
-                    ? el.dataset.sw
-                    : el.dataset.en;
-
-        });
-
-        document.documentElement.lang = currentLang;
-
-        document.getElementById("swBtn")
-            ?.classList.toggle("active", currentLang === "sw");
-
-        document.getElementById("enBtn")
-            ?.classList.toggle("active", currentLang === "en");
-    }
-
-
-    /* =========================================================
-       LANGUAGE
-       ========================================================= */
-
-    function setLanguage(lang) {
-
-        currentLang = lang;
-
-        localStorage.setItem(
-            "weatherDashboardLanguage",
-            lang
-        );
-
-        updateStaticTranslations();
-
-        updateDateTime();
-
-        updateDeviceUI(deviceState);
-
-        fetchLiveWeatherData();
-        loadWeatherStats();
-        loadWeatherLogs();
-    }
-
-
-    /* =========================================================
-       THEME SWITCHING (DARK / LIGHT MODE)
-       ========================================================= */
-
-    function setTheme(theme) {
-        currentTheme = theme;
-        const htmlRoot = document.getElementById("htmlRoot");
-        const themeIcon = document.getElementById("themeIcon");
-
-        if (theme === "dark") {
-            htmlRoot.setAttribute("data-theme", "dark");
-            if (themeIcon) {
-                themeIcon.className = "fa-solid fa-sun";
-            }
-        } else {
-            htmlRoot.removeAttribute("data-theme");
-            if (themeIcon) {
-                themeIcon.className = "fa-solid fa-moon";
-            }
-        }
-
-        localStorage.setItem("weatherDashboardTheme", theme);
-
-        if (weatherChart) {
-            const isDark = theme === "dark";
-            const textColor = isDark ? "#9aa89e" : "#87958c";
-            const gridColor = isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(120,145,128,0.10)";
-
-            weatherChart.options.scales.x.ticks.color = textColor;
-            weatherChart.options.scales.y.ticks.color = textColor;
-            weatherChart.options.scales.y.grid.color = gridColor;
-            weatherChart.update("none");
-        }
-    }
-
-    function toggleTheme() {
-        if (currentTheme === "dark") {
-            setTheme("light");
-        } else {
-            setTheme("dark");
-        }
-    }
-
-
-    /* =========================================================
-       TAB SYSTEM
-       ========================================================= */
-
-    function switchTab(tabId, button) {
-
-        document.querySelectorAll(".tab-content")
-            .forEach(tab => tab.classList.remove("active"));
-
-        document.querySelectorAll(".nav-link")
-            .forEach(btn => btn.classList.remove("active"));
-
-        const target = document.getElementById(tabId);
-
-        if (target) {
-            target.classList.add("active");
-        }
-
-        if (button) {
-            button.classList.add("active");
-        }
-    }
-
-
-    /* =========================================================
-       DATE & TIME
-       ========================================================= */
-
-    function updateDateTime() {
-
-        const el = document.getElementById("dateTime");
-
-        if (!el) return;
-
-        const now = new Date();
-
-        const locale =
-            currentLang === "sw"
-                ? "sw-TZ"
-                : "en-TZ";
-
-        el.textContent = now.toLocaleString(
-            locale,
-            {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        );
-    }
-
-
-    setInterval(updateDateTime, 1000);
-
-
-    /* =========================================================
-       VALUE HELPERS
-       ========================================================= */
-
-    function isValidValue(value) {
-
-        return (
-            value !== undefined &&
-            value !== null &&
-            value !== "" &&
-            value !== "null" &&
-            !Number.isNaN(Number(value))
-        );
-    }
-
-
-    function numberValue(value, decimals = 1) {
-
-        if (!isValidValue(value)) {
-            return "—";
-        }
-
-        return Number(value).toFixed(decimals);
-    }
-
-
-    function valueOrDash(value) {
-
-        if (
-            value === undefined ||
-            value === null ||
-            value === ""
-        ) {
-            return "—";
-        }
-
-        return value;
-    }
-
-
-    /* =========================================================
-       RAIN TRANSLATION
-       ========================================================= */
-
-    function translateRainStatus(value) {
-
-        if (
-            value === undefined ||
-            value === null ||
-            value === ""
-        ) {
-            return "—";
-        }
-
-        const raw = String(value).trim().toLowerCase();
-
-        const map = {
-
-            "hakuna mvua": {
-                sw: "Hakuna Mvua",
-                en: "No Rain"
-            },
-
-            "no rain": {
-                sw: "Hakuna Mvua",
-                en: "No Rain"
-            },
-
-            "mvua": {
-                sw: "Mvua",
-                en: "Rain"
-            },
-
-            "rain": {
-                sw: "Mvua",
-                en: "Rain"
-            },
-
-            "mvua kubwa": {
-                sw: "Mvua Kubwa",
-                en: "Heavy Rain"
-            },
-
-            "heavy rain": {
-                sw: "Mvua Kubwa",
-                en: "Heavy Rain"
-            },
-
-            "mvua ndogo": {
-                sw: "Mvua Ndogo",
-                en: "Light Rain"
-            },
-
-            "light rain": {
-                sw: "Mvua Ndogo",
-                en: "Light Rain"
-            }
-        };
-
-        if (map[raw]) {
-            return map[raw][currentLang];
-        }
-
-        return value;
-    }
-
-
-    /* =========================================================
-       WIND DIRECTION
-       ========================================================= */
-
-    function translateWindDirection(value) {
-
-        if (
-            value === undefined ||
-            value === null ||
-            value === ""
-        ) {
-            return "—";
-        }
-
-        const raw = String(value)
-            .trim()
-            .toUpperCase();
-
-        const directions = {
-
-            "N": {
-                sw: "Kaskazini",
-                en: "North"
-            },
-
-            "NE": {
-                sw: "Kaskazini-Mashariki",
-                en: "Northeast"
-            },
-
-            "E": {
-                sw: "Mashariki",
-                en: "East"
-            },
-
-            "SE": {
-                sw: "Kusini-Mashariki",
-                en: "Southeast"
-            },
-
-            "S": {
-                sw: "Kusini",
-                en: "South"
-            },
-
-            "SW": {
-                sw: "Kusini-Magharibi",
-                en: "Southwest"
-            },
-
-            "W": {
-                sw: "Magharibi",
-                en: "West"
-            },
-
-            "NW": {
-                sw: "Kaskazini-Magharibi",
-                en: "Northwest"
-            }
-        };
-
-        if (directions[raw]) {
-            return directions[raw][currentLang];
-        }
-
-        return value;
-    }
-
-
-    /* =========================================================
-       DEVICE UI
-       ========================================================= */
-
-    function updateDeviceUI(state) {
-
-        deviceState = state;
-
-        const dot =
-            document.getElementById("connectionDot");
-
-        const text =
-            document.getElementById("connectionText");
-
-        const sensorDot =
-            document.getElementById("sensorStatusDot");
-
-        const sensorText =
-            document.getElementById("sensorStatusText");
-
-        const stateBox =
-            document.getElementById("deviceState");
-
-        const stateText =
-            document.getElementById("deviceStateText");
-
-        const status =
-            document.getElementById("systemStatus");
-
-        const statusSub =
-            document.getElementById("systemStatusSub");
-
-
-        [dot, sensorDot].forEach(el => {
-
-            if (!el) return;
-
-            el.classList.remove(
-                "online",
-                "offline",
-                "waiting"
-            );
-
-            el.classList.add(state);
-        });
-
-
-        if (state === "online") {
-
-            if (text) {
-                text.textContent =
-                    t("Online", "Online");
-            }
-
-            if (sensorText) {
-                sensorText.textContent =
-                    t("Data inapokelewa", "Receiving data");
-            }
-
-            if (stateBox) {
-                stateBox.className =
-                    "device-state online";
-            }
-
-            if (stateText) {
-                stateText.textContent =
-                    t("Online", "Online");
-            }
-
-            if (status) {
-                status.textContent =
-                    t("Online", "Online");
-            }
-
-            if (statusSub) {
-                statusSub.textContent =
-                    t(
-                        "Data inapokelewa",
-                        "Data is being received"
-                    );
-            }
-
-        } else if (state === "offline") {
-
-            if (text) {
-                text.textContent =
-                    t("Offline", "Offline");
-            }
-
-            if (sensorText) {
-                sensorText.textContent =
-                    t("Data haipokelewi", "No data received");
-            }
-
-            if (stateBox) {
-                stateBox.className =
-                    "device-state offline";
-            }
-
-            if (stateText) {
-                stateText.textContent =
-                    t("Offline", "Offline");
-            }
-
-            if (status) {
-                status.textContent =
-                    t("Offline", "Offline");
-            }
-
-            if (statusSub) {
-                statusSub.textContent =
-                    t(
-                        "Hakuna data mpya",
-                        "No new data"
-                    );
-            }
-
-        } else {
-
-            if (text) {
-                text.textContent =
-                    t("Offline", "Offline");
-            }
-
-            if (sensorText) {
-                sensorText.textContent =
-                    t("Inasubiri data", "Waiting for data");
-            }
-
-            if (stateBox) {
-                stateBox.className =
-                    "device-state waiting";
-            }
-
-            if (stateText) {
-                stateText.textContent =
-                    t("Offline", "Offline");
-            }
-
-            if (status) {
-                status.textContent =
-                    t("Offline", "Offline");
-            }
-
-            if (statusSub) {
-                statusSub.textContent =
-                    t(
-                        "Inasubiri ESP32",
-                        "Waiting for ESP32"
-                    );
-            }
-        }
-    }
-
-
-    /* =========================================================
-       SENSOR CARD STATES
-       ========================================================= */
-
-    function setSensorCardsState(connected) {
-
-        const cards = document.querySelectorAll(
-            ".sensor-card"
-        );
-
-        cards.forEach(card => {
-
-            if (connected) {
-                card.classList.add("connected");
-            } else {
-                card.classList.remove("connected");
-            }
-
-        });
-    }
-
-
-    /* =========================================================
-       UPDATE SENSOR VALUES
-       ========================================================= */
-
-    function updateSensorValues(data) {
-
-        const temperature =
-            document.getElementById("temperatureValue");
-
-        const humidity =
-            document.getElementById("humidityValue");
-
-        const rainfall =
-            document.getElementById("rainfallValue");
-
-        const rainStatus =
-            document.getElementById("rainStatusValue");
-
-        const windSpeed =
-            document.getElementById("windSpeedValue");
-
-        const windDirection =
-            document.getElementById("windDirectionValue");
-
-
-        if (temperature) {
-
-            temperature.innerHTML =
-                isValidValue(data.temperature)
-                    ? `${numberValue(data.temperature)}<span class="sensor-unit">°C</span>`
-                    : "—";
-        }
-
-
-        if (humidity) {
-
-            humidity.innerHTML =
-                isValidValue(data.humidity)
-                    ? `${numberValue(data.humidity)}<span class="sensor-unit">%</span>`
-                    : "—";
-        }
-
-
-        if (rainfall) {
-
-            rainfall.innerHTML =
-                isValidValue(data.rainfall)
-                    ? `${numberValue(data.rainfall)}<span class="sensor-unit">mm</span>`
-                    : "—";
-        }
-
-
-        if (rainStatus) {
-
-            rainStatus.textContent =
-                translateRainStatus(
-                    data.rain_availability ??
-                    data.rain_status
-                );
-        }
-
-
-        if (windSpeed) {
-
-            windSpeed.innerHTML =
-                isValidValue(data.wind_speed)
-                    ? `${numberValue(data.wind_speed)}<span class="sensor-unit">m/s</span>`
-                    : "—";
-        }
-
-
-        if (windDirection) {
-
-            windDirection.textContent =
-                translateWindDirection(
-                    data.wind_direction
-                );
-        }
-
-
-        const states = [
-            "temperatureState",
-            "humidityState",
-            "rainfallState",
-            "rainStatusState",
-            "windSpeedState",
-            "windDirectionState"
-        ];
-
-        states.forEach(id => {
-
-            const el = document.getElementById(id);
-
-            if (!el) return;
-
-            el.textContent =
-                deviceState === "online"
-                    ? t("Data halisi", "Live data")
-                    : t(
-                        "Inasubiri data",
-                        "Waiting for data"
-                    );
-        });
-    }
-
-
-    /* =========================================================
-       LIVE DATA
-       ========================================================= */
-
-    async function fetchLiveWeatherData() {
-
-        try {
-
-            const response =
-                await fetch(
-                    `/get-data?lang=${currentLang}`,
-                    {
-                        cache: "no-store"
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    `HTTP ${response.status}`
-                );
-            }
-
-            const data =
-                await response.json();
-
-
-            let isOnline = false;
-
-            if (
-                data.is_online === true ||
-                data.device_online === true
-            ) {
-                isOnline = true;
-            }
-
-            const hasSensorData =
-                isValidValue(data.temperature) ||
-                isValidValue(data.humidity) ||
-                isValidValue(data.rainfall) ||
-                isValidValue(data.wind_speed) ||
-                (
-                    data.wind_direction !== undefined &&
-                    data.wind_direction !== null &&
-                    data.wind_direction !== ""
-                );
-
-
-            if (
-                data.is_online === true ||
-                data.device_online === true
-            ) {
-                updateDeviceUI("online");
-            }
-
-            else if (
-                data.is_online === false ||
-                data.device_online === false
-            ) {
-                updateDeviceUI(
-                    hasSensorData
-                        ? "offline"
-                        : "waiting"
-                );
-            }
-
-            else if (hasSensorData) {
-                updateDeviceUI("online");
-            }
-
-            else {
-                updateDeviceUI("waiting");
-            }
-
-
-            setSensorCardsState(
-                deviceState === "online"
-            );
-
-
-            updateSensorValues(data);
-
-
-            if (data.location) {
-
-                document.getElementById(
-                    "locationValue"
-                ).textContent = data.location;
-
-                document.getElementById(
-                    "heroLocation"
-                ).textContent = data.location;
-
-                document.getElementById(
-                    "stationLocation"
-                ).textContent = data.location;
-            }
-
-
-            const wifiStatus =
-                document.getElementById("wifiStatus");
-
-            const wifiSsid =
-                document.getElementById("wifiSsid");
-
-
-            if (wifiStatus) {
-
-                if (
-                    data.wifi_status !== undefined &&
-                    data.wifi_status !== null
-                ) {
-
-                    wifiStatus.textContent =
-                        valueOrDash(data.wifi_status);
-
-                } else if (deviceState === "online") {
-
-                    wifiStatus.textContent =
-                        t("Imeunganishwa", "Connected");
-
-                } else {
-
-                    wifiStatus.textContent = "—";
-                }
-            }
-
-
-            if (wifiSsid) {
-
-                wifiSsid.textContent =
-                    data.wifi_ssid ??
-                    data.ssid ??
-                    "—";
-            }
-
-
-            if (Array.isArray(data.history)) {
-                updateWeatherChart(data.history);
-            }
-
-        } catch (error) {
-
-            console.warn(
-                "Weather data error:",
-                error
-            );
-
-            if (deviceState === "online") {
-
-                updateDeviceUI("offline");
-
-            } else {
-
-                updateDeviceUI("waiting");
-            }
-
-            setSensorCardsState(false);
-        }
-    }
-
-
-    /* =========================================================
-       STATISTICS
-       ========================================================= */
-
-    async function loadWeatherStats() {
-
-        try {
-
-            const response =
-                await fetch(
-                    `/get-stats?lang=${currentLang}`,
-                    {
-                        cache: "no-store"
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    `HTTP ${response.status}`
-                );
-            }
-
-            const data =
-                await response.json();
-
-
-            const avgTemp =
-                document.getElementById("avgTemp");
-
-            const avgHumidity =
-                document.getElementById("avgHumidity");
-
-            const totalRain =
-                document.getElementById("totalRain");
-
-            const avgWind =
-                document.getElementById("avgWind");
-
-            const totalRecords =
-                document.getElementById("totalRecords");
-
-
-            if (avgTemp) {
-
-                avgTemp.innerHTML =
-                    isValidValue(data.avg_temperature)
-                        ? `${numberValue(data.avg_temperature)}<span class="sensor-unit">°C</span>`
-                        : "—";
-            }
-
-
-            if (avgHumidity) {
-
-                avgHumidity.innerHTML =
-                    isValidValue(data.avg_humidity)
-                        ? `${numberValue(data.avg_humidity)}<span class="sensor-unit">%</span>`
-                        : "—";
-            }
-
-
-            if (totalRain) {
-
-                totalRain.innerHTML =
-                    isValidValue(data.total_rainfall)
-                        ? `${numberValue(data.total_rainfall)}<span class="sensor-unit">mm</span>`
-                        : "—";
-            }
-
-
-            if (avgWind) {
-
-                avgWind.innerHTML =
-                    isValidValue(data.avg_wind_speed)
-                        ? `${numberValue(data.avg_wind_speed)}<span class="sensor-unit">m/s</span>`
-                        : "—";
-            }
-
-
-            if (totalRecords) {
-
-                totalRecords.textContent =
-                    valueOrDash(
-                        data.total_records ??
-                        data.records ??
-                        data.count
-                    );
-            }
-
-        } catch (error) {
-
-            console.warn(
-                "Statistics error:",
-                error
-            );
-        }
-    }
-
-
-    /* =========================================================
-       HISTORY
-       ========================================================= */
-
-    async function loadWeatherLogs() {
-
-        const tbody =
-            document.getElementById(
-                "historyTableBody"
-            );
-
-        if (!tbody) return;
-
-
-        try {
-
-            const response =
-                await fetch(
-                    `/get-logs?lang=${currentLang}`,
-                    {
-                        cache: "no-store"
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    `HTTP ${response.status}`
-                );
-            }
-
-            const data =
-                await response.json();
-
-
-            const logs =
-                Array.isArray(data)
-                    ? data
-                    : (
-                        Array.isArray(data.logs)
-                            ? data.logs
-                            : (
-                                Array.isArray(data.history)
-                                    ? data.history
-                                    : []
-                            )
-                    );
-
-
-            if (!logs.length) {
-
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-state">
-                                <i class="fa-solid fa-database"></i>
-
-                                <p>
-                                    ${t(
-                                        "Hakuna data iliyopokelewa bado.",
-                                        "No data has been received yet."
-                                    )}
-                                </p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-
-                return;
-            }
-
-
-            tbody.innerHTML =
-                logs.map(log => {
-
-                    const rain =
-                        translateRainStatus(
-                            log.rain_availability ??
-                            log.rain_status
-                        );
-
-                    const rainRaw =
-                        String(
-                            log.rain_availability ??
-                            log.rain_status ??
-                            ""
-                        ).toLowerCase();
-
-                    const isRain =
-                        rainRaw.includes("mvua") ||
-                        rainRaw.includes("rain");
-
-
-                    return `
-                        <tr>
-
-                            <td>
-                                ${valueOrDash(
-                                    log.timestamp ??
-                                    log.time ??
-                                    log.date
-                                )}
-                            </td>
-
-                            <td>
-                                ${
-                                    isValidValue(log.temperature)
-                                        ? numberValue(log.temperature) + " °C"
-                                        : "—"
-                                }
-                            </td>
-
-                            <td>
-                                ${
-                                    isValidValue(log.humidity)
-                                        ? numberValue(log.humidity) + " %"
-                                        : "—"
-                                }
-                            </td>
-
-                            <td>
-                                ${
-                                    isValidValue(log.rainfall)
-                                        ? numberValue(log.rainfall) + " mm"
-                                        : "—"
-                                }
-                            </td>
-
-                            <td>
-                                <span class="table-status ${
-                                    isRain
-                                        ? "status-rain"
-                                        : "status-dry"
-                                }">
-                                    ${rain}
-                                </span>
-                            </td>
-
-                            <td>
-                                ${
-                                    isValidValue(log.wind_speed)
-                                        ? numberValue(log.wind_speed) + " m/s"
-                                        : "—"
-                                }
-                            </td>
-
-                            <td>
-                                ${translateWindDirection(
-                                    log.wind_direction
-                                )}
-                            </td>
-
-                        </tr>
-                    `;
-
-                }).join("");
-
-        } catch (error) {
-
-            console.warn(
-                "History error:",
-                error
-            );
-
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7">
-                        <div class="empty-state">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-
-                            <p>
-                                ${t(
-                                    "Imeshindikana kupata historia ya data.",
-                                    "Unable to load data history."
-                                )}
-                            </p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-    }
-
-
-    /* =========================================================
-       CHART
-       ========================================================= */
-
-    function initializeWeatherChart() {
-
-        const canvas =
-            document.getElementById(
-                "weatherChart"
-            );
-
-        if (!canvas) return;
-
-        const ctx =
-            canvas.getContext("2d");
-
-        const isDark = currentTheme === "dark";
-        const textColor = isDark ? "#9aa89e" : "#87958c";
-        const gridColor = isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(120,145,128,0.10)";
-
-
-        weatherChart =
-            new Chart(ctx, {
-
-                type: "line",
-
-                data: {
-
-                    labels: [],
-
-                    datasets: [
-
-                        {
-                            label:
-                                t(
-                                    "Joto",
-                                    "Temperature"
-                                ),
-
-                            data: [],
-
-                            borderColor:
-                                "#e27b35",
-
-                            backgroundColor:
-                                "rgba(226,123,53,0.08)",
-
-                            borderWidth: 2,
-
-                            tension: 0.35,
-
-                            fill: true,
-
-                            pointRadius: 2,
-
-                            pointHoverRadius: 5
-                        },
-
-                        {
-                            label:
-                                t(
-                                    "Unyevu",
-                                    "Humidity"
-                                ),
-
-                            data: [],
-
-                            borderColor:
-                                "#258dcb",
-
-                            backgroundColor:
-                                "rgba(37,141,203,0.07)",
-
-                            borderWidth: 2,
-
-                            tension: 0.35,
-
-                            fill: true,
-
-                            pointRadius: 2,
-
-                            pointHoverRadius: 5
-                        }
-
-                    ]
-
-                },
-
-                options: {
-
-                    responsive: true,
-
-                    maintainAspectRatio: false,
-
-                    interaction: {
-                        intersect: false,
-                        mode: "index"
-                    },
-
-                    plugins: {
-
-                        legend: {
-                            display: false
-                        }
-
-                    },
-
-                    scales: {
-
-                        x: {
-                            grid: {
-                                display: false
-                            },
-
-                            ticks: {
-                                color: textColor,
-                                font: {
-                                    size: 9
-                                }
-                            }
-                        },
-
-                        y: {
-
-                            beginAtZero: false,
-
-                            grid: {
-                                color: gridColor
-                            },
-
-                            ticks: {
-                                color: textColor,
-                                font: {
-                                    size: 9
-                                }
-                            }
-                        }
-
-                    }
-
-                }
-
-            });
-    }
-
-
-    function updateWeatherChart(history) {
-
-        if (!weatherChart) {
-            return;
-        }
-
-        if (!Array.isArray(history)) {
-            return;
-        }
-
-
-        const labels =
-            history.map(item =>
-                item.timestamp ??
-                item.time ??
-                item.date ??
-                ""
-            );
-
-
-        const temperatures =
-            history.map(item =>
-                isValidValue(item.temperature)
-                    ? Number(item.temperature)
-                    : null
-            );
-
-
-        const humidity =
-            history.map(item =>
-                isValidValue(item.humidity)
-                    ? Number(item.humidity)
-                    : null
-            );
-
-
-        weatherChart.data.labels =
-            labels;
-
-        weatherChart.data.datasets[0].label =
-            t("Joto", "Temperature");
-
-        weatherChart.data.datasets[1].label =
-            t("Unyevu", "Humidity");
-
-        weatherChart.data.datasets[0].data =
-            temperatures;
-
-        weatherChart.data.datasets[1].data =
-            humidity;
-
-        weatherChart.update("none");
-    }
-
-
-    /* =========================================================
-       INITIALIZE
-       ========================================================= */
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        () => {
-
-            const savedLanguage =
-                localStorage.getItem(
-                    "weatherDashboardLanguage"
-                );
-
-            if (
-                savedLanguage === "sw" ||
-                savedLanguage === "en"
-            ) {
-                currentLang =
-                    savedLanguage;
-            }
-
-            const savedTheme =
-                localStorage.getItem(
-                    "weatherDashboardTheme"
-                );
-
-            if (savedTheme === "dark" || savedTheme === "light") {
-                setTheme(savedTheme);
-            }
-
-
-            updateStaticTranslations();
-
-            updateDateTime();
-
-            updateDeviceUI("waiting");
-
-            setSensorCardsState(false);
-
-            initializeWeatherChart();
-
-            fetchLiveWeatherData();
-
-            loadWeatherStats();
-
-            loadWeatherLogs();
-
-
-            setInterval(
-                fetchLiveWeatherData,
-                5000
-            );
-
-            setInterval(
-                loadWeatherStats,
-                15000
-            );
-
-            setInterval(
-                loadWeatherLogs,
-                15000
-            );
-
-        }
-    );
-</script>
-
 </body>
 </html>
