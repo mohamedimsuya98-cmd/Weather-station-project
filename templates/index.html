@@ -178,14 +178,12 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
         }
-
     </style>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-
 </head>
 
 <body class="font-sans text-slate-800 min-h-screen">
@@ -436,9 +434,9 @@
         <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
                 <div>
-                    <h2 class="text-lg font-extrabold flex items-center gap-2">
+                    <h2 class="text-lg font-extrabold flex items-center gap-2" data-i18n="forecast_title">
                         <span>📅</span>
-                        <span data-i18n="forecast_title">Utabiri wa Masaa 24 Yajayo</span>
+                        <span>Utabiri wa Masaa 24 Yajayo</span>
                     </h2>
                     <p class="text-xs text-slate-500 mt-1">
                         <span data-i18n="forecast_for">Kwa eneo:</span>
@@ -459,9 +457,9 @@
         <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
-                    <h2 class="text-lg font-extrabold flex items-center gap-2">
+                    <h2 class="text-lg font-extrabold flex items-center gap-2" data-i18n="history_title">
                         <span>📈</span>
-                        <span data-i18n="history_title">Historia na Mwelekeo</span>
+                        <span>Historia na Mwelekeo</span>
                     </h2>
                     <p class="text-xs text-slate-500 mt-1" data-i18n="history_subtitle">
                         Tumia historia kuona mwelekeo wa hali ya shamba, si tukio la dakika moja tu.
@@ -1451,8 +1449,7 @@
     checkUserStatus();
 </script>
 
-
-<!-- Non-destructive UX enhancement layer: existing IDs, classes, APIs, functions, and data bindings remain unchanged. -->
+<!-- Non-destructive UX enhancement layer (Sahihi yenye selectors zilizorekebishwa kwenda 100%) -->
 <script>
 (function () {
   const decorate = () => {
@@ -1467,8 +1464,8 @@
     });
     const targets = [
       ['#early-warnings-card h2', 'triangle-alert'],
-      ['#dashboard-section h2[data-i18n="forecasttitle"]', 'cloud-sun'],
-      ['#dashboard-section h2[data-i18n="historytitle"]', 'chart-no-axes-combined'],
+      ['#dashboard-section h2[data-i18n="forecast_title"]', 'cloud-sun'],
+      ['#dashboard-section h2[data-i18n="history_title"]', 'chart-no-axes-combined'],
       ['#health-icon', 'radio-tower']
     ];
     targets.forEach(([selector, name]) => {
