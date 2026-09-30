@@ -1,7 +1,7 @@
 import os
 import secrets
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -9,7 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import africastalking
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'smart_farm_secret_key_2026_x89z')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # --- DATABASE CONFIGURATION ---
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -27,12 +27,70 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # --- AFRICA'S TALKING & OPENWEATHER SETUP ---
-USERNAME = os.environ.get('AT_USERNAME', 'sandbox')
-API_KEY = os.environ.get('AT_API_KEY', 'your_africastalking_api_key')
-africastalking.initialize(USERNAME, API_KEY)
-sms = africastalking.SMS
+AT_USERNAME = os.environ.get('AT_USERNAME', 'sandbox')
+AT_API_KEY = os.environ.get('AT_API_KEY', '')
+OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
 
-OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY', '2ad63a80db9d993fc4d960e0d7992651')
+sms = None
+if AT_API_KEY:
+    try:
+        africastalking.initialize(AT_USERNAME, AT_API_KEY)
+        sms = africastalking.SMS
+    except Exception as e:
+        print(f"Africa's Talking Initialization Error: {e}")
+
+# ==================== LANGUAGE & TRANSLATION SYSTEM ====================
+
+TRANSLATIONS = {
+    'sw': {
+        'no_forecast': "ℹ️ Hakuna utabiri wa kimataifa uliopatikana kwa eneo hili.",
+        'heavy_rain_warning': "🌧️ TAHADHARI YA MVUA KUBWA: Mvua ya takriban {rain}mm inatarajiwa masaa 24 yajayo. Safisha mifereji ya shamba na sitisha upuliziaji dawa.",
+        'strong_wind_warning': "💨 TAHADHARI YA UPEPO MKALI: Upepo wa hadi {wind} km/h unatarajiwa. Usipulizie dawa au mbolea ya maji.",
+        'high_temp_warning': "☀️ TAHADHARI YA JOTO KALI: Joto litafika {temp}°C. Hakikisha mfumo wa kumwagilia maji uko tayari kuzuia mazao kunyauka.",
+        'safe_weather': "✅ Hali ya hewa inatarajiwa kuwa shwari bila hatari yoyote masaa 24 yajayo.",
+        'fungus_risk': "⚠ Tishio la Ukungu/Kuvu: Unyevu mwingi unaongeza hatari ya magonjwa. Epuka kumwagilia maji juu ya majani.",
+        'heat_dry_risk': "☀️ Joto Kali & Ukavu: Mazao yapo kwenye hatari ya kukauka. Hakikisha unamwagilia asubuhi au jioni mapema.",
+        'irrigation_advise': "💧 Ushauri wa Maji: Hakuna mvua iliyorekodiwa na hewa ni kavu. Inashauriwa kumwagilia shamba.",
+        'wind_advise': "💨 Upepo Mkali: Usipulizie dawa ya wadudu kwani itapeperushwa na upepo.",
+        'rain_advise_heavy': "🌧 Mvua Kubwa Inanyesha ({rain}mm): Sitisha upuliziaji wa dawa/mbolea na hakikisha mifereji haijaziba.",
+        'rain_advise_light': "🌧 Mvua Kidogo Inanyesha ({rain}mm): Usipulizie dawa ya maji kwani itaoshwa na mvua.",
+        'good_weather': "✅ Hali ya Hewa: Ni nzuri kwa upuliziaji wa dawa au mbolea ya maji.",
+        'no_data': "Inasubiri data kutoka sensor ya ESP32...",
+        'rain_none': "Hakuna Mvua",
+        'rain_light': "Mvua Kidogo",
+        'rain_heavy': "Mvua Kubwa",
+        'never_updated': "Hajawahi Kutuma",
+        'farm_not_found': "Shamba halikupatikana"
+    },
+    'en': {
+        'no_forecast': "ℹ️ No global forecast available for this location.",
+        'heavy_rain_warning': "🌧️ HEAVY RAIN WARNING: Heavy rain of approx {rain}mm expected in next 24 hours. Clear farm drainage and pause spraying.",
+        'strong_wind_warning': "💨 STRONG WIND WARNING: Winds up to {wind} km/h expected. Avoid spraying pesticides or liquid fertilizer.",
+        'high_temp_warning': "☀️ EXTREME HEAT WARNING: Temperatures reaching {temp}°C. Ensure irrigation system is ready to prevent crop wilting.",
+        'safe_weather': "✅ Weather is expected to be clear with no warnings for the next 24 hours.",
+        'fungus_risk': "⚠ Fungal/Blight Risk: High humidity increases disease risk. Avoid overhead watering.",
+        'heat_dry_risk': "☀️ Extreme Heat & Dryness: Crops are at risk of wilting. Irrigate during early morning or late evening.",
+        'irrigation_advise': "💧 Irrigation Advisory: No rain recorded and air is dry. Irrigation is recommended.",
+        'wind_advise': "💨 Strong Wind: Do not spray pesticides as chemicals will drift.",
+        'rain_advise_heavy': "🌧 Heavy Rain Falling ({rain}mm): Stop spraying pesticides/fertilizer and ensure field drainage is clear.",
+        'rain_advise_light': "🌧 Light Rain Falling ({rain}mm): Avoid liquid spraying as rain will wash it off.",
+        'good_weather': "✅ Fair Weather: Good conditions for spraying pesticides or liquid fertilizer.",
+        'no_data': "Waiting for data from ESP32 sensor...",
+        'rain_none': "No Rain",
+        'rain_light': "Light Rain",
+        'rain_heavy': "Heavy Rain",
+        'never_updated': "Never Received",
+        'farm_not_found': "Farm not found"
+    }
+}
+
+def t(key, lang='sw', **kwargs):
+    """Helper function to retrieve translated text."""
+    language = lang if lang in TRANSLATIONS else 'sw'
+    text = TRANSLATIONS[language].get(key, TRANSLATIONS['sw'].get(key, key))
+    if kwargs:
+        return text.format(**kwargs)
+    return text
 
 # ==================== DATABASE MODELS ====================
 
@@ -43,7 +101,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='farmer')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     farms = db.relationship('Farm', backref='owner', lazy=True, cascade="all, delete-orphan")
 
@@ -60,7 +118,7 @@ class Farm(db.Model):
     name = db.Column(db.String(100), nullable=False)
     location = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     stations = db.relationship('Station', backref='farm', lazy=True, cascade="all, delete-orphan")
     subscribers = db.relationship('Subscriber', backref='farm', lazy=True, cascade="all, delete-orphan")
@@ -86,7 +144,7 @@ class WeatherLog(db.Model):
     humidity = db.Column(db.Float, nullable=False)
     rain = db.Column(db.Float, default=0.0)
     wind_speed = db.Column(db.Float, default=0.0)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Subscriber(db.Model):
@@ -98,23 +156,24 @@ class Subscriber(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 with app.app_context():
     db.create_all()
 
 # ==================== FORECAST & EARLY WARNING LOGIC ====================
 
-def fetch_weather_forecast(location_name):
+def fetch_weather_forecast(location_name, lang='sw'):
     if not location_name or not OPENWEATHER_API_KEY:
         return None
     try:
-        url = f"http://api.openweathermap.org/data/2.5/forecast?q={location_name}&appid={OPENWEATHER_API_KEY}&units=metric&lang=sw"
+        api_lang = 'sw' if lang == 'sw' else 'en'
+        url = f"http://api.openweathermap.org/data/2.5/forecast?q={location_name}&appid={OPENWEATHER_API_KEY}&units=metric&lang={api_lang}"
         res = requests.get(url, timeout=5)
         if res.status_code == 200:
             data = res.json()
             forecast_list = []
-            for item in data.get('list', [])[:8]: # Masaa 24 yajayo (3x8)
+            for item in data.get('list', [])[:8]: # Next 24 hours
                 forecast_list.append({
                     'time': item.get('dt_txt'),
                     'temp': round(item['main']['temp'], 1),
@@ -129,43 +188,53 @@ def fetch_weather_forecast(location_name):
         print(f"Forecast Error: {e}")
     return None
 
-def generate_early_warnings(forecast_list):
+def generate_early_warnings(forecast_list, lang='sw'):
     warnings = []
     if not forecast_list:
-        return ["ℹ️ Hakuna utabiri wa kimataifa uliopatikana kwa eneo hili."]
+        return [t('no_forecast', lang)]
 
     total_rain = sum([f['rain'] for f in forecast_list])
     max_wind = max([f['wind'] for f in forecast_list])
     max_temp = max([f['temp'] for f in forecast_list])
 
     if total_rain >= 15.0:
-        warnings.append(f"🌧️ TAHADHARI YA MVUA KUBWA: Mvua ya takriban {round(total_rain, 1)}mm inatarajiwa masaa 24 yajayo. Safisha mifereji ya shamba na sitisha upuliziaji dawa.")
+        warnings.append(t('heavy_rain_warning', lang, rain=round(total_rain, 1)))
     
     if max_wind >= 20.0:
-        warnings.append(f"💨 TAHADHARI YA UPEPO MKALI: Upepo wa hadi {max_wind} km/h unatarajiwa. Usipulizie dawa au mbolea ya maji.")
+        warnings.append(t('strong_wind_warning', lang, wind=max_wind))
 
     if max_temp >= 34.0:
-        warnings.append(f"☀️ TAHADHARI YA JOTO KALI: Joto litafika {max_temp}°C. Hakikisha mfumo wa kumwagilia maji uko tayari kuzuia mazao kunyauka.")
+        warnings.append(t('high_temp_warning', lang, temp=max_temp))
 
     if not warnings:
-        warnings.append("✅ Hali ya hewa inatarajiwa kuwa shwari bila hatari yoyote masaa 24 yajayo.")
+        warnings.append(t('safe_weather', lang))
 
     return warnings
 
-def generate_agri_advisory(temp, hum, rain, wind):
+def generate_agri_advisory(temp, hum, rain, wind, lang='sw'):
     advisories = []
+    
+    # Check Rain Sensor reading
+    if rain > 5.0:
+        advisories.append(t('rain_advise_heavy', lang, rain=round(rain, 1)))
+    elif rain > 0.0:
+        advisories.append(t('rain_advise_light', lang, rain=round(rain, 1)))
+    elif rain == 0.0 and hum < 50:
+        advisories.append(t('irrigation_advise', lang))
+
+    # Check humidity & temperature risks
     if hum >= 80 and 20 <= temp <= 32:
-        advisories.append("⚠ Tishio la Ukungu/Kuvu: Unyevu mwingi unaongeza hatari ya magonjwa. Epuka kumwagilia maji juu ya majani.")
+        advisories.append(t('fungus_risk', lang))
     if temp >= 32 and hum <= 40:
-        advisories.append("☀️ Joto Kali & Ukavu: Mazao yapo kwenye hatari ya kukauka. Hakikisha unamwagilia asubuhi au jioni mapema.")
-    elif rain == 0 and hum < 50:
-        advisories.append("💧 Ushauri wa Maji: Hakuna mvua iliyorekodiwa na hewa ni kavu. Inashauriwa kumwagilia shamba.")
+        advisories.append(t('heat_dry_risk', lang))
+
+    # Check wind speed
     if wind >= 15:
-        advisories.append("💨 Upepo Mkali: Usipulizie dawa ya wadudu kwani itapeperushwa na upepo.")
-    elif rain > 5:
-        advisories.append("🌧 Mvua Inanyesha: Usipulizie dawa kwani itaoshwa na mvua.")
-    else:
-        advisories.append("✅ Hali ya Hewa: Ni nzuri kwa upuliziaji wa dawa au mbolea ya maji.")
+        advisories.append(t('wind_advise', lang))
+
+    if not advisories:
+        advisories.append(t('good_weather', lang))
+
     return advisories
 
 # ==================== ROUTING ====================
@@ -174,147 +243,55 @@ def generate_agri_advisory(temp, hum, rain, wind):
 def index():
     return render_template('index.html')
 
-@app.route('/api/register', methods=['POST'])
-def register():
-    data = request.get_json() or {}
-    username = (data.get('username') or '').strip()
-    email = (data.get('email') or '').strip().lower()
-    password = (data.get('password') or '').strip()
-
-    if not username or not email or not password:
-        return jsonify({'status': 'error', 'message': 'Jaza taarifa zote'}), 400
-
-    if User.query.filter(User.username.ilike(username)).first():
-        return jsonify({'status': 'error', 'message': 'Username tayari ipo'}), 400
-
-    if User.query.filter(User.email.ilike(email)).first():
-        return jsonify({'status': 'error', 'message': 'Email tayari ipo'}), 400
-
-    new_user = User(username=username, email=email)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
-
-    default_farm = Farm(name="Shamba la Kwanza", location="Tanga", user_id=new_user.id)
-    db.session.add(default_farm)
-    db.session.commit()
-
-    default_station = Station(
-        station_code=f"STATION_{default_farm.id:03d}",
-        api_key=secrets.token_hex(16),
-        farm_id=default_farm.id
-    )
-    db.session.add(default_station)
-    db.session.commit()
-
-    login_user(new_user)
-    return jsonify({'status': 'success', 'message': 'Usajili umefanikiwa!'})
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.get_json() or {}
-    login_input = (data.get('username') or '').strip()
-    password = (data.get('password') or '').strip()
-
-    user = User.query.filter((User.username.ilike(login_input)) | (User.email.ilike(login_input))).first()
-    if user and user.check_password(password):
-        login_user(user)
-        return jsonify({'status': 'success', 'message': 'Umeingia kikamilifu'})
-
-    return jsonify({'status': 'error', 'message': 'Taarifa si sahihi'}), 401
-
-@app.route('/api/logout', methods=['POST'])
-@login_required
-def logout():
-    logout_user()
-    return jsonify({'status': 'success', 'message': 'Umetoka'})
-
-@app.route('/api/user-status', methods=['GET'])
-def user_status():
-    if current_user.is_authenticated:
-        return jsonify({'logged_in': True, 'username': current_user.username, 'email': current_user.email})
-    return jsonify({'logged_in': False})
-
-@app.route('/api/farms', methods=['GET'])
-@login_required
-def get_farms():
-    farms = Farm.query.filter_by(user_id=current_user.id).all()
-    result = []
-    for f in farms:
-        st = Station.query.filter_by(farm_id=f.id).first()
-        result.append({'id': f.id, 'name': f.name, 'location': f.location or 'Tanga', 'api_key': st.api_key if st else ''})
-    return jsonify({'status': 'success', 'farms': result})
-
-@app.route('/api/farms/add', methods=['POST'])
-@login_required
-def add_farm():
-    data = request.get_json() or {}
-    name = (data.get('name') or '').strip()
-    location = (data.get('location') or 'Tanga').strip()
-
-    if not name:
-        return jsonify({'status': 'error', 'message': 'Ingiza jina la shamba'}), 400
-
-    new_farm = Farm(name=name, location=location, user_id=current_user.id)
-    db.session.add(new_farm)
-    db.session.commit()
-
-    new_station = Station(station_code=f"STATION_{new_farm.id:03d}", api_key=secrets.token_hex(16), farm_id=new_farm.id)
-    db.session.add(new_station)
-    db.session.commit()
-
-    return jsonify({'status': 'success', 'message': 'Shamba limeongezwa'})
-
-@app.route('/api/farms/edit', methods=['POST'])
-@login_required
-def edit_farm():
-    data = request.get_json() or {}
-    farm_id = data.get('farm_id')
-    name = (data.get('name') or '').strip()
-    location = (data.get('location') or '').strip()
-
-    if not farm_id or not name or not location:
-        return jsonify({'status': 'error', 'message': 'Jaza taarifa zote kwa usahihi'}), 400
-
-    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
-    if not farm:
-        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
-
-    farm.name = name
-    farm.location = location
-    db.session.commit()
-
-    return jsonify({'status': 'success', 'message': 'Taarifa za shamba zimebadilishwa'})
-
 @app.route('/api/get-data', methods=['GET'])
 @login_required
 def get_data():
     farm_id = request.args.get('farm_id', type=int)
+    lang = request.args.get('lang', 'sw')  # 'sw' or 'en'
+    
     farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
     if not farm:
-        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
+        return jsonify({'status': 'error', 'message': t('farm_not_found', lang)}), 404
 
     station = Station.query.filter_by(farm_id=farm.id).first()
     if not station:
-        return jsonify({'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0, 'wind_speed': 0, 'is_online': False, 'advisories': []})
+        return jsonify({
+            'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0,
+            'rain_status': t('rain_none', lang), 'wind_speed': 0, 'is_online': False, 'advisories': []
+        })
 
     latest_log = WeatherLog.query.filter_by(station_id=station.id).order_by(WeatherLog.timestamp.desc()).first()
-    is_online = station.last_seen and (datetime.utcnow() - station.last_seen) < timedelta(minutes=5)
+    now_utc = datetime.now(timezone.utc)
+    
+    is_online = False
+    if station.last_seen:
+        last_seen_aware = station.last_seen if station.last_seen.tzinfo else station.last_seen.replace(tzinfo=timezone.utc)
+        is_online = (now_utc - last_seen_aware) < timedelta(minutes=5)
 
     if not latest_log:
         return jsonify({
-            'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0, 'wind_speed': 0,
-            'is_online': is_online, 'last_updated': 'Hajawahi Kutuma', 'api_key': station.api_key,
-            'advisories': ["Inasubiri data kutoka sensor ya ESP32..."]
+            'status': 'success', 'temperature': 0, 'humidity': 0, 'rain': 0,
+            'rain_status': t('rain_none', lang), 'wind_speed': 0,
+            'is_online': is_online, 'last_updated': t('never_updated', lang), 'api_key': station.api_key,
+            'advisories': [t('no_data', lang)]
         })
 
-    advisories = generate_agri_advisory(latest_log.temperature, latest_log.humidity, latest_log.rain, latest_log.wind_speed)
+    # Rain sensor classification
+    if latest_log.rain > 5.0:
+        rain_status = t('rain_heavy', lang)
+    elif latest_log.rain > 0.0:
+        rain_status = t('rain_light', lang)
+    else:
+        rain_status = t('rain_none', lang)
+
+    advisories = generate_agri_advisory(latest_log.temperature, latest_log.humidity, latest_log.rain, latest_log.wind_speed, lang=lang)
 
     return jsonify({
         'status': 'success',
         'temperature': round(latest_log.temperature, 1),
         'humidity': round(latest_log.humidity, 1),
         'rain': round(latest_log.rain, 1),
+        'rain_status': rain_status,
         'wind_speed': round(latest_log.wind_speed, 1),
         'is_online': is_online,
         'last_updated': latest_log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
@@ -326,12 +303,14 @@ def get_data():
 @login_required
 def get_forecast():
     farm_id = request.args.get('farm_id', type=int)
+    lang = request.args.get('lang', 'sw')  # 'sw' or 'en'
+    
     farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
     if not farm:
-        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
+        return jsonify({'status': 'error', 'message': t('farm_not_found', lang)}), 404
 
-    forecast_data = fetch_weather_forecast(farm.location or "Tanga")
-    early_warnings = generate_early_warnings(forecast_data)
+    forecast_data = fetch_weather_forecast(farm.location or "Tanga", lang=lang)
+    early_warnings = generate_early_warnings(forecast_data, lang=lang)
 
     return jsonify({
         'status': 'success',
@@ -342,29 +321,32 @@ def get_forecast():
 
 @app.route('/update', methods=['POST'])
 def update_weather():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
     api_key = data.get('api_key')
+
+    if not api_key:
+        return jsonify({'status': 'error', 'message': 'API Key is required'}), 400
 
     station = Station.query.filter_by(api_key=api_key).first()
     if not station:
-        return jsonify({'status': 'error', 'message': 'API Key si sahihi'}), 401
+        return jsonify({'status': 'error', 'message': 'Invalid API Key'}), 401
 
-    temp = data.get('temperature')
-    hum = data.get('humidity')
-    rain = data.get('rain', 0.0)
-    wind = data.get('wind_speed', 0.0)
-
-    if temp is None or hum is None:
-        return jsonify({'status': 'error', 'message': 'Data hazijakamilika'}), 400
+    try:
+        temp = float(data.get('temperature'))
+        hum = float(data.get('humidity'))
+        rain = float(data.get('rain', 0.0)) # Receives rain sensor data
+        wind = float(data.get('wind_speed', 0.0))
+    except (ValueError, TypeError):
+        return jsonify({'status': 'error', 'message': 'Invalid sensor data format'}), 400
 
     log = WeatherLog(station_id=station.id, temperature=temp, humidity=hum, rain=rain, wind_speed=wind)
     station.is_online = True
-    station.last_seen = datetime.utcnow()
+    station.last_seen = datetime.now(timezone.utc)
 
     db.session.add(log)
     db.session.commit()
 
-    return jsonify({'status': 'success', 'message': 'Data imepokewa'})
+    return jsonify({'status': 'success', 'message': 'Data received successfully'})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
