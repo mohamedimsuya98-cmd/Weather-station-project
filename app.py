@@ -6,7 +6,6 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for, f
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from apscheduler.schedulers.background import BackgroundScheduler
 import africastalking
 
 app = Flask(__name__)
@@ -107,7 +106,7 @@ with app.app_context():
 # ==================== FORECAST & EARLY WARNING LOGIC ====================
 
 def fetch_weather_forecast(location_name):
-    if not location_name:
+    if not location_name or not OPENWEATHER_API_KEY:
         return None
     try:
         url = f"http://api.openweathermap.org/data/2.5/forecast?q={location_name}&appid={OPENWEATHER_API_KEY}&units=metric&lang=sw"
@@ -266,6 +265,27 @@ def add_farm():
 
     return jsonify({'status': 'success', 'message': 'Shamba limeongezwa'})
 
+@app.route('/api/farms/edit', methods=['POST'])
+@login_required
+def edit_farm():
+    data = request.get_json() or {}
+    farm_id = data.get('farm_id')
+    name = (data.get('name') or '').strip()
+    location = (data.get('location') or '').strip()
+
+    if not farm_id or not name or not location:
+        return jsonify({'status': 'error', 'message': 'Jaza taarifa zote kwa usahihi'}), 400
+
+    farm = Farm.query.filter_by(id=farm_id, user_id=current_user.id).first()
+    if not farm:
+        return jsonify({'status': 'error', 'message': 'Shamba halikupatikana'}), 404
+
+    farm.name = name
+    farm.location = location
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Taarifa za shamba zimebadilishwa'})
+
 @app.route('/api/get-data', methods=['GET'])
 @login_required
 def get_data():
@@ -302,7 +322,6 @@ def get_data():
         'advisories': advisories
     })
 
-# --- FORECAST & EARLY WARNINGS ENDPOINT ---
 @app.route('/api/forecast', methods=['GET'])
 @login_required
 def get_forecast():
