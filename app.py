@@ -121,7 +121,7 @@ def generate_agri_advisory(temp, hum, rain, wind):
     if wind >= 15:
         advisories.append("💨 Upepo Mkali: Usipulizie dawa ya wadudu au mbolea kwa sasa kwani itapeperushwa na upepo.")
     elif rain > 5:
-        advisories.append("🌧️ Mvua Inanyesha: Usipulizie dawa kwani itaoshwa na mvua na kupotea.")
+        advisories.append("🌧️️ Mvua Inanyesha: Usipulizie dawa kwani itaoshwa na mvua na kupotea.")
     else:
         advisories.append("✅ Hali ya Hewa: Ni nzuri kwa upuliziaji wa dawa au mbolea ya maji kama inahitajika.")
 
@@ -145,17 +145,17 @@ def index():
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json() or {}
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    password = (data.get('password') or '').strip()
 
     if not username or not email or not password:
         return jsonify({'status': 'error', 'message': 'Jaza taarifa zote zinazotakiwa'}), 400
 
-    if User.query.filter_by(username=username).first():
+    if User.query.filter(User.username.ilike(username)).first():
         return jsonify({'status': 'error', 'message': 'Jina hili la mtumiaji tayari linatumika'}), 400
 
-    if User.query.filter_by(email=email).first():
+    if User.query.filter(User.email.ilike(email)).first():
         return jsonify({'status': 'error', 'message': 'Barua pepe hii tayari imesajiliwa'}), 400
 
     new_user = User(username=username, email=email)
@@ -187,10 +187,17 @@ def register():
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
-    username = data.get('username')
-    password = data.get('password')
+    login_input = (data.get('username') or '').strip()
+    password = (data.get('password') or '').strip()
 
-    user = User.query.filter_by(username=username).first()
+    if not login_input or not password:
+        return jsonify({'status': 'error', 'message': 'Tafadhali ingiza taarifa zote'}), 400
+
+    # Kutafuta kwa Username AU Email bila kujali herufi kubwa/ndogo
+    user = User.query.filter(
+        (User.username.ilike(login_input)) | (User.email.ilike(login_input))
+    ).first()
+
     if user and user.check_password(password):
         login_user(user)
         return jsonify({
@@ -199,7 +206,7 @@ def login():
             'user': {'username': user.username, 'email': user.email}
         })
 
-    return jsonify({'status': 'error', 'message': 'Jina la mtumiaji au nenosiri si sahihi'}), 401
+    return jsonify({'status': 'error', 'message': 'Jina la mtumiaji/barua pepe au nenosiri si sahihi'}), 401
 
 @app.route('/api/logout', methods=['POST'])
 @login_required
@@ -238,8 +245,8 @@ def get_farms():
 @login_required
 def add_farm():
     data = request.get_json() or {}
-    name = data.get('name')
-    location = data.get('location', '')
+    name = (data.get('name') or '').strip()
+    location = (data.get('location') or '').strip()
 
     if not name:
         return jsonify({'status': 'error', 'message': 'Tafadhali ingiza jina la shamba'}), 400
