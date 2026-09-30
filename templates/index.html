@@ -1,19 +1,12 @@
 <!DOCTYPE html>
-<html lang="sw" id="htmlRoot" class="light">
+<html lang="sw" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Farm Weather Station</title>
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#059669">
-
-    <!-- Tailwind CSS & Chart.js -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-100 font-sans antialiased text-gray-800 transition-colors duration-200">
+<body class="bg-gray-100 font-sans text-gray-800">
 
     <!-- NAV BAR -->
     <nav class="bg-green-700 text-white shadow-lg sticky top-0 z-50">
@@ -21,13 +14,11 @@
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-3">
                     <span class="text-2xl">🌱</span>
-                    <span class="font-bold text-xl tracking-wide">Smart Farm</span>
+                    <span class="font-bold text-xl">Smart Farm System</span>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span id="user-display" class="hidden text-sm font-medium bg-green-800 px-3 py-1 rounded-full"></span>
-                    <button id="logout-btn" onclick="logout()" class="hidden bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg font-semibold transition">
-                        Toka (Logout)
-                    </button>
+                    <button id="logout-btn" onclick="logout()" class="hidden bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg font-semibold">Toka</button>
                 </div>
             </div>
         </div>
@@ -36,155 +27,106 @@
     <!-- MAIN CONTAINER -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        <!-- AUTH SECTION (LOGIN / REGISTER FORM) -->
-        <div id="auth-section" class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-            
-            <!-- Auth Tabs -->
+        <!-- AUTH SECTION -->
+        <div id="auth-section" class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl">
             <div class="flex border-b mb-6">
-                <button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-center font-bold text-green-700 border-b-2 border-green-700">
-                    Ingia (Login)
-                </button>
-                <button id="tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-center font-bold text-gray-500 hover:text-green-700">
-                    Jisajili (Register)
-                </button>
+                <button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 font-bold text-green-700 border-b-2 border-green-700">Ingia</button>
+                <button id="tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 font-bold text-gray-500 hover:text-green-700">Jisajili</button>
             </div>
 
             <div id="auth-message" class="hidden mb-4 p-3 rounded-lg text-sm text-center"></div>
 
-            <!-- FORM YA LOGIN -->
             <form id="login-form" onsubmit="handleLogin(event)">
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Username au Email</label>
-                    <input type="text" id="login-username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Ingiza username au barua pepe" required>
+                    <input type="text" id="login-username" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" required>
                 </div>
                 <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Nenosiri (Password)</label>
-                    <div class="relative">
-                        <input type="password" id="login-password" class="w-full px-4 py-2 border rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Ingiza nenosiri" required>
-                        <button type="button" onclick="togglePasswordVisibility('login-password', 'eye-icon-login')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-green-600 focus:outline-none">
-                            <svg id="eye-icon-login" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        </button>
-                    </div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Nenosiri</label>
+                    <input type="password" id="login-password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" required>
                 </div>
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
-                    Ingia Kwenye Mfumo
-                </button>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700">Ingia Kwenye Mfumo</button>
             </form>
 
-            <!-- FORM YA REGISTER -->
             <form id="register-form" onsubmit="handleRegister(event)" class="hidden">
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Jina la Mtumiaji (Username)</label>
-                    <input type="text" id="register-username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mfano: amani_2026" required>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Username</label>
+                    <input type="text" id="register-username" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" required>
                 </div>
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Barua Pepe (Email)</label>
-                    <input type="email" id="register-email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="mfano@gmail.com" required>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                    <input type="email" id="register-email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" required>
                 </div>
                 <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Nenosiri (Password)</label>
-                    <div class="relative">
-                        <input type="password" id="register-password" class="w-full px-4 py-2 border rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Tengeneza nenosiri" required>
-                        <button type="button" onclick="togglePasswordVisibility('register-password', 'eye-icon-register')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-green-600 focus:outline-none">
-                            <svg id="eye-icon-register" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        </button>
-                    </div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Nenosiri</label>
+                    <input type="password" id="register-password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500" required>
                 </div>
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
-                    Tengeneza Akaunti
-                </button>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700">Tengeneza Akaunti</button>
             </form>
         </div>
 
-        <!-- DASHBOARD SECTION (MTAZAMO WA SHAMBA) -->
+        <!-- DASHBOARD SECTION -->
         <div id="dashboard-section" class="hidden space-y-6">
             
-            <!-- Shamba Selection & Header -->
             <div class="bg-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800">Dashboard ya Hali ya Hewa</h1>
-                    <p class="text-sm text-gray-500">Kituo cha Mfumo: <span id="station-status" class="font-semibold text-gray-600">Inatathmini...</span></p>
+                    <h1 class="text-2xl font-bold text-gray-800">Dashboard ya Shamba</h1>
+                    <p class="text-sm text-gray-500">Kituo cha Sensor: <span id="station-status" class="font-semibold">Inatathmini...</span></p>
                 </div>
-                <div class="flex items-center space-x-3 w-full md:w-auto">
-                    <select id="farm-select" onchange="loadDashboardData()" class="px-4 py-2 border rounded-lg bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-green-500">
-                        <!-- Ma-shamba yatajazwa na JS -->
-                    </select>
-                    <button onclick="openAddFarmModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition">
-                        + Ongeza Shamba
-                    </button>
+                <div class="flex items-center space-x-3">
+                    <select id="farm-select" onchange="loadDashboardData()" class="px-4 py-2 border rounded-lg bg-gray-50 font-medium"></select>
+                    <button onclick="openAddFarmModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-green-700">+ Ongeza Shamba</button>
                 </div>
             </div>
 
-            <!-- CARDS ZA VIPIMO VYA HALI YA HEWA -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Temperature -->
-                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-amber-500">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 font-medium">Joto (Temperature)</span>
-                        <span class="text-2xl">🌡️</span>
-                    </div>
-                    <div class="mt-4">
-                        <span id="val-temp" class="text-3xl font-bold text-gray-800">0</span>
-                        <span class="text-xl font-semibold text-gray-600">°C</span>
-                    </div>
-                </div>
-
-                <!-- Humidity -->
-                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-blue-500">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 font-medium">Unyevu (Humidity)</span>
-                        <span class="text-2xl">💧</span>
-                    </div>
-                    <div class="mt-4">
-                        <span id="val-hum" class="text-3xl font-bold text-gray-800">0</span>
-                        <span class="text-xl font-semibold text-gray-600">%</span>
-                    </div>
-                </div>
-
-                <!-- Rain -->
-                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-indigo-500">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 font-medium">Kiwango cha Mvua</span>
-                        <span class="text-2xl">🌧️</span>
-                    </div>
-                    <div class="mt-4">
-                        <span id="val-rain" class="text-3xl font-bold text-gray-800">0</span>
-                        <span class="text-xl font-semibold text-gray-600">mm</span>
-                    </div>
-                </div>
-
-                <!-- Wind Speed -->
-                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-teal-500">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 font-medium">Kasi ya Upepo</span>
-                        <span class="text-2xl">💨</span>
-                    </div>
-                    <div class="mt-4">
-                        <span id="val-wind" class="text-3xl font-bold text-gray-800">0</span>
-                        <span class="text-xl font-semibold text-gray-600">km/h</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- USHAURI WA KIKILIMA (AGRI-ADVISORY) -->
-            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-200 shadow-sm">
-                <h2 class="text-lg font-bold text-emerald-900 mb-3 flex items-center gap-2">
-                    <span>💡</span> Ushauri wa Kilimo Kulingana na Mfumo
+            <!-- EARLY WARNINGS CARD -->
+            <div id="early-warnings-card" class="bg-amber-50 border-l-4 border-amber-500 p-5 rounded-2xl shadow-sm">
+                <h2 class="text-lg font-bold text-amber-900 mb-2 flex items-center gap-2">
+                    <span>⚠️</span> Tahadhari za Mapema (Early Warnings)
                 </h2>
-                <ul id="advisories-list" class="space-y-2 text-emerald-800 font-medium text-sm">
-                    <li>Inapakua ushauri...</li>
+                <ul id="early-warnings-list" class="space-y-1 text-amber-800 font-semibold text-sm">
+                    <li>Inapakua utabiri...</li>
                 </ul>
             </div>
 
-            <!-- API KEY DISPLAY FOR ESP32 -->
-            <div class="bg-white p-4 rounded-xl border border-gray-200 text-xs text-gray-600 flex flex-col sm:flex-row justify-between items-center gap-2">
-                <span><strong>Sensor API Key (Kwenye ESP32 Code):</strong> <code id="api-key-display" class="bg-gray-100 px-2 py-1 rounded text-green-700 font-mono">----------------</code></span>
+            <!-- CARDS ZA SENSOR DATA -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-amber-500">
+                    <span class="text-gray-500 font-medium">Joto Shambani</span>
+                    <div class="mt-2"><span id="val-temp" class="text-3xl font-bold">0</span><span class="text-xl">°C</span></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-blue-500">
+                    <span class="text-gray-500 font-medium">Unyevu (Humidity)</span>
+                    <div class="mt-2"><span id="val-hum" class="text-3xl font-bold">0</span><span class="text-xl">%</span></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-indigo-500">
+                    <span class="text-gray-500 font-medium">Kiwango cha Mvua</span>
+                    <div class="mt-2"><span id="val-rain" class="text-3xl font-bold">0</span><span class="text-xl">mm</span></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-teal-500">
+                    <span class="text-gray-500 font-medium">Kasi ya Upepo</span>
+                    <div class="mt-2"><span id="val-wind" class="text-3xl font-bold">0</span><span class="text-xl">km/h</span></div>
+                </div>
+            </div>
+
+            <!-- UTABIRI WA HALI YA HEWA (24-HOUR FORECAST) -->
+            <div class="bg-white p-6 rounded-2xl shadow-md">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span>📅</span> Utabiri wa Masaa 24 Yajayo (<span id="forecast-location">Eneo</span>)
+                </h2>
+                <div id="forecast-container" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-center">
+                    <!-- Forecast Cards Zitajazwa hapa -->
+                </div>
+            </div>
+
+            <!-- USHAURI WA KILIMO -->
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-200 shadow-sm">
+                <h2 class="text-lg font-bold text-emerald-900 mb-2">💡 Ushauri wa Kilimo kwa Sasa</h2>
+                <ul id="advisories-list" class="space-y-1 text-emerald-800 font-medium text-sm"></ul>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border text-xs text-gray-600 flex justify-between">
+                <span><strong>Sensor API Key:</strong> <code id="api-key-display" class="bg-gray-100 px-2 py-1 rounded text-green-700">----</code></span>
                 <span id="last-updated-time">Muda: Hajawahi kutuma</span>
             </div>
 
@@ -192,121 +134,58 @@
 
     </main>
 
-    <!-- MODAL YA KUONGEZA SHAMBA -->
-    <div id="add-farm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h3 class="text-xl font-bold mb-4 text-gray-800">Ongeza Shamba Jipya</h3>
+    <!-- MODAL YA SHAMBA -->
+    <div id="add-farm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4">Ongeza Shamba Jipya</h3>
             <form onsubmit="handleAddFarm(event)">
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Jina la Shamba</label>
-                    <input type="text" id="new-farm-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mfano: Shamba la Nyanya" required>
+                    <label class="block text-sm font-bold mb-1">Jina la Shamba</label>
+                    <input type="text" id="new-farm-name" class="w-full px-4 py-2 border rounded-lg" required>
                 </div>
                 <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Eneo / Mahali</label>
-                    <input type="text" id="new-farm-location" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mfano: Morogoro Vijijini">
+                    <label class="block text-sm font-bold mb-1">Eneo / Mji (Mfano: Tanga, Morogoro, Arusha)</label>
+                    <input type="text" id="new-farm-location" class="w-full px-4 py-2 border rounded-lg" placeholder="Tanga" required>
                 </div>
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeAddFarmModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700 font-semibold">Ghairi</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">Hifadhi</button>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeAddFarmModal()" class="px-4 py-2 bg-gray-200 rounded-lg">Ghairi</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Hifadhi</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
     <script>
-        // FUNCTION YA SHOW/HIDE PASSWORD
-        function togglePasswordVisibility(inputId, iconId) {
-            const passwordInput = document.getElementById(inputId);
-            const eyeIcon = document.getElementById(iconId);
-
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeIcon.innerHTML = `
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908A8.98 8.98 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m-0.469 0.469L3 3l18 18" />
-                `;
-            } else {
-                passwordInput.type = 'password';
-                eyeIcon.innerHTML = `
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                `;
-            }
-        }
-
         function switchAuthTab(tab) {
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const tabLogin = document.getElementById('tab-login');
-            const tabRegister = document.getElementById('tab-register');
-            const authMsg = document.getElementById('auth-message');
-
-            authMsg.classList.add('hidden');
-
-            if (tab === 'login') {
-                loginForm.classList.remove('hidden');
-                registerForm.classList.add('hidden');
-                tabLogin.className = "w-1/2 py-2 text-center font-bold text-green-700 border-b-2 border-green-700";
-                tabRegister.className = "w-1/2 py-2 text-center font-bold text-gray-500 hover:text-green-700";
-            } else {
-                loginForm.classList.add('hidden');
-                registerForm.classList.remove('hidden');
-                tabRegister.className = "w-1/2 py-2 text-center font-bold text-green-700 border-b-2 border-green-700";
-                tabLogin.className = "w-1/2 py-2 text-center font-bold text-gray-500 hover:text-green-700";
-            }
+            document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
         }
 
-        function showMessage(msg, isError = false) {
-            const authMsg = document.getElementById('auth-message');
-            authMsg.textContent = msg;
-            authMsg.className = `mb-4 p-3 rounded-lg text-sm text-center ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
-            authMsg.classList.remove('hidden');
-        }
-
-        // AUTH HANDLERS
         async function handleLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                if (res.ok && data.status === 'success') {
-                    checkUserStatus();
-                } else {
-                    showMessage(data.message || 'Login imefeli', true);
-                }
-            } catch (err) {
-                showMessage('Imeshindikana kuunganisha kwenye server', true);
-            }
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: document.getElementById('login-username').value,
+                    password: document.getElementById('login-password').value
+                })
+            });
+            if (res.ok) checkUserStatus();
         }
 
         async function handleRegister(e) {
             e.preventDefault();
-            const username = document.getElementById('register-username').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-
-            try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ username, email, password })
-                });
-                const data = await res.json();
-                if (res.ok && data.status === 'success') {
-                    checkUserStatus();
-                } else {
-                    showMessage(data.message || 'Usajili umefeli', true);
-                }
-            } catch (err) {
-                showMessage('Imeshindikana kuunganisha kwenye server', true);
-            }
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: document.getElementById('register-username').value,
+                    email: document.getElementById('register-email').value,
+                    password: document.getElementById('register-password').value
+                })
+            });
+            if (res.ok) checkUserStatus();
         }
 
         async function logout() {
@@ -314,49 +193,38 @@
             checkUserStatus();
         }
 
-        // USER STATUS & DASHBOARD LOADER
         async function checkUserStatus() {
-            try {
-                const res = await fetch('/api/user-status');
-                const data = await res.json();
+            const res = await fetch('/api/user-status');
+            const data = await res.json();
 
-                if (data.logged_in) {
-                    document.getElementById('auth-section').classList.add('hidden');
-                    document.getElementById('dashboard-section').classList.remove('hidden');
-                    document.getElementById('logout-btn').classList.remove('hidden');
-                    document.getElementById('user-display').classList.remove('hidden');
-                    document.getElementById('user-display').textContent = `👤 ${data.username}`;
-                    
-                    loadFarms();
-                } else {
-                    document.getElementById('auth-section').classList.remove('hidden');
-                    document.getElementById('dashboard-section').classList.add('hidden');
-                    document.getElementById('logout-btn').classList.add('hidden');
-                    document.getElementById('user-display').classList.add('hidden');
-                }
-            } catch (err) {
-                console.error(err);
+            if (data.logged_in) {
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.remove('hidden');
+                document.getElementById('logout-btn').classList.remove('hidden');
+                document.getElementById('user-display').classList.remove('hidden');
+                document.getElementById('user-display').textContent = `👤 ${data.username}`;
+                loadFarms();
+            } else {
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('dashboard-section').classList.add('hidden');
+                document.getElementById('logout-btn').classList.add('hidden');
+                document.getElementById('user-display').classList.add('hidden');
             }
         }
 
         async function loadFarms() {
-            try {
-                const res = await fetch('/api/farms');
-                const data = await res.json();
-                const select = document.getElementById('farm-select');
-                select.innerHTML = '';
-
-                if (data.farms && data.farms.length > 0) {
-                    data.farms.forEach(f => {
-                        const opt = document.createElement('option');
-                        opt.value = f.id;
-                        opt.textContent = `${f.name} (${f.location})`;
-                        select.appendChild(opt);
-                    });
-                    loadDashboardData();
-                }
-            } catch (err) {
-                console.error(err);
+            const res = await fetch('/api/farms');
+            const data = await res.json();
+            const select = document.getElementById('farm-select');
+            select.innerHTML = '';
+            if (data.farms) {
+                data.farms.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = `${f.name} (${f.location})`;
+                    select.appendChild(opt);
+                });
+                loadDashboardData();
             }
         }
 
@@ -364,43 +232,65 @@
             const farmId = document.getElementById('farm-select').value;
             if (!farmId) return;
 
-            try {
-                const res = await fetch(`/api/get-data?farm_id=${farmId}`);
-                const data = await res.json();
+            // 1. Data za Sensor
+            const res = await fetch(`/api/get-data?farm_id=${farmId}`);
+            const data = await res.json();
 
-                if (data.status === 'success') {
-                    document.getElementById('val-temp').textContent = data.temperature;
-                    document.getElementById('val-hum').textContent = data.humidity;
-                    document.getElementById('val-rain').textContent = data.rain;
-                    document.getElementById('val-wind').textContent = data.wind_speed;
+            if (data.status === 'success') {
+                document.getElementById('val-temp').textContent = data.temperature;
+                document.getElementById('val-hum').textContent = data.humidity;
+                document.getElementById('val-rain').textContent = data.rain;
+                document.getElementById('val-wind').textContent = data.wind_speed;
+                document.getElementById('api-key-display').textContent = data.api_key || 'N/A';
+                document.getElementById('last-updated-time').textContent = `Muda: ${data.last_updated}`;
 
-                    document.getElementById('api-key-display').textContent = data.api_key || 'N/A';
-                    document.getElementById('last-updated-time').textContent = `Muda: ${data.last_updated}`;
+                const statusBadge = document.getElementById('station-status');
+                statusBadge.textContent = data.is_online ? "ONLINE 🟢" : "OFFLINE 🔴";
+                statusBadge.className = data.is_online ? "font-semibold text-green-600" : "font-semibold text-red-600";
 
-                    const statusBadge = document.getElementById('station-status');
-                    if (data.is_online) {
-                        statusBadge.textContent = "ONLINE 🟢";
-                        statusBadge.className = "font-semibold text-green-600";
-                    } else {
-                        statusBadge.textContent = "OFFLINE 🔴";
-                        statusBadge.className = "font-semibold text-red-600";
-                    }
+                const advList = document.getElementById('advisories-list');
+                advList.innerHTML = '';
+                (data.advisories || []).forEach(adv => {
+                    const li = document.createElement('li');
+                    li.textContent = adv;
+                    advList.appendChild(li);
+                });
+            }
 
-                    // Ongeza Ushauri
-                    const advList = document.getElementById('advisories-list');
-                    advList.innerHTML = '';
-                    (data.advisories || []).forEach(adv => {
-                        const li = document.createElement('li');
-                        li.textContent = adv;
-                        advList.appendChild(li);
-                    });
-                }
-            } catch (err) {
-                console.error(err);
+            // 2. Data za Forecast & Early Warnings
+            const fRes = await fetch(`/api/forecast?farm_id=${farmId}`);
+            const fData = await fRes.json();
+
+            if (fData.status === 'success') {
+                document.getElementById('forecast-location').textContent = fData.location;
+
+                // Warnings
+                const warnList = document.getElementById('early-warnings-list');
+                warnList.innerHTML = '';
+                (fData.early_warnings || []).forEach(w => {
+                    const li = document.createElement('li');
+                    li.textContent = w;
+                    warnList.appendChild(li);
+                });
+
+                // Cards za Forecast
+                const container = document.getElementById('forecast-container');
+                container.innerHTML = '';
+                (fData.forecast || []).forEach(f => {
+                    const timeOnly = f.time.split(' ')[1].substring(0, 5);
+                    const card = document.createElement('div');
+                    card.className = "bg-gray-50 p-2 rounded-xl border text-xs flex flex-col items-center justify-between";
+                    card.innerHTML = `
+                        <span class="font-bold text-gray-600">${timeOnly}</span>
+                        <img src="https://openweathermap.org/img/wn/${f.icon}.png" class="w-10 h-10" title="${f.desc}">
+                        <span class="font-bold text-sm">${f.temp}°C</span>
+                        <span class="text-blue-600">${f.rain}mm</span>
+                    `;
+                    container.appendChild(card);
+                });
             }
         }
 
-        // MODAL FUNCTIONS
         function openAddFarmModal() { document.getElementById('add-farm-modal').classList.remove('hidden'); }
         function closeAddFarmModal() { document.getElementById('add-farm-modal').classList.add('hidden'); }
 
@@ -408,25 +298,19 @@
             e.preventDefault();
             const name = document.getElementById('new-farm-name').value;
             const location = document.getElementById('new-farm-location').value;
-
-            try {
-                const res = await fetch('/api/farms/add', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ name, location })
-                });
-                if (res.ok) {
-                    closeAddFarmModal();
-                    loadFarms();
-                }
-            } catch (err) {
-                console.error(err);
+            const res = await fetch('/api/farms/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, location })
+            });
+            if (res.ok) {
+                closeAddFarmModal();
+                loadFarms();
             }
         }
 
-        // INILIZATION
         checkUserStatus();
-        setInterval(loadDashboardData, 10000); // Inajirudia kila sekunde 10
+        setInterval(loadDashboardData, 15000);
     </script>
 </body>
 </html>
