@@ -6,3 +6,4 @@ requests
 africastalking
 gunicorn
 Flask-Login
+psycopg2-binary
