@@ -1,493 +1,432 @@
 <!DOCTYPE html>
 <html lang="sw" id="htmlRoot" class="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Farm Weather Station</title>
-  
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="/static/manifest.json">
-  <meta name="theme-color" content="#059669">
-  
-  <!-- Tailwind CSS & Chart.js -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            emerald: { 50: '#ecfdf5', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46' }
-          }
-        }
-      }
-    }
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Farm Weather Station</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#059669">
+
+    <!-- Tailwind CSS & Chart.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-200">
+<body class="bg-gray-100 font-sans antialiased text-gray-800 transition-colors duration-200">
 
-  <!-- HEADER / NAVIGATION -->
-  <header class="bg-emerald-700 dark:bg-slate-800 text-white sticky top-0 z-40 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
-      
-      <!-- LOGO / BRANDING -->
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🌱</span>
-        <h1 class="font-bold text-lg md:text-xl tracking-tight">SmartFarm</h1>
-      </div>
+    <!-- NAV BAR -->
+    <nav class="bg-green-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">🌱</span>
+                    <span class="font-bold text-xl tracking-wide">Smart Farm</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-display" class="hidden text-sm font-medium bg-green-800 px-3 py-1 rounded-full"></span>
+                    <button id="logout-btn" onclick="logout()" class="hidden bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg font-semibold transition">
+                        Toka (Logout)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-      <!-- MIDDLE: FARM SELECTOR & ADD BUTTON (Appears when logged in) -->
-      <div id="farmSelectorContainer" class="hidden flex items-center gap-2">
-        <select id="farmSelect" onchange="onFarmChange()" class="bg-emerald-800 dark:bg-slate-700 text-white text-xs md:text-sm rounded-lg px-2 py-1.5 outline-none border border-emerald-600 dark:border-slate-600 font-medium cursor-pointer">
-          <!-- Options populated via JS -->
-        </select>
-        
-        <button onclick="toggleModal('addFarmModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1 transition-all" title="Ongeza Shamba">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-          <span class="hidden sm:inline" data-sw="Ongeza" data-en="Add">Ongeza</span>
-        </button>
-      </div>
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-      <!-- RIGHT: CONTROLS & AUTH -->
-      <div class="flex items-center gap-2">
-        <!-- Language Switcher -->
-        <button onclick="toggleLanguage()" class="px-2 py-1 rounded bg-emerald-800 dark:bg-slate-700 text-xs font-bold hover:bg-emerald-600 transition-all">
-          <span id="langBtnText">EN</span>
-        </button>
+        <!-- AUTH SECTION (LOGIN / REGISTER FORM) -->
+        <div id="auth-section" class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+            
+            <!-- Auth Tabs -->
+            <div class="flex border-b mb-6">
+                <button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-center font-bold text-green-700 border-b-2 border-green-700">
+                    Ingia (Login)
+                </button>
+                <button id="tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-center font-bold text-gray-500 hover:text-green-700">
+                    Jisajili (Register)
+                </button>
+            </div>
 
-        <!-- Dark Mode Switcher -->
-        <button onclick="toggleDarkMode()" class="p-1.5 rounded-lg bg-emerald-800 dark:bg-slate-700 hover:bg-emerald-600 transition-all text-xs">
-          🌙
-        </button>
+            <div id="auth-message" class="hidden mb-4 p-3 rounded-lg text-sm text-center"></div>
 
-        <!-- Auth Button -->
-        <button id="authBtn" onclick="toggleModal('authModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all">
-          Login
-        </button>
-      </div>
+            <!-- FORM YA LOGIN -->
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Username au Email</label>
+                    <input type="text" id="login-username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Ingiza username au barua pepe" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Nenosiri (Password)</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" class="w-full px-4 py-2 border rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Ingiza nenosiri" required>
+                        <button type="button" onclick="togglePasswordVisibility('login-password', 'eye-icon-login')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-green-600 focus:outline-none">
+                            <svg id="eye-icon-login" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                    Ingia Kwenye Mfumo
+                </button>
+            </form>
+
+            <!-- FORM YA REGISTER -->
+            <form id="register-form" onsubmit="handleRegister(event)" class="hidden">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Jina la Mtumiaji (Username)</label>
+                    <input type="text" id="register-username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mfano: amani_2026" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Barua Pepe (Email)</label>
+                    <input type="email" id="register-email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="mfano@gmail.com" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Nenosiri (Password)</label>
+                    <div class="relative">
+                        <input type="password" id="register-password" class="w-full px-4 py-2 border rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Tengeneza nenosiri" required>
+                        <button type="button" onclick="togglePasswordVisibility('register-password', 'eye-icon-register')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-green-600 focus:outline-none">
+                            <svg id="eye-icon-register" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                    Tengeneza Akaunti
+                </button>
+            </form>
+        </div>
+
+        <!-- DASHBOARD SECTION (MTAZAMO WA SHAMBA) -->
+        <div id="dashboard-section" class="hidden space-y-6">
+            
+            <!-- Shamba Selection & Header -->
+            <div class="bg-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Dashboard ya Hali ya Hewa</h1>
+                    <p class="text-sm text-gray-500">Kituo cha Mfumo: <span id="station-status" class="font-semibold text-gray-600">Inatathmini...</span></p>
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <select id="farm-select" onchange="loadDashboardData()" class="px-4 py-2 border rounded-lg bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <!-- Ma-shamba yatajazwa na JS -->
+                    </select>
+                    <button onclick="openAddFarmModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition">
+                        + Ongeza Shamba
+                    </button>
+                </div>
+            </div>
+
+            <!-- CARDS ZA VIPIMO VYA HALI YA HEWA -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Temperature -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-amber-500">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Joto (Temperature)</span>
+                        <span class="text-2xl">🌡️</span>
+                    </div>
+                    <div class="mt-4">
+                        <span id="val-temp" class="text-3xl font-bold text-gray-800">0</span>
+                        <span class="text-xl font-semibold text-gray-600">°C</span>
+                    </div>
+                </div>
+
+                <!-- Humidity -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-blue-500">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Unyevu (Humidity)</span>
+                        <span class="text-2xl">💧</span>
+                    </div>
+                    <div class="mt-4">
+                        <span id="val-hum" class="text-3xl font-bold text-gray-800">0</span>
+                        <span class="text-xl font-semibold text-gray-600">%</span>
+                    </div>
+                </div>
+
+                <!-- Rain -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-indigo-500">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Kiwango cha Mvua</span>
+                        <span class="text-2xl">🌧️</span>
+                    </div>
+                    <div class="mt-4">
+                        <span id="val-rain" class="text-3xl font-bold text-gray-800">0</span>
+                        <span class="text-xl font-semibold text-gray-600">mm</span>
+                    </div>
+                </div>
+
+                <!-- Wind Speed -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border-l-4 border-teal-500">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Kasi ya Upepo</span>
+                        <span class="text-2xl">💨</span>
+                    </div>
+                    <div class="mt-4">
+                        <span id="val-wind" class="text-3xl font-bold text-gray-800">0</span>
+                        <span class="text-xl font-semibold text-gray-600">km/h</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USHAURI WA KIKILIMA (AGRI-ADVISORY) -->
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-200 shadow-sm">
+                <h2 class="text-lg font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                    <span>💡</span> Ushauri wa Kilimo Kulingana na Mfumo
+                </h2>
+                <ul id="advisories-list" class="space-y-2 text-emerald-800 font-medium text-sm">
+                    <li>Inapakua ushauri...</li>
+                </ul>
+            </div>
+
+            <!-- API KEY DISPLAY FOR ESP32 -->
+            <div class="bg-white p-4 rounded-xl border border-gray-200 text-xs text-gray-600 flex flex-col sm:flex-row justify-between items-center gap-2">
+                <span><strong>Sensor API Key (Kwenye ESP32 Code):</strong> <code id="api-key-display" class="bg-gray-100 px-2 py-1 rounded text-green-700 font-mono">----------------</code></span>
+                <span id="last-updated-time">Muda: Hajawahi kutuma</span>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL YA KUONGEZA SHAMBA -->
+    <div id="add-farm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">Ongeza Shamba Jipya</h3>
+            <form onsubmit="handleAddFarm(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Jina la Shamba</label>
+                    <input type="text" id="new-farm-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mfano: Shamba la Nyanya" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Eneo / Mahali</label>
+                    <input type="text" id="new-farm-location" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Mfano: Morogoro Vijijini">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeAddFarmModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700 font-semibold">Ghairi</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">Hifadhi</button>
+                </div>
+            </form>
+        </div>
     </div>
-  </header>
 
-  <!-- MAIN CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 py-6">
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // FUNCTION YA SHOW/HIDE PASSWORD
+        function togglePasswordVisibility(inputId, iconId) {
+            const passwordInput = document.getElementById(inputId);
+            const eyeIcon = document.getElementById(iconId);
 
-    <!-- NOT LOGGED IN BANNER -->
-    <div id="loggedOutBanner" class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-6 rounded-2xl text-center mb-6">
-      <h2 class="text-xl font-bold text-amber-800 dark:text-amber-200 mb-2" data-sw="Karibu Kwenye Mfumo wa Smart Farm" data-en="Welcome to Smart Farm System">Karibu Kwenye Mfumo wa Smart Farm</h2>
-      <p class="text-sm text-amber-700 dark:text-amber-300 mb-4" data-sw="Tafadhali ingia au jisajili ili kuangalia na kusimamia mashamba yako." data-en="Please login or register to view and manage your farms.">Tafadhali ingia au jisajili ili kuangalia na kusimamia mashamba yako.</p>
-      <button onclick="toggleModal('authModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2 rounded-xl transition-all shadow-md" data-sw="Ingia / Jisajili" data-en="Login / Register">Ingia / Jisajili</button>
-    </div>
-
-    <!-- DASHBOARD CONTENT (Visible when logged in) -->
-    <div id="dashboardContent" class="hidden space-y-6">
-
-      <!-- STATUS BAR -->
-      <div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-        <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400" data-sw="Hali ya Sensor" data-en="Sensor Status">Hali ya Sensor</span>
-          <div class="flex items-center gap-2 mt-0.5">
-            <span id="statusIndicator" class="w-3 h-3 rounded-full bg-gray-400"></span>
-            <span id="statusText" class="font-bold text-sm">Checking...</span>
-          </div>
-        </div>
-
-        <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400" data-sw="Mara ya Mwisho" data-en="Last Updated">Mara ya Mwisho</span>
-          <p id="lastUpdatedText" class="text-sm font-semibold text-slate-600 dark:text-slate-300">--</p>
-        </div>
-
-        <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400" data-sw="API Key ya Station" data-en="Station API Key">API Key ya Station</span>
-          <p id="apiKeyDisplay" class="text-xs font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">--</p>
-        </div>
-      </div>
-
-      <!-- METRIC CARDS GRID -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <!-- Temperature Card -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Joto" data-en="Temperature">Joto</span>
-            <span class="text-xl">🌡️</span>
-          </div>
-          <p id="tempVal" class="text-2xl md:text-3xl font-extrabold text-amber-500">--°C</p>
-        </div>
-
-        <!-- Humidity Card -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Unyevu" data-en="Humidity">Unyevu</span>
-            <span class="text-xl">💧</span>
-          </div>
-          <p id="humidityVal" class="text-2xl md:text-3xl font-extrabold text-blue-500">--%</p>
-        </div>
-
-        <!-- Rain Card -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Mvua" data-en="Rainfall">Mvua</span>
-            <span class="text-xl">🌧️️</span>
-          </div>
-          <p id="rainVal" class="text-2xl md:text-3xl font-extrabold text-indigo-500">-- mm</p>
-        </div>
-
-        <!-- Wind Speed Card -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold uppercase text-slate-400" data-sw="Upepo" data-en="Wind Speed">Upepo</span>
-            <span class="text-xl">💨</span>
-          </div>
-          <p id="windVal" class="text-2xl md:text-3xl font-extrabold text-teal-500">-- km/h</p>
-        </div>
-      </div>
-
-      <!-- GRAPH & STATS SECTION -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Chart Canvas (2 Cols) -->
-        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <h3 class="font-bold text-lg mb-4" data-sw="Mwenendo wa Hali ya Hewa" data-en="Weather Trends">Mwenendo wa Hali ya Hewa</h3>
-          <div class="relative h-64 md:h-80">
-            <canvas id="weatherChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Stats Summary (1 Col) -->
-        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
-          <h3 class="font-bold text-lg border-b dark:border-slate-700 pb-2" data-sw="Takwimu za Jumla" data-en="Summary Statistics">Takwimu za Jumla</h3>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-500" data-sw="Wastani wa Joto:" data-en="Avg Temperature:">Wastani wa Joto:</span>
-            <span id="statAvgTemp" class="font-bold">--°C</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-500" data-sw="Joto la Juu Zaidi:" data-en="Max Temperature:">Joto la Juu Zaidi:</span>
-            <span id="statMaxTemp" class="font-bold text-red-500">--°C</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-500" data-sw="Joto la Chini Zaidi:" data-en="Min Temperature:">Joto la Chini Zaidi:</span>
-            <span id="statMinTemp" class="font-bold text-blue-500">--°C</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-500" data-sw="Wastani wa Unyevu:" data-en="Avg Humidity:">Wastani wa Unyevu:</span>
-            <span id="statAvgHum" class="font-bold">--%</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </main>
-
-  <!-- ==================== MODALS ==================== -->
-
-  <!-- 1. AUTHENTICATION MODAL -->
-  <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-md relative border border-slate-200 dark:border-slate-700">
-      <button onclick="toggleModal('authModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl">&times;</button>
-      
-      <!-- Tab Buttons -->
-      <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-        <button id="loginTab" onclick="switchAuthTab('login')" class="w-1/2 py-2 font-bold text-emerald-600 border-b-2 border-emerald-600" data-sw="Ingia" data-en="Login">Ingia</button>
-        <button id="registerTab" onclick="switchAuthTab('register')" class="w-1/2 py-2 font-bold text-gray-400" data-sw="Jisajili" data-en="Register">Jisajili</button>
-      </div>
-
-      <!-- Login Form -->
-      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Jina la Mtumiaji" data-en="Username">Jina la Mtumiaji</label>
-          <input type="text" id="loginUsername" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Nenosiri" data-en="Password">Nenosiri</label>
-          <input type="password" id="loginPassword" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
-        </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md" data-sw="Ingia Mfomoni" data-en="Sign In">Ingia Mfomoni</button>
-      </form>
-
-      <!-- Register Form -->
-      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4 hidden">
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Jina la Mtumiaji" data-en="Username">Jina la Mtumiaji</label>
-          <input type="text" id="regUsername" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Barua Pepe" data-en="Email Address">Barua Pepe</label>
-          <input type="email" id="regEmail" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Nenosiri" data-en="Password">Nenosiri</label>
-          <input type="password" id="regPassword" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
-        </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md" data-sw="Tengeneza Akaunti" data-en="Create Account">Tengeneza Akaunti</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- 2. ADD FARM MODAL -->
-  <div id="addFarmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-md relative border border-slate-200 dark:border-slate-700">
-      <button onclick="toggleModal('addFarmModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl">&times;</button>
-      
-      <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-        🌱 <span data-sw="Ongeza Shamba Jipya" data-en="Add New Farm">Ongeza Shamba Jipya</span>
-      </h3>
-
-      <form id="addFarmForm" onsubmit="handleAddFarm(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Jina la Shamba *" data-en="Farm Name *">Jina la Shamba *</label>
-          <input type="text" id="farmName" placeholder="Mfano: Shamba la Mahindi" required class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-bold uppercase text-gray-500 mb-1" data-sw="Eneo / Mahali" data-en="Location">Eneo / Mahali</label>
-          <input type="text" id="farmLocation" placeholder="Mfano: Kilosa, Morogoro" class="w-full p-2.5 rounded-xl border dark:bg-slate-700 dark:border-slate-600 text-sm">
-        </div>
-        
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="toggleModal('addFarmModal')" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700" data-sw="Ghairi" data-en="Cancel">Ghairi</button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-md" data-sw="Hifadhi Shamba" data-en="Save Farm">Hifadhi Shamba</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- JAVASCRIPT LOGIC -->
-  <script>
-    let currentFarmId = null;
-    let weatherChart = null;
-    let currentLang = 'sw';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      checkUserStatus();
-      initChart();
-    });
-
-    // --- AUTHENTICATION LOGIC ---
-    async function checkUserStatus() {
-      try {
-        const res = await fetch('/api/user-status');
-        const data = await res.json();
-        
-        const authBtn = document.getElementById('authBtn');
-        const farmContainer = document.getElementById('farmSelectorContainer');
-        const loggedOutBanner = document.getElementById('loggedOutBanner');
-        const dashboardContent = document.getElementById('dashboardContent');
-
-        if (data.logged_in) {
-          authBtn.innerText = `Logout (${data.username})`;
-          authBtn.onclick = handleLogout;
-          farmContainer.classList.remove('hidden');
-          loggedOutBanner.classList.add('hidden');
-          dashboardContent.classList.remove('hidden');
-          await loadFarms();
-        } else {
-          authBtn.innerText = 'Login';
-          authBtn.onclick = () => toggleModal('authModal');
-          farmContainer.classList.add('hidden');
-          loggedOutBanner.classList.remove('hidden');
-          dashboardContent.classList.add('hidden');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908A8.98 8.98 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m-0.469 0.469L3 3l18 18" />
+                `;
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                `;
+            }
         }
-      } catch (err) {
-        console.error("Status check failed:", err);
-      }
-    }
 
-    async function handleLogin(e) {
-      e.preventDefault();
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          username: document.getElementById('loginUsername').value,
-          password: document.getElementById('loginPassword').value
-        })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        toggleModal('authModal');
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+            const authMsg = document.getElementById('auth-message');
+
+            authMsg.classList.add('hidden');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                tabLogin.className = "w-1/2 py-2 text-center font-bold text-green-700 border-b-2 border-green-700";
+                tabRegister.className = "w-1/2 py-2 text-center font-bold text-gray-500 hover:text-green-700";
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                tabRegister.className = "w-1/2 py-2 text-center font-bold text-green-700 border-b-2 border-green-700";
+                tabLogin.className = "w-1/2 py-2 text-center font-bold text-gray-500 hover:text-green-700";
+            }
+        }
+
+        function showMessage(msg, isError = false) {
+            const authMsg = document.getElementById('auth-message');
+            authMsg.textContent = msg;
+            authMsg.className = `mb-4 p-3 rounded-lg text-sm text-center ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+            authMsg.classList.remove('hidden');
+        }
+
+        // AUTH HANDLERS
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    checkUserStatus();
+                } else {
+                    showMessage(data.message || 'Login imefeli', true);
+                }
+            } catch (err) {
+                showMessage('Imeshindikana kuunganisha kwenye server', true);
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, email, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    checkUserStatus();
+                } else {
+                    showMessage(data.message || 'Usajili umefeli', true);
+                }
+            } catch (err) {
+                showMessage('Imeshindikana kuunganisha kwenye server', true);
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            checkUserStatus();
+        }
+
+        // USER STATUS & DASHBOARD LOADER
+        async function checkUserStatus() {
+            try {
+                const res = await fetch('/api/user-status');
+                const data = await res.json();
+
+                if (data.logged_in) {
+                    document.getElementById('auth-section').classList.add('hidden');
+                    document.getElementById('dashboard-section').classList.remove('hidden');
+                    document.getElementById('logout-btn').classList.remove('hidden');
+                    document.getElementById('user-display').classList.remove('hidden');
+                    document.getElementById('user-display').textContent = `👤 ${data.username}`;
+                    
+                    loadFarms();
+                } else {
+                    document.getElementById('auth-section').classList.remove('hidden');
+                    document.getElementById('dashboard-section').classList.add('hidden');
+                    document.getElementById('logout-btn').classList.add('hidden');
+                    document.getElementById('user-display').classList.add('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadFarms() {
+            try {
+                const res = await fetch('/api/farms');
+                const data = await res.json();
+                const select = document.getElementById('farm-select');
+                select.innerHTML = '';
+
+                if (data.farms && data.farms.length > 0) {
+                    data.farms.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.id;
+                        opt.textContent = `${f.name} (${f.location})`;
+                        select.appendChild(opt);
+                    });
+                    loadDashboardData();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadDashboardData() {
+            const farmId = document.getElementById('farm-select').value;
+            if (!farmId) return;
+
+            try {
+                const res = await fetch(`/api/get-data?farm_id=${farmId}`);
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    document.getElementById('val-temp').textContent = data.temperature;
+                    document.getElementById('val-hum').textContent = data.humidity;
+                    document.getElementById('val-rain').textContent = data.rain;
+                    document.getElementById('val-wind').textContent = data.wind_speed;
+
+                    document.getElementById('api-key-display').textContent = data.api_key || 'N/A';
+                    document.getElementById('last-updated-time').textContent = `Muda: ${data.last_updated}`;
+
+                    const statusBadge = document.getElementById('station-status');
+                    if (data.is_online) {
+                        statusBadge.textContent = "ONLINE 🟢";
+                        statusBadge.className = "font-semibold text-green-600";
+                    } else {
+                        statusBadge.textContent = "OFFLINE 🔴";
+                        statusBadge.className = "font-semibold text-red-600";
+                    }
+
+                    // Ongeza Ushauri
+                    const advList = document.getElementById('advisories-list');
+                    advList.innerHTML = '';
+                    (data.advisories || []).forEach(adv => {
+                        const li = document.createElement('li');
+                        li.textContent = adv;
+                        advList.appendChild(li);
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // MODAL FUNCTIONS
+        function openAddFarmModal() { document.getElementById('add-farm-modal').classList.remove('hidden'); }
+        function closeAddFarmModal() { document.getElementById('add-farm-modal').classList.add('hidden'); }
+
+        async function handleAddFarm(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-farm-name').value;
+            const location = document.getElementById('new-farm-location').value;
+
+            try {
+                const res = await fetch('/api/farms/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name, location })
+                });
+                if (res.ok) {
+                    closeAddFarmModal();
+                    loadFarms();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // INILIZATION
         checkUserStatus();
-      } else {
-        alert(data.message);
-      }
-    }
-
-    async function handleRegister(e) {
-      e.preventDefault();
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          username: document.getElementById('regUsername').value,
-          email: document.getElementById('regEmail').value,
-          password: document.getElementById('regPassword').value
-        })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        alert(data.message);
-        toggleModal('authModal');
-        checkUserStatus();
-      } else {
-        alert(data.message);
-      }
-    }
-
-    async function handleLogout() {
-      await fetch('/api/logout', {method: 'POST'});
-      checkUserStatus();
-    }
-
-    // --- FARM MANAGEMENT LOGIC ---
-    async function loadFarms(selectedFarmId = null) {
-      try {
-        const res = await fetch('/api/farms');
-        const data = await res.json();
-        
-        if (data.status === 'success' && data.farms.length > 0) {
-          const select = document.getElementById('farmSelect');
-          select.innerHTML = data.farms.map(f => `<option value="${f.id}">${f.name} (${f.location})</option>`).join('');
-          
-          if (selectedFarmId) {
-            select.value = selectedFarmId;
-          }
-          currentFarmId = select.value;
-          fetchDashboardData();
-        }
-      } catch (err) {
-        console.error("Failed to load farms:", err);
-      }
-    }
-
-    function onFarmChange() {
-      currentFarmId = document.getElementById('farmSelect').value;
-      fetchDashboardData();
-    }
-
-    async function handleAddFarm(e) {
-      e.preventDefault();
-      const name = document.getElementById('farmName').value;
-      const location = document.getElementById('farmLocation').value;
-
-      const res = await fetch('/api/farms/add', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ name: name, location: location })
-      });
-
-      const data = await res.json();
-      if (data.status === 'success') {
-        alert(data.message);
-        toggleModal('addFarmModal');
-        await loadFarms(data.farm.id);
-      } else {
-        alert(data.message);
-      }
-    }
-
-    // --- DASHBOARD DATA FETCHING ---
-    async function fetchDashboardData() {
-      if (!currentFarmId) return;
-
-      // 1. Fetch Latest Data
-      const resData = await fetch(`/api/get-data?farm_id=${currentFarmId}`);
-      const data = await resData.json();
-
-      if (data.status === 'success') {
-        document.getElementById('tempVal').innerText = `${data.temperature}°C`;
-        document.getElementById('humidityVal').innerText = `${data.humidity}%`;
-        document.getElementById('rainVal').innerText = `${data.rain} mm`;
-        document.getElementById('windVal').innerText = `${data.wind_speed} km/h`;
-        document.getElementById('lastUpdatedText').innerText = data.last_updated;
-        document.getElementById('apiKeyDisplay').innerText = data.api_key || 'N/A';
-
-        const statusDot = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
-        if (data.is_online) {
-          statusDot.className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
-          statusText.innerText = "Online";
-          statusText.className = "font-bold text-sm text-emerald-600";
-        } else {
-          statusDot.className = "w-3 h-3 rounded-full bg-rose-500";
-          statusText.innerText = "Offline";
-          statusText.className = "font-bold text-sm text-rose-600";
-        }
-      }
-
-      // 2. Fetch Stats
-      const resStats = await fetch(`/api/get-stats?farm_id=${currentFarmId}`);
-      const statsData = await resStats.json();
-      if (statsData.status === 'success' && statsData.stats) {
-        document.getElementById('statAvgTemp').innerText = `${statsData.stats.avg_temp}°C`;
-        document.getElementById('statMaxTemp').innerText = `${statsData.stats.max_temp}°C`;
-        document.getElementById('statMinTemp').innerText = `${statsData.stats.min_temp}°C`;
-        document.getElementById('statAvgHum').innerText = `${statsData.stats.avg_hum}%`;
-      }
-
-      // 3. Fetch Logs for Graph
-      const resLogs = await fetch(`/api/get-logs?farm_id=${currentFarmId}`);
-      const logsData = await resLogs.json();
-      if (logsData.status === 'success' && logsData.logs) {
-        updateChart(logsData.logs);
-      }
-    }
-
-    // --- CHART LOGIC ---
-    function initChart() {
-      const ctx = document.getElementById('weatherChart').getContext('2d');
-      weatherChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [
-            { label: 'Joto (°C)', data: [], borderColor: '#f59e0b', tension: 0.3, fill: false },
-            { label: 'Unyevu (%)', data: [], borderColor: '#3b82f6', tension: 0.3, fill: false }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { y: { beginAtZero: false } }
-        }
-      });
-    }
-
-    function updateChart(logs) {
-      const reversedLogs = [...logs].reverse();
-      weatherChart.data.labels = reversedLogs.map(l => l.timestamp.split(' ')[1]);
-      weatherChart.data.datasets[0].data = reversedLogs.map(l => l.temperature);
-      weatherChart.data.datasets[1].data = reversedLogs.map(l => l.humidity);
-      weatherChart.update();
-    }
-
-    // --- UI HELPERS & MODALS ---
-    function toggleModal(id) {
-      document.getElementById(id).classList.toggle('hidden');
-    }
-
-    function switchAuthTab(tab) {
-      if (tab === 'login') {
-        document.getElementById('loginForm').classList.remove('hidden');
-        document.getElementById('registerForm').classList.add('hidden');
-        document.getElementById('loginTab').className = "w-1/2 py-2 font-bold text-emerald-600 border-b-2 border-emerald-600";
-        document.getElementById('registerTab').className = "w-1/2 py-2 font-bold text-gray-400";
-      } else {
-        document.getElementById('loginForm').classList.add('hidden');
-        document.getElementById('registerForm').classList.remove('hidden');
-        document.getElementById('registerTab').className = "w-1/2 py-2 font-bold text-emerald-600 border-b-2 border-emerald-600";
-        document.getElementById('loginTab').className = "w-1/2 py-2 font-bold text-gray-400";
-      }
-    }
-
-    function toggleDarkMode() {
-      document.documentElement.classList.toggle('dark');
-    }
-
-    function toggleLanguage() {
-      currentLang = currentLang === 'sw' ? 'en' : 'sw';
-      document.getElementById('langBtnText').innerText = currentLang === 'sw' ? 'EN' : 'SW';
-      document.querySelectorAll('[data-sw]').forEach(el => {
-        el.innerText = el.getAttribute(`data-${currentLang}`);
-      });
-    }
-  </script>
+        setInterval(loadDashboardData, 10000); // Inajirudia kila sekunde 10
+    </script>
 </body>
 </html>
