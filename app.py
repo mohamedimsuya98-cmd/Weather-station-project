@@ -21,7 +21,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # - One or more weather stations per farm
 # - ESP32 sensor ingestion
 # - Temperature, humidity, rainfall, rain detection,
-#   wind speed, wind direction, optional soil moisture
+#   wind speed, wind direction, optional soil moisture,
+#   optional air pressure (HX710B, hPa)
+# - 3-hour pressure trend with storm early warnings
 # - 24-hour forecast via OpenWeather
 # - Early warnings
 # - Agricultural decision support
@@ -111,6 +113,8 @@ TRANSLATIONS = {
         "farm_deleted": "Shamba limefutwa.",
         "cannot_delete_last_farm": "Mfumo unahitaji angalau shamba moja.",
         "station_key_generated": "Station API key imetengenezwa.",
+        "pressure_fast_fall": "Shinikizo la hewa linashuka kwa kasi; dhoruba au mvua kubwa inaweza kuja. Panga kazi za shamba mapema na linda mazao, mbegu na vifaa.",
+        "pressure_falling": "Shinikizo la hewa linashuka; hali ya hewa inaweza kubadilika ndani ya masaa machache.",
     },
     "en": {
         "auth_required": "You must be logged in.",
@@ -150,6 +154,8 @@ TRANSLATIONS = {
         "farm_deleted": "Farm deleted.",
         "cannot_delete_last_farm": "The system requires at least one farm.",
         "station_key_generated": "Station API key generated.",
+        "pressure_fast_fall": "Air pressure is falling quickly; a storm or heavy rain may be approaching. Plan field work early and protect crops, seed and equipment.",
+        "pressure_falling": "Air pressure is falling; weather may change within a few hours.",
     }
 }
 
@@ -236,6 +242,9 @@ class WeatherLog(db.Model):
     wind_direction = db.Column(db.Float, nullable=True)
     soil_moisture = db.Column(db.Float, nullable=True)
 
+    # Air pressure from HX710B, in hPa (millibars).
+    pressure = db.Column(db.Float, nullable=True)
+
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
@@ -246,14 +255,28 @@ class WeatherLog(db.Model):
 def ensure_schema():
     """
     db.create_all() creates missing tables but does not add new columns
-    to an existing SQLite table. This lightweight migration adds the
-    new optional columns if an older database is already present.
+    to an existing table. This lightweight migration adds the optional
+    columns to older Postgres and SQLite databases.
     """
     db.create_all()
 
     engine = db.engine
+    backend = engine.url.get_backend_name()
 
-    if engine.url.get_backend_name() != "sqlite":
+    if backend == "postgresql":
+        pg_additions = [
+            "ALTER TABLE weather_log ADD COLUMN IF NOT EXISTS rain_detected BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE weather_log ADD COLUMN IF NOT EXISTS wind_direction FLOAT",
+            "ALTER TABLE weather_log ADD COLUMN IF NOT EXISTS soil_moisture FLOAT",
+            "ALTER TABLE weather_log ADD COLUMN IF NOT EXISTS pressure FLOAT",
+            "ALTER TABLE farm ADD COLUMN IF NOT EXISTS crop_type VARCHAR(120)",
+        ]
+        with engine.begin() as conn:
+            for sql in pg_additions:
+                conn.exec_driver_sql(sql)
+        return
+
+    if backend != "sqlite":
         return
 
     with engine.connect() as conn:
@@ -280,6 +303,10 @@ def ensure_schema():
             additions.append(
                 "ALTER TABLE weather_log ADD COLUMN soil_moisture FLOAT"
             )
+        if "pressure" not in weather_columns:
+            additions.append(
+                "ALTER TABLE weather_log ADD COLUMN pressure FLOAT"
+            )
         if "crop_type" not in farm_columns:
             additions.append(
                 "ALTER TABLE farm ADD COLUMN crop_type VARCHAR(120)"
@@ -299,6 +326,10 @@ def load_user(user_id):
 # ============================================================
 # HELPERS
 # ============================================================
+
+PRESSURE_LOOKBACK_HOURS = 3
+PRESSURE_TOLERANCE = timedelta(minutes=30)
+
 
 def json_number(value, digits=1):
     if value is None:
@@ -375,6 +406,48 @@ def latest_log(station):
     )
 
 
+def pressure_trend(station, current_log):
+    """
+    Compares current pressure with the reading from about 3 hours earlier.
+    Returns None until enough history exists.
+    """
+    if not station or not current_log or current_log.pressure is None:
+        return None
+
+    target_time = current_log.timestamp - timedelta(hours=PRESSURE_LOOKBACK_HOURS)
+
+    candidates = (
+        WeatherLog.query
+        .filter(
+            WeatherLog.station_id == station.id,
+            WeatherLog.pressure.isnot(None),
+            WeatherLog.timestamp >= target_time - PRESSURE_TOLERANCE,
+            WeatherLog.timestamp <= target_time + PRESSURE_TOLERANCE,
+        )
+        .all()
+    )
+
+    if not candidates:
+        return None
+
+    past = min(candidates, key=lambda log: abs(log.timestamp - target_time))
+    delta = current_log.pressure - past.pressure
+
+    # Thresholds are tunable. About 1.5 hPa per 3 h is a meaningful change.
+    if delta <= -3:
+        label = "fast_fall"
+    elif delta <= -1.5:
+        label = "falling"
+    elif delta >= 3:
+        label = "fast_rise"
+    elif delta >= 1.5:
+        label = "rising"
+    else:
+        label = "steady"
+
+    return {"label": label, "delta_3h": round(delta, 1)}
+
+
 def random_station_code():
     return "WS-" + secrets.token_hex(4).upper()
 
@@ -421,6 +494,7 @@ def validate_station_payload(payload):
         0,
         100
     )
+    pressure = parse_optional_float(payload.get("pressure"), 300, 1100)
 
     rain_detected_raw = payload.get("rain_detected")
 
@@ -433,7 +507,10 @@ def validate_station_payload(payload):
             "1", "true", "yes", "rain", "mvua"
         )
 
-    if all(v is None for v in (temperature, humidity, rain, wind_speed, wind_direction, soil_moisture)):
+    if all(v is None for v in (
+        temperature, humidity, rain, wind_speed,
+        wind_direction, soil_moisture, pressure
+    )):
         raise ValueError("No valid sensor value supplied.")
 
     return {
@@ -443,7 +520,8 @@ def validate_station_payload(payload):
         "rain_detected": rain_detected,
         "wind_speed": wind_speed or 0.0,
         "wind_direction": wind_direction,
-        "soil_moisture": soil_moisture
+        "soil_moisture": soil_moisture,
+        "pressure": pressure,
     }
 
 
@@ -473,11 +551,18 @@ def direction_label(degrees, lang="sw"):
 # AGRICULTURAL DECISION ENGINE
 # ============================================================
 
-def generate_agri_advisory(farm, log, lang="sw"):
+def generate_agri_advisory(farm, log, lang="sw", trend=None):
     if not log:
         return [t("no_data", lang)]
 
     advice = []
+
+    # Pressure trend first: it is the earliest warning signal.
+    trend_label = (trend or {}).get("label")
+    if trend_label == "fast_fall":
+        advice.append(t("pressure_fast_fall", lang))
+    elif trend_label == "falling":
+        advice.append(t("pressure_falling", lang))
 
     temp = log.temperature
     humidity = log.humidity
@@ -633,7 +718,7 @@ def fetch_weather_forecast(location_name, lang="sw"):
         "q": location_name,
         "appid": OPENWEATHER_API_KEY,
         "units": "metric",
-        "lang": "en" if lang == "en" else "en",
+        "lang": "sw" if lang == "sw" else "en",
     }
 
     try:
@@ -1019,7 +1104,8 @@ def update_sensor_data():
       "wind_speed": 8.5,
       "wind_direction": 90,
       "soil_moisture": 44,
-      "rain_detected": true
+      "rain_detected": true,
+      "pressure": 1008.4
     }
 
     Old payloads without the new fields still work.
@@ -1063,6 +1149,7 @@ def update_sensor_data():
         wind_speed=sensor_data["wind_speed"],
         wind_direction=sensor_data["wind_direction"],
         soil_moisture=sensor_data["soil_moisture"],
+        pressure=sensor_data["pressure"],
         timestamp=datetime.utcnow()
     )
 
@@ -1115,10 +1202,13 @@ def get_data():
                 "last_seen": format_datetime(None, lang)
             },
             "message": t("no_data", lang),
-            "advisories": [t("no_data", lang)]
+            "advisories": [t("no_data", lang)],
+            "pressure": None,
+            "pressure_trend": None
         })
 
     online = station_online(station)
+    trend = pressure_trend(station, log)
 
     return jsonify({
         "status": "success",
@@ -1142,8 +1232,10 @@ def get_data():
         "wind_direction": json_number(log.wind_direction, 0),
         "wind_direction_label": direction_label(log.wind_direction, lang),
         "soil_moisture": json_number(log.soil_moisture, 0),
+        "pressure": json_number(log.pressure, 1),
+        "pressure_trend": trend,
         "last_updated": format_datetime(log.timestamp, lang),
-        "advisories": generate_agri_advisory(farm, log, lang)
+        "advisories": generate_agri_advisory(farm, log, lang, trend)
     })
 
 
@@ -1248,6 +1340,7 @@ def history():
         rains = [x.rain or 0 for x in items]
         winds = [x.wind_speed or 0 for x in items]
         soils = [x.soil_moisture for x in items if x.soil_moisture is not None]
+        pressures = [x.pressure for x in items if x.pressure is not None]
 
         rows.append({
             "date": day,
@@ -1263,6 +1356,9 @@ def history():
             "wind_max": json_number(max(winds) if winds else None, 1),
             "soil_moisture_avg": json_number(
                 sum(soils) / len(soils) if soils else None, 0
+            ),
+            "pressure_avg": json_number(
+                sum(pressures) / len(pressures) if pressures else None, 1
             ),
             "samples": len(items)
         })
