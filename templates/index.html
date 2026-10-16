@@ -58,7 +58,7 @@
             position: relative;
             height: 300px;
         }
-    
+
         /* ===== PROFESSIONAL AGRITECH / IOT VISUAL SYSTEM ===== */
         :root {
             --sf-primary: #176B4D;
@@ -116,7 +116,7 @@
         }
         #farm-location:empty::after { content: "Location unavailable"; color: var(--sf-faint); }
         #station-status { letter-spacing: .04em; }
-        /* Make the decision module a calm operational summary, not decoration. */
+        /* Decision module */
         #decision-headline { color: #fff !important; line-height: 1.24; max-width: 48rem; }
         #advisories-list > div { border: 1px solid rgba(255,255,255,.12); }
         #dashboard-section .bg-gradient-to-br { background: linear-gradient(135deg, #0F4C3A 0%, #176B4D 55%, #168A83 100%) !important; border-radius: var(--sf-radius) !important; box-shadow: 0 10px 26px rgba(15,76,58,.15) !important; }
@@ -376,7 +376,7 @@
         </div>
 
         <!-- LIVE SENSOR CARDS -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
 
             <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-amber-500">
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_temp">Joto</p>
@@ -392,6 +392,15 @@
                     <span id="val-hum" class="text-3xl font-extrabold">--</span>
                     <span class="text-slate-500 font-semibold">%</span>
                 </div>
+            </div>
+
+            <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-violet-500">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500" data-i18n="card_pressure">Shinikizo la Hewa</p>
+                <div class="mt-3 flex items-baseline gap-1">
+                    <span id="val-pressure" class="text-3xl font-extrabold">--</span>
+                    <span class="text-slate-500 font-semibold">hPa</span>
+                </div>
+                <p id="pressure-trend" class="text-xs text-slate-500 mt-2">--</p>
             </div>
 
             <div class="metric-card bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-indigo-500">
@@ -484,7 +493,7 @@
             <div>
                 <p class="text-xs uppercase tracking-wider text-slate-400 font-bold" data-i18n="sensor_setup_note">Sensor setup</p>
                 <p class="font-semibold mt-1" data-i18n="sensor_setup_text">
-                    API key haionyeshwi moja kwa moja kwenye dashboard. Tumia Kituo kwa kuiona wakati wa ku-configure ESP32.
+                    API key haionyeshwi moja kwa moja kwenye dashboard. Tumia Kituo kuiona wakati wa ku-configure ESP32.
                 </p>
             </div>
             <button onclick="openStationModal()"
@@ -623,6 +632,7 @@
             early_warnings_title: "Tahadhari za Mapema",
             card_temp: "Joto",
             card_hum: "Unyevu wa Hewa",
+            card_pressure: "Shinikizo la Hewa",
             card_rain: "Mvua",
             card_wind: "Upepo",
             card_soil: "Unyevu wa Udongo",
@@ -672,7 +682,15 @@
             soil_high: "Juu",
             rain_detected: "Mvua imeonekana",
             no_rain: "Hakuna mvua iliyogunduliwa",
-            direction: "Mwelekeo"
+            direction: "Mwelekeo",
+            trend_fast_fall: "Linashuka kwa kasi",
+            trend_falling: "Linashuka",
+            trend_steady: "Tulivu",
+            trend_rising: "Linapanda",
+            trend_fast_rise: "Linapanda kwa kasi",
+            trend_unavailable: "Inakusanya historia ya masaa 3",
+            pressure_no_sensor: "Sensor ya shinikizo haijaunganishwa",
+            pressure_chart: "Shinikizo hPa"
         },
         en: {
             logout_btn: "Logout",
@@ -694,6 +712,7 @@
             early_warnings_title: "Early Warnings",
             card_temp: "Temperature",
             card_hum: "Air Humidity",
+            card_pressure: "Air Pressure",
             card_rain: "Rainfall",
             card_wind: "Wind",
             card_soil: "Soil Moisture",
@@ -743,7 +762,15 @@
             soil_high: "High",
             rain_detected: "Rain detected",
             no_rain: "No rain detected",
-            direction: "Direction"
+            direction: "Direction",
+            trend_fast_fall: "Falling fast",
+            trend_falling: "Falling",
+            trend_steady: "Steady",
+            trend_rising: "Rising",
+            trend_fast_rise: "Rising fast",
+            trend_unavailable: "Collecting 3-hour history",
+            pressure_no_sensor: "Pressure sensor not connected",
+            pressure_chart: "Pressure hPa"
         }
     };
 
@@ -977,8 +1004,13 @@
         const wind = Number(data.wind_speed || 0);
         const rain = Number(data.rain || 0);
         const temp = Number(data.temperature || 0);
+        const trendLabel = data.pressure_trend?.label;
 
-        if (rain > 5 || data.rain_detected) {
+        if (trendLabel === 'fast_fall') {
+            headline.textContent = currentLang === 'sw'
+                ? 'Shinikizo linashuka kwa kasi — panga kazi mapema na linda mazao.'
+                : 'Pressure is falling fast — plan work early and protect crops.';
+        } else if (rain > 5 || data.rain_detected) {
             headline.textContent = currentLang === 'sw'
                 ? 'Mvua imeonekana — punguza/ahirisha umwagiliaji na fuatilia drainage.'
                 : 'Rain detected — reduce/delay irrigation and monitor drainage.';
@@ -1005,7 +1037,7 @@
         const list = document.getElementById('advisories-list');
         list.innerHTML = '';
 
-        (advisories || []).forEach((text, index) => {
+        (advisories || []).forEach((text) => {
             const item = document.createElement('div');
             item.className = 'flex items-start gap-2 bg-white/10 rounded-xl p-3';
             item.innerHTML = `<span class="mt-0.5">•</span><span>${escapeHtml(text)}</span>`;
@@ -1018,6 +1050,29 @@
         if (value < 30) return tr('soil_low');
         if (value > 80) return tr('soil_high');
         return tr('soil_good');
+    }
+
+    function renderPressure(data) {
+        const valueEl = document.getElementById('val-pressure');
+        const trendEl = document.getElementById('pressure-trend');
+
+        if (data.pressure === null || data.pressure === undefined) {
+            valueEl.textContent = '--';
+            trendEl.textContent = tr('pressure_no_sensor');
+            return;
+        }
+
+        valueEl.textContent = data.pressure;
+
+        const p = data.pressure_trend;
+        if (!p) {
+            trendEl.textContent = tr('trend_unavailable');
+            return;
+        }
+
+        const sign = p.delta_3h > 0 ? '+' : '';
+        trendEl.textContent =
+            `${tr('trend_' + p.label)} (${sign}${p.delta_3h} hPa / 3h)`;
     }
 
     function renderDashboardData(data) {
@@ -1043,13 +1098,14 @@
             data.last_updated || '--';
 
         if (!data.has_data) {
-            ['val-temp','val-hum','val-rain','val-wind','val-soil'].forEach(id => {
+            ['val-temp','val-hum','val-rain','val-wind','val-soil','val-pressure'].forEach(id => {
                 document.getElementById(id).textContent = '--';
             });
 
             document.getElementById('wind-direction').textContent = '--';
             document.getElementById('rain-status').textContent = '--';
             document.getElementById('soil-status').textContent = tr('no_soil');
+            document.getElementById('pressure-trend').textContent = tr('pressure_no_sensor');
 
             setDecisionHeadline(data);
             renderAdvisories(data.advisories || []);
@@ -1081,6 +1137,8 @@
 
         document.getElementById('soil-status').textContent =
             soilLabel(data.soil_moisture);
+
+        renderPressure(data);
 
         setDecisionHeadline(data);
         renderAdvisories(data.advisories || []);
@@ -1216,21 +1274,33 @@
                         data: rows.map(row => row.temperature_avg),
                         borderWidth: 2,
                         tension: .35,
-                        spanGaps: true
+                        spanGaps: true,
+                        yAxisID: 'y'
                     },
                     {
                         label: currentLang === 'sw' ? 'Mvua mm' : 'Rain mm',
                         data: rows.map(row => row.rain_total),
                         borderWidth: 2,
                         tension: .35,
-                        spanGaps: true
+                        spanGaps: true,
+                        yAxisID: 'y'
                     },
                     {
                         label: currentLang === 'sw' ? 'Unyevu %' : 'Humidity %',
                         data: rows.map(row => row.humidity_avg),
                         borderWidth: 2,
                         tension: .35,
-                        spanGaps: true
+                        spanGaps: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: tr('pressure_chart'),
+                        data: rows.map(row => row.pressure_avg),
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        tension: .35,
+                        spanGaps: true,
+                        yAxisID: 'y1'
                     }
                 ]
             },
@@ -1248,7 +1318,13 @@
                 },
                 scales: {
                     y: {
-                        beginAtZero: false
+                        beginAtZero: false,
+                        position: 'left'
+                    },
+                    y1: {
+                        beginAtZero: false,
+                        position: 'right',
+                        grid: { drawOnChartArea: false }
                     }
                 }
             }
@@ -1449,11 +1525,11 @@
     checkUserStatus();
 </script>
 
-<!-- Non-destructive UX enhancement layer (Sahihi yenye selectors zilizorekebishwa kwenda 100%) -->
+<!-- Non-destructive UX enhancement layer -->
 <script>
 (function () {
   const decorate = () => {
-    const metricIcons = ['thermometer', 'droplets', 'cloud-rain', 'wind', 'sprout', 'wheat'];
+    const metricIcons = ['thermometer', 'droplets', 'gauge', 'cloud-rain', 'wind', 'sprout', 'wheat'];
     document.querySelectorAll('.metric-card > p:first-child').forEach((label, index) => {
       if (label.querySelector('[data-lucide]')) return;
       const icon = document.createElement('i');
